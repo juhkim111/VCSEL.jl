@@ -1,0 +1,34 @@
+# Documentation: http://docs.travis-ci.com/user/languages/julia/
+language: julia
+os:
+  - linux
+  - osx
+julia:
+  - 0.7
+  - 1.0
+  - nightly
+matrix:
+  allow_failures:
+    - julia: nightly
+addons:
+    apt_packages:
+        - gfortran
+notifications:
+  email: false
+git:
+  depth: 99999999
+
+after_script: 
+  # push coverage results to Codecov and Coveralls
+  - julia -e 'using Pkg, VarianceComponentSelect; cd(joinpath(dirname(pathof(VarianceComponentSelect)), "..")); Pkg.add("Coverage"); using Coverage; Codecov.submit(process_folder()); Coveralls.submit(process_folder())'
+
+jobs:
+  include:
+    - stage: "Documentation"
+      julia: 1.0
+      os: osx
+      script:
+        - julia -e 'using Pkg; Pkg.add("Documenter")'
+        - julia -e 'using VarianceComponentSelect; include(joinpath(dirname(pathof(VarianceComponentSelect)), "..", "docs", "make.jl"))'
+      after_script: skip
+      after_success: skip
