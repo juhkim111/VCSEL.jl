@@ -4,10 +4,10 @@
 Project `y` to null space of `X` and transform `V` accordingly.
 
 # Input 
-- `y::Vector{Float64}`: response vector to be transformed. 
-- `X::Matrix{Float64}`: covariate matrix whose null space `y` is projected to.
-- `V::Vector{Matrix{Float64}}`: vector of covariance matrices to be transformed. 
-- `tol::Float64`: if any diagonal entries  `Q` matrix in QR decomposition has its absolute
+- `y`: response vector to be transformed. 
+- `X`: covariate matrix whose null space `y` is projected to.
+- `V`: vector of covariance matrices to be transformed. 
+- `tol`: if any diagonal entries  `Q` matrix in QR decomposition has its absolute
     value samller or equal to `tol`, then it is considered 0. That column is considered a
     basis vector of null space of `I-X(X'X)^{-1}X'`. Default is 1e-6. 
 
@@ -20,8 +20,8 @@ function projectToNullSpace(
     y    :: Vector{T},
     X    :: Matrix{T},
     V    :: Vector{Matrix{T}};
-    tol  :: T = 1e-6
-    ) where {T <: Float64}
+    tol  :: Float64 = 1e-6
+    ) where {T <: Real}
 
     # number of groups 
     m = length(V) - 1
@@ -34,7 +34,7 @@ function projectToNullSpace(
     # REML transformed response vector 
     ynew = B' * y
     # REML transformed covariance matrices 
-    Vnew  = Array{Matrix{Float64}}(undef, m + 1)
+    Vnew  = Array{Matrix{T}}(undef, m + 1)
     for i in 1:(m + 1)
         Vnew[i] = B' * V[i] * B  
     end  
