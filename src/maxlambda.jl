@@ -50,7 +50,7 @@ function maxlambda(
     # make sure all estimated sigmas are 0 at current λ
     while true
       # Step 1: obtain sigmas at tempλ
-      sigmas, = vcmm(y, V; penfun=penfun, λ=tempλ, penwt=penwt)
+      sigmas, = vcselect(y, V; penfun=penfun, λ=tempλ, penwt=penwt)
       # Step 2: if all sigmas are zero, break the loop and move to Step 3.
       all(sigmas[1:end-1] .< tol) && break;
       # Step 2: else, multiply lambda by 1.5 and go to Step 1.
@@ -69,9 +69,9 @@ function maxlambda(
     # loop through while iteration number less than maxiter 
     while iter <= maxiter
       c = (a + b) / 2
-      sigmas_a, = vcmm(y, V; penfun=penfun, λ=a, penwt=penwt)
-      sigmas_b, = vcmm(y, V; penfun=penfun, λ=b, penwt=penwt)
-      sigmas_c, = vcmm(y, V, penfun=penfun, λ=c, penwt=penwt)
+      sigmas_a, = vcselect(y, V; penfun=penfun, λ=a, penwt=penwt)
+      sigmas_b, = vcselect(y, V; penfun=penfun, λ=b, penwt=penwt)
+      sigmas_c, = vcselect(y, V, penfun=penfun, λ=c, penwt=penwt)
 
       if all(sigmas_a[1:end-1] .< tol)
         b = a
