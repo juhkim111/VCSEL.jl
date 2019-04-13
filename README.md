@@ -2,7 +2,7 @@
 
 | **Documentation** | **Build Status** | **Code Coverage**  |
 |-------------------|------------------|--------------------|
-| [![](https://img.shields.io/badge/docs-current-blue.svg)](https://juhkim111.github.io/VarianceComponentSelect.jl/latest/) | [![Build Status](https://travis-ci.com/juhkim111/VarianceComponentSelect.jl.svg?token=7gXCpdNhzwTMrtSaJsFi&branch=master)](https://travis-ci.com/juhkim111/VarianceComponentSelect.jl)  |  |  
+| | | | 
 
 **VarianceComponentSelect.jl** is a Julia package for implementing MM algorithm that selects relevant variance components via penalization method. 
 
