@@ -26,9 +26,10 @@ Generate solution path of variance components along varying lambda values.
 - `nlambda::Int`: number of tuning parameter values. Default is 100. 
 - `λpath::Vector{Float64}`: user-supplied grid of tuning parameter values. 
         If unspeficied, internally generate a grid.
-- `σ2::Vector{Float64}`: initial estimates
-- `maxiter::Int`: maximum number of iteration for MM loop
-- `tolfun::Float64`: tolerance in objective value for MM loop
+- `σ2::Vector{Float64}`: initial estimates.
+- `maxiter::Int`: maximum number of iteration for MM loop.
+- `tolfun::Float64`: tolerance in objective value for MM loop.
+- `verbose::Bool`: display switch. 
 
 # Output 
 - `σ2path`: solution path along varying lambda values. 
@@ -46,7 +47,8 @@ function vcselect(
     λpath   :: Vector{Float64} = Float64[],
     σ2      :: Vector{Float64} = ones(length(Vobs)),
     maxiter :: Int = 1000,
-    tol     :: Float64 = 1e-6
+    tol     :: Float64 = 1e-6,
+    verbose :: Bool = false
     ) 
 
     # number of groups 
