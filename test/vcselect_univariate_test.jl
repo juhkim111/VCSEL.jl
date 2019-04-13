@@ -4,13 +4,13 @@ using Random, LinearAlgebra, Test, VarianceComponentSelect, PenaltyFunctions
 
 Random.seed!(123)
 
+# generate data from an univariate response variance component model 
 n = 100   # no. observations
 m = 10    # no. variance components
 p = 3     # no. covariates
 X = randn(n, p)
 β = ones(p)
 
-## make the first variance component 0 matrix
 V  = Array{Matrix{Float64}}(undef, m + 1)
 for i = 1:m
   Vi = randn(n, 50)
@@ -32,27 +32,24 @@ end
 Ωchol = cholesky(Ω)
 y = X * β + Ωchol.L * randn(n)
 
-# lasso penalty 
-println("lasso penalty")
+@info "variance component selection with lasso penalty"
 σ2path, objpath, λpath = vcselect(y, X, V; penfun=L1Penalty()) 
-println("σ2path=$σ2path")
-println("objpath=$objpath")
-println("λpath=$λpath")
+@test σ2path .>= 0 
 
-# adaptive lasso penalty
+@info "variance component selection with no penalty"
+temp, = vcselect(y, X, V)
+@test temp .>= 0 
 
-# mcp penalty 
-println("MCP penalty")
+@info "variance component selection with adaptive lasso penalty"
+penwt = zeros(m + 1)
+penwt[1:m] = 1 ./ sqrt.(temp[1:m])
+σ2path, objpath, λpath = vcselect(y, X, V; penfun=L1Penalty(), penwt=penwt)
+@test σ2path .>= 0  
+
+@info "variance component selection with MCP penalty"
 σ2path, objpath, λpath = vcselect(y, X, V; penfun=MCPPenalty()) 
-println("σ2path=$σ2path")
-println("objpath=$objpath")
-println("λpath=$λpath")
+@test σ2path .>= 0 
 
-# no penalty 
-println("No penalty")
-σ2path, objpath, λpath = vcselect(y, X, V; penfun=NoPenalty()) 
-println("σ2path=$σ2path")
-println("objpath=$objpath")
-println("λpath=$λpath")
+
 
 end 
