@@ -32,9 +32,9 @@ function vcselect(
     penwt   :: Vector{T} = [ones(length(V)-1); 0.0],
     σ2      :: Vector{T} = ones(length(V)),
     maxiter :: Int = 1000,
-    tol     :: T = 1e-6,
+    tol     :: Float64 = 1e-6,
     verbose :: Bool = false
-    ) where {T <: Float64}
+    ) where {T <: Real}
 
     ynew, Vnew = projectToNullSpace(y, X, V)
 
@@ -81,9 +81,9 @@ function vcselect(
     penwt   :: Vector{T} = [ones(length(V)-1); 0.0],
     σ2      :: Vector{T} = ones(length(V)),
     maxiter :: Int = 1000,
-    tol  :: T = 1e-6,
+    tol     :: Float64 = 1e-6,
     verbose :: Bool = false
-    ) where {T <: Float64}
+    ) where {T <: Real}
 
     # initialize algorithm
     n = length(y)       # no. observations
@@ -199,18 +199,18 @@ Project `y` to null space of `X` and generate solution path of variance componen
 along varying lambda values.
 
 # Input  
-- `y::Vector{Float64}`: response vector. 
-- `X::Matrix{Float64}`: covariate matrix.
-- `V::Vector{Matrix{Float64}}`: vector of covariance matrices; (V1,...,Vm).
-- `penfun::Penalty`: penalty function. Default is NoPenalty().
-- `penwt::Vector{Float64}`: weights for penalty term. Default is (1,1,...1,0).
-- `nlambda::Int`: number of tuning parameter values. Default is 100. 
-- `λpath::Vector{Float64}`: user-supplied grid of tuning parameter values. 
+- `y`: response vector. 
+- `X`: covariate matrix.
+- `V`: vector of covariance matrices; (V1,...,Vm).
+- `penfun`: penalty function. Default is NoPenalty().
+- `penwt`: weights for penalty term. Default is (1,1,...1,0).
+- `nlambda`: number of tuning parameter values. Default is 100. 
+- `λpath`: user-supplied grid of tuning parameter values. 
         If unspeficied, internally generate a grid.
-- `σ2::Vector{Float64}`: initial estimates.
-- `maxiter::Int`: maximum number of iteration for MM loop.
-- `tol::Float64`: tolerance in objective value for MM loop.
-- `verbose::Bool`: display switch. 
+- `σ2`: initial estimates.
+- `maxiter`: maximum number of iteration for MM loop.
+- `tol`: tolerance in objective value for MM loop.
+- `verbose`: display switch. 
 
 # Output 
 - `σ2path`: solution path along varying lambda values. 
@@ -228,9 +228,9 @@ function vcselectPath(
     λpath   :: Vector{T} = Float64[],
     σ2      :: Vector{T} = ones(length(V)),
     maxiter :: Int = 1000,
-    tol     :: T = 1e-6,
+    tol     :: Float64 = 1e-6,
     verbose :: Bool = false
-    ) where {T <: Float64}
+    ) where {T <: Real}
 
     # project response vector and covariance matrices 
     ynew, Vnew = projectToNullSpace(y, X, V)
@@ -254,18 +254,18 @@ end
 Generate solution path of variance components along varying lambda values.
 
 # Input  
-- `y::Vector{Float64}`: response vector. 
-- `X::Matrix{Float64}`: covariate matrix.
-- `V::Vector{Matrix{Float64}}`: vector of covariance matrices; (V1,...,Vm).
-- `penfun::Penalty`: penalty function. Default is NoPenalty().
-- `penwt::Vector{Float64}`: weights for penalty term. Default is (1,1,...1,0).
-- `nlambda::Int`: number of tuning parameter values. Default is 100. 
-- `λpath::Vector{Float64}`: user-supplied grid of tuning parameter values. 
+- `y`: response vector. 
+- `X`: covariate matrix.
+- `V`: vector of covariance matrices; (V1,...,Vm).
+- `penfun`: penalty function. Default is NoPenalty().
+- `penwt`: weights for penalty term. Default is (1,1,...1,0).
+- `nlambda`: number of tuning parameter values. Default is 100. 
+- `λpath`: user-supplied grid of tuning parameter values. 
         If unspeficied, internally generate a grid.
-- `σ2::Vector{Float64}`: initial estimates.
-- `maxiter::Int`: maximum number of iteration for MM loop.
-- `tol::Float64`: tolerance in objective value for MM loop.
-- `verbose::Bool`: display switch. 
+- `σ2`: initial estimates.
+- `maxiter`: maximum number of iteration for MM loop.
+- `tol`: tolerance in objective value for MM loop.
+- `verbose`: display switch. 
 
 # Output 
 - `σ2path`: solution path along varying lambda values. 
@@ -279,12 +279,12 @@ function vcselectPath(
     penfun  :: Penalty = NoPenalty(),
     penwt   :: Vector{T} = [ones(length(V)-1); 0.0],
     nlambda :: Int = 100, 
-    λpath   :: Vector{T} = Float64[],
+    λpath   :: Vector{T} = T[],
     σ2      :: Vector{T} = ones(length(V)),
     maxiter :: Int = 1000,
-    tol     :: T = 1e-6,
+    tol     :: Float64 = 1e-6,
     verbose :: Bool = false
-    ) where {T <: Float64}
+    ) where {T <: Real}
 
 
     ## generate solution path based on penalty 
