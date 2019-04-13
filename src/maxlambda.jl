@@ -1,6 +1,7 @@
 """
 
-    maxlambda(y, V; penfun=NoPenalty(), penwt=[ones(length(V)-1); 0.0], maxiter=500, tol=1e-8)
+    maxlambda(y, V; 
+              penfun=NoPenalty(), penwt=[ones(length(V)-1); 0.0], maxiter=500, tol=1e-8)
 
 Find the value of λ where all σ turns 0. At any value greater than λ, all σ's are 0.
 
