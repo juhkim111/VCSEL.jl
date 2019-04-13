@@ -1,7 +1,7 @@
 """
     vcmm(y, V; penfun, λ, penwt, σ2, maxiter, tolfun, verbose)
 
-Minimizes penalized negative log-likelihood of variance component model using 
+Minimize penalized negative log-likelihood of variance component model using 
 MM algorithm.
 The objective function is
   `0.5n*log(2π) + 0.5logdet(Ω) + 0.5y'*inv(Ω)*y + λ * sum(penwt.*penfun(σ))`

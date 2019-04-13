@@ -4,8 +4,6 @@ using PenaltyFunctions
 using LinearAlgebra 
 using StatsBase
 using Distributions 
-using DelimitedFiles
-using Random 
 
 export vcselect, vcmm, maxlambda
 
@@ -14,25 +12,29 @@ include("maxlambda.jl")
 
 
 """
-    vcselect(y, X, V; penfun, penwt, nlambda, λpath, σ2, maxiter, tolfun, verbose)
+    vcselect(yobs, Xobs, Vobs; penfun=NoPenalty(), penwt=[ones(length(Vobs)-1); 0.0], 
+            nlambda=100, λpath=Float64[], σ2=ones(length(Vobs)), maxiter=1000, tolfun=1e-6)
+
+Generate solution path of variance components along varying lambda values.
 
 # Input  
-- `y`: response vector. 
-- `X`: covariate matrix.
-- `V`: vector of covariance matrices; (V1,...,Vm).
-- `penfun`: penalty function. Default is NoPenalty().
-- `penwt`: weights for penalty term. Default is (1,1,...1,0).
-- `nlambda`: number of tuning parameter values. Default is 100. 
-- `λpath`: user-supplied grid of tuning parameter values. 
+- `yobs::Vector{Float64}`: response vector. 
+- `Xobs::Matrix{Float64}`: covariate matrix.
+- `Vobs::Vector{Matrix{Float64}}`: vector of covariance matrices; (V1,...,Vm).
+- `penfun::Penalty`: penalty function. Default is NoPenalty().
+- `penwt::Vector{Float64}`: weights for penalty term. Default is (1,1,...1,0).
+- `nlambda::Int`: number of tuning parameter values. Default is 100. 
+- `λpath::Vector{Float64}`: user-supplied grid of tuning parameter values. 
         If unspeficied, internally generate a grid.
-- `σ2`: initial estimates
-- `maxiter`: maximum number of iteration for MM loop
-- `tolfun`: tolerance in objective value for MM loop
+- `σ2::Vector{Float64}`: initial estimates
+- `maxiter::Int`: maximum number of iteration for MM loop
+- `tolfun::Float64`: tolerance in objective value for MM loop
 
 # Output 
-- `σ2path`: 
-- `objpath`:
-- `λpath`: 
+- `σ2path`: solution path along varying lambda values. 
+        Each column gives estimated σ2 at specific lambda.
+- `objpath`: objective value path. 
+- `λpath`: tuning parameter path.
 """
 function vcselect(
     yobs    :: Vector{Float64},
@@ -44,8 +46,7 @@ function vcselect(
     λpath   :: Vector{Float64} = Float64[],
     σ2      :: Vector{Float64} = ones(length(Vobs)),
     maxiter :: Int = 1000,
-    tol     :: Float64 = 1e-6,
-    verbose :: Bool = false
+    tol     :: Float64 = 1e-6
     ) 
 
     # number of groups 
