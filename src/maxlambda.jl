@@ -6,25 +6,25 @@
 Find the value of λ where all σ turns 0. At any value greater than λ, all σ's are 0.
 
 # Arguments
-- `y::Vector{Float64}`: response vector
-- `V::Vector{Matrix{Float64}}`: vector of covariance matrices
-- `penfun::Penalty`: penalty function. 
+- `y`: response vector
+- `V`: vector of covariance matrices
+- `penfun`: penalty function. 
             Possible options are NoPenalty() (default), L1Penalty(), MCPPenalty().
-- `penwt::Vector{Float64}`: weight vector
-- `maxiter::Int`: maximum number of iterations. Default is 500. 
-- `tol::Float64`: value below which sigma is considered 0
+- `penwt`: weight vector
+- `maxiter`: maximum number of iterations. Default is 500. 
+- `tol`: value below which sigma is considered 0
 
 # Output
-- `maxλ::Float64`: value of λ where all coeffecients turn zero (i.e. smallest λ with all zero coefficients)
+- `maxλ`: value of λ where all coeffecients turn zero (i.e. smallest λ with all zero coefficients)
 """
 function maxlambda(
-    y       :: Vector{Float64},
-    V       :: Vector{Matrix{Float64}};
+    y       :: Vector{T},
+    V       :: Vector{Matrix{T}};
     penfun  :: Penalty = NoPenalty(),
-    penwt   :: Vector{Float64} = [ones(length(V)-1); 0.0],
+    penwt   :: Vector{T} = [ones(length(V)-1); 0.0],
     maxiter :: Int = 500,
     tol     :: Float64 = 1e-8
-    ) 
+    ) where {T <: Real}
 
     # initialize values 
     n = length(y)

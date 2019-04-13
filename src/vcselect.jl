@@ -195,7 +195,8 @@ end
     vcselectPath(y, X, V; penfun=NoPenalty(), penwt=[ones(length(V)-1); 0.0], 
             nlambda=100, λpath=Float64[], σ2=ones(length(V)), maxiter=1000, tol=1e-6)
 
-Generate solution path of variance components along varying lambda values.
+Project `y` to null space of `X` and generate solution path of variance components 
+along varying lambda values.
 
 # Input  
 - `y::Vector{Float64}`: response vector. 
@@ -231,20 +232,72 @@ function vcselectPath(
     verbose :: Bool = false
     ) where {T <: Float64}
 
-    ## project response vector and covariance matrices 
+    # project response vector and covariance matrices 
     ynew, Vnew = projectToNullSpace(y, X, V)
+
+    # call vcselectPath function 
+    σ2path, objpath, λpath = vcselectPath(ynew, Vnew; penfun=penfun, penwt=penwt, 
+                            nlambda=nlambda, λpath=λpath, σ2=σ2, maxiter=maxiter, tol=tol)
+
+    # output 
+    return σ2path, objpath, λpath 
+
+
+end 
+
+
+
+"""
+    vcselectPath(y, V; penfun=NoPenalty(), penwt=[ones(length(V)-1); 0.0], 
+            nlambda=100, λpath=Float64[], σ2=ones(length(V)), maxiter=1000, tol=1e-6)
+
+Generate solution path of variance components along varying lambda values.
+
+# Input  
+- `y::Vector{Float64}`: response vector. 
+- `X::Matrix{Float64}`: covariate matrix.
+- `V::Vector{Matrix{Float64}}`: vector of covariance matrices; (V1,...,Vm).
+- `penfun::Penalty`: penalty function. Default is NoPenalty().
+- `penwt::Vector{Float64}`: weights for penalty term. Default is (1,1,...1,0).
+- `nlambda::Int`: number of tuning parameter values. Default is 100. 
+- `λpath::Vector{Float64}`: user-supplied grid of tuning parameter values. 
+        If unspeficied, internally generate a grid.
+- `σ2::Vector{Float64}`: initial estimates.
+- `maxiter::Int`: maximum number of iteration for MM loop.
+- `tol::Float64`: tolerance in objective value for MM loop.
+- `verbose::Bool`: display switch. 
+
+# Output 
+- `σ2path`: solution path along varying lambda values. 
+        Each column gives estimated σ2 at specific lambda.
+- `objpath`: objective value path. 
+- `λpath`: tuning parameter path.
+"""
+function vcselectPath(
+    y       :: Vector{T},
+    V       :: Vector{Matrix{T}};
+    penfun  :: Penalty = NoPenalty(),
+    penwt   :: Vector{T} = [ones(length(V)-1); 0.0],
+    nlambda :: Int = 100, 
+    λpath   :: Vector{T} = Float64[],
+    σ2      :: Vector{T} = ones(length(V)),
+    maxiter :: Int = 1000,
+    tol     :: T = 1e-6,
+    verbose :: Bool = false
+    ) where {T <: Float64}
+
 
     ## generate solution path based on penalty 
     if penfun != NoPenalty() 
 
         # create a lambda grid if not specified  
         if isempty(λpath) 
-            maxλ = maxlambda(ynew, Vnew; penfun=penfun, penwt=penwt)
+            maxλ = maxlambda(y, V; penfun=penfun, penwt=penwt)
             λpath = range(0, stop=maxλ, length=nlambda)
         end 
 
         # no. groups 
-        m = length(Vnew)
+        m = length(V) - 1
 
         # initialize solution path 
         σ2path = zeros(m + 1, nlambda)
@@ -253,12 +306,12 @@ function vcselectPath(
         # create solution path 
         for iter in 1:length(λpath)
             λ = λpath[iter]
-            σ2path[:, iter], objpath[iter], = vcselect(ynew, Vnew; penfun=penfun, λ=λ, 
+            σ2path[:, iter], objpath[iter], = vcselect(y, V; penfun=penfun, λ=λ, 
                         penwt=penwt, σ2=σ2, maxiter=maxiter, tol=tol, verbose=verbose)
         end
 
     else # if no penalty, there is no lambda grid 
-        σ2path, objpath, = vcselect(ynew, Vnew; penfun=penfun)
+        σ2path, objpath, = vcselect(y, V; penfun=penfun)
     end 
 
     # output 
