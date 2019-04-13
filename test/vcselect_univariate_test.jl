@@ -32,23 +32,35 @@ end
 Ωchol = cholesky(Ω)
 y = X * β + Ωchol.L * randn(n)
 
-@info "variance component selection with lasso penalty"
-σ2path, objpath, λpath = vcselect(y, X, V; penfun=L1Penalty()) 
-@test σ2path .>= 0 
-
 @info "variance component selection with no penalty"
-temp, = vcselect(y, X, V)
-@test temp .>= 0 
+temp, = vcselectPath(y, X, V)
+@test all(temp .>= 0)
 
-@info "variance component selection with adaptive lasso penalty"
+@info "variance component selection with lasso penalty at λ = 2.0 "
+σ2, obj, = vcselect(y, X, V; penfun=L1Penalty(), λ=2.0)
+@test all(σ2 .>= 0)
+
+@info "variance component selection with adaptive lasso penalty at λ = 2.0"
 penwt = zeros(m + 1)
 penwt[1:m] = 1 ./ sqrt.(temp[1:m])
-σ2path, objpath, λpath = vcselect(y, X, V; penfun=L1Penalty(), penwt=penwt)
-@test σ2path .>= 0  
+σ2, obj, = vcselect(y, X, V; penfun=L1Penalty(), λ=2.0, penwt=penwt)
+@test all(σ2 .>= 0)
 
-@info "variance component selection with MCP penalty"
-σ2path, objpath, λpath = vcselect(y, X, V; penfun=MCPPenalty()) 
-@test σ2path .>= 0 
+@info "variance component selection with MCP penalty at λ = 2.0"
+σ2, obj, = vcselect(y, X, V; penfun=MCPPenalty(), λ=2.0)
+@test all(σ2 .>= 0)
+
+@info "solution path for variance component selection with lasso penalty"
+σ2path, objpath, λpath = vcselectPath(y, X, V; penfun=L1Penalty()) 
+@test all(σ2path .>= 0)
+
+@info "solution path for variance component selection with adaptive lasso penalty"
+σ2path, objpath, λpath = vcselectPath(y, X, V; penfun=L1Penalty(), penwt=penwt)
+@test all(σ2path .>= 0)
+
+@info "solution path for variance component selection with MCP penalty"
+σ2path, objpath, λpath = vcselectPath(y, X, V; penfun=MCPPenalty()) 
+@test all(σ2path .>= 0)
 
 
 
