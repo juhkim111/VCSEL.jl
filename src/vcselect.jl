@@ -135,7 +135,7 @@ function vcselect(
                   # MCP penalty 
                   elseif isa(penfun, MCPPenalty) 
                     if σ2[j] != 0 # check if previous iterate is not zero 
-                        if σ2[j] <= sqrt(penfun.γ * λ)
+                        if σ2[j] <= (penfun.γ * λ)^2
                             σ2[j] = σ2[j] * 
                                 √(const2 / (const1 + (λ / sqrt(σ2[j])) - (1 / penfun.γ)))
                         else 
