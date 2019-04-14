@@ -8,7 +8,7 @@ Project `y` to null space of `X` and transform `V` accordingly.
 - `X`: covariate matrix whose null space `y` is projected to.
 - `V`: vector of covariance matrices to be transformed. 
 - `tol`: if any diagonal entries  `Q` matrix in QR decomposition has its absolute
-    value samller or equal to `tol`, then it is considered 0. That column is considered a
+    value smaller or equal to `tol`, then it is considered 0. That column is considered a
     basis vector of null space of `I-X(X'X)^{-1}X'`. Default is 1e-6. 
 
 # Ouptut 
