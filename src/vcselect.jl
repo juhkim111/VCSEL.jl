@@ -39,7 +39,7 @@ function vcselect(
     verbose :: Bool = false
     ) where {T <: Real}
 
-    ynew, Vnew = projectToNullSpace(y, X, V)
+    ynew, Vnew = projectontonull(y, X, V)
 
     # call vcselect 
     σ2, obj, niters, Ω, Ωinv = vcselect(ynew, Vnew; penfun=penfun, λ=λ, penwt=penwt, σ2=σ2,
@@ -91,6 +91,11 @@ function vcselect(
     verbose :: Bool = false
     ) where {T <: Real} 
 
+    # exception handling 
+    #ArgumentError() # values in penwt should be nonnegative 
+    #ArgumentError() # previous σ2 values should be nonnegative 
+
+
     # initialize algorithm
     n = length(y)       # no. observations
     m = length(V) - 1   # no. variance components
@@ -99,7 +104,7 @@ function vcselect(
         Ω .+= σ2[j] .* V[j]
     end
   
-    Ωchol = cholesky(Hermitian(Ω))
+    Ωchol = cholesky(Symmetric(Ω))
     Ωinv = inv(Ωchol) 
     v = Ωinv * y
     obj = (1//2) * logdet(Ωchol) + (1//2) * dot(y, v) # objective value 
@@ -115,16 +120,28 @@ function vcselect(
         println("obj  = ", obj)
     end
 
+    # pre-allocate memory 
+    w = similar(v)
 
-    # MM loop
+    # MM loop 
     niters = 0
     for iter in 1:maxiter
         # update variance components
         fill!(Ω, 0.0)
         for j in 1:m
+            # move onto the next variance component if previous iterate is 0
+            if iszero(σ2[j]) 
+                continue 
+            # set to 0 and move onto the next variance component if penalty weight is 0
+            elseif iszero(penwt[j]) 
+                σ2[j] = 0.0
+                continue 
+            end 
+
             # compute constants  
             const1 = dot(Ωinv, V[j]) # const1 = tr(Ωinv * V[j])
-            const2 = dot(V[j] * v, v) # const2 = y' * Ωinv * V[j] * Ωinv * y
+            mul!(w, V[j], v)
+            const2 = dot(w, v) # const2 = y' * Ωinv * V[j] * Ωinv * y
 
             # update variance component under specified penalty 
             if !isa(penfun, NoPenalty) && penwt[j] > 0.0
@@ -134,35 +151,41 @@ function vcselect(
               else
                   penstrength = λ * penwt[j]
                   # L1 penalty 
-                  if isa(penfun, L1Penalty) 
-                      if σ2[j] != 0 # check if previous iterate is not zero 
+                  if isa(penfun, L1Penalty)  
                         σ2[j] = σ2[j] * √(const2 / (const1 + penstrength / sqrt(σ2[j])))
-                      end
                   # MCP penalty 
                   elseif isa(penfun, MCPPenalty) 
-                    if σ2[j] != 0 # check if previous iterate is not zero 
-                        if σ2[j] <= (penfun.γ * λ)^2
-                            σ2[j] = σ2[j] * 
-                                √(const2 / (const1 + (λ / sqrt(σ2[j])) - (1 / penfun.γ)))
-                        else 
-                            σ2[j] = σ2[j] * √(const2 / const1)  
-                        end 
+                    if σ2[j] <= (penfun.γ * λ)^2
+                        σ2[j] = σ2[j] * 
+                            √(const2 / (const1 + (λ / sqrt(σ2[j])) - (1 / penfun.γ)))
+                    else 
+                        σ2[j] = σ2[j] * √(const2 / const1)  
                     end 
                   end 
               end
+
             # update variance component under no penalty 
             elseif isa(penfun, NoPenalty)
                 σ2[j] = σ2[j] * √(const2 / const1)
             end
+
+            # move onto the next variance component if estimated variance component is 0
+            if iszero(σ2[j]) 
+                continue 
+            end 
             Ω .+= σ2[j] .* V[j]
         end # end of for loop over j
 
-        # update covariance matrix 
+        # update last variance component  
         σ2[m + 1] = σ2[m + 1] * √(dot(v, v) / tr(Ωinv))
-        Ω[diagind(Ω)] .+= σ2[m + 1]
-        Ωchol = cholesky(Hermitian(Ω))
+        # update diagonal entry of Ω
+        for i in 1:n 
+            Ω[i, i] += σ2[m + 1]
+        end 
+        # update Ωchol, Ωinv, v 
+        Ωchol = cholesky(Symmetric(Ω))
         Ωinv  = inv(Ωchol)
-        v = Ωinv * y
+        mul!(v, Ωinv, y)
 
         # update objective value 
         objold = obj
@@ -242,7 +265,7 @@ function vcselectpath(
     ) where {T <: Real}
 
     # project response vector and covariance matrices 
-    ynew, Vnew = projectToNullSpace(y, X, V)
+    ynew, Vnew = projectontonull(y, X, V)
 
     # call vcselectPath function 
     σ2path, objpath, λpath = vcselectpath(ynew, Vnew; penfun=penfun, penwt=penwt, 
