@@ -7,32 +7,35 @@ call `vcselect(y, V; penfun, λ, penwt, σ2, maxiter, tol, verbose)`
 # Input
 - `y`: response vector
 - `X`: covariate matrix 
-- `V`: vector of covariance matrices
+- `V`: vector of covariance matrices, (V[1],V[2],...,V[m],I)
+        note that V[end] should be identity matrix
+
+# Keyword
 - `penfun`: penalty function, e.g., NoPenalty() (default), L1Penalty(), MCPPenalty(γ = 2.0)
-- `λ`: penalty strength
-- `penwt`: vector of penalty weights
-- `σ2`: initial values
-- `maxiter`: maximum number of iterations
-- `tol`: tolerance in objective value
-- `verbose`: display switch
+- `λ`: penalty strength, default is 1.0
+- `penwt`: vector of penalty weights, default is (1,1,...1,0)
+- `σ2`: initial values, default is (1,1,...,1)
+- `maxiter`: maximum number of iterations, default is 1000
+- `tol`: tolerance in difference of objective values for MM loop, default is 1e-6
+- `verbose`: display switch, default is false 
 
 # Output
-- `σ2`: minimizer
-- `obj`: objevtive value at the minimizer
-- `niter`: number of iterations
-- `Ω`: covariance matrix evaluated at the minimizer
-- `Ωinv`: precision (inverse covariance) matrix evaluated at the minimizer
+- `σ2`: vector of estimated variance components 
+- `obj`: objective value at the estimated variance components 
+- `niter`: number of iterations to convergence
+- `Ω`: covariance matrix evaluated at the estimated variance components
+- `Ωinv`: precision (inverse covariance) matrix evaluated at the estimated variance components
 """
 function vcselect( 
-    y       :: Vector{T},
-    X       :: Matrix{T},
-    V       :: Vector{Matrix{T}};
+    y       :: AbstractVector{T},
+    X       :: AbstractMatrix{T},
+    V       :: AbstractVector{AbstractMatrix{T}};
     penfun  :: Penalty = NoPenalty(),
-    λ       :: T = 1.0,
-    penwt   :: Vector{T} = [ones(length(V)-1); 0.0],
-    σ2      :: Vector{T} = ones(length(V)),
+    λ       :: T = one(T),
+    penwt   :: AbstractVector{T} = [ones(T, length(V)-1); zero(T)],
+    σ2      :: AbstractVector{T} = ones(T, length(V)),
     maxiter :: Int = 1000,
-    tol     :: Float64 = 1e-6,
+    tol     :: AbstractFloat = 1e-6,
     verbose :: Bool = false
     ) where {T <: Real}
 
@@ -52,38 +55,41 @@ Select variance components at specified lambda by minimizing penalized negative
 log-likelihood of variance component model. 
 The objective function to minimize is
   `0.5n*log(2π) + 0.5logdet(Ω) + 0.5y'*inv(Ω)*y + λ * sum(penwt.*penfun(σ))`
-where `Ω = σ2[1]*V[1] + ... + σ2[end]*V[end]`.
+where `Ω = σ2[1]*V[1] + ... + σ2[end]*V[end]` and `V[end] = I`
 Minimization is achieved via majorization-minimization (MM) algorithm. 
 
 # Input
 - `y`: response vector
-- `V`: vector of covariance matrices
+- `V`: vector of covariance matrices, (V[1],V[2],...,V[m],I)
+        note that V[end] should be identity matrix
+
+# Keyword
 - `penfun`: penalty function, e.g., NoPenalty() (default), L1Penalty(), MCPPenalty(γ = 2.0)
-- `λ`: penalty strength
-- `penwt`: vector of penalty weights
-- `σ2`: initial values
-- `maxiter`: maximum number of iterations
-- `tol`: tolerance in objective value
-- `verbose`: display switch
+- `λ`: penalty strength, default is 1.0
+- `penwt`: vector of penalty weights, default is (1,1,...1,0)
+- `σ2`: initial values, default is (1,1,...,1)
+- `maxiter`: maximum number of iterations, default is 1000
+- `tol`: tolerance in difference of objective values for MM loop, default is 1e-6
+- `verbose`: display switch, default is false 
 
 # Output
-- `σ2`: minimizer
-- `obj`: objevtive value at the minimizer
-- `niter`: number of iterations
-- `Ω`: covariance matrix evaluated at the minimizer
-- `Ωinv`: precision (inverse covariance) matrix evaluated at the minimizer
+- `σ2`: vector of estimated variance components 
+- `obj`: objective value at the estimated variance components 
+- `niter`: number of iterations to convergence
+- `Ω`: covariance matrix evaluated at the estimated variance components
+- `Ωinv`: precision (inverse covariance) matrix evaluated at the estimated variance components
 """
 function vcselect( 
-    y       :: Vector{T},
-    V       :: Vector{Matrix{T}};
+    y       :: AbstractVector{T},
+    V       :: AbstractVector{AbstractMatrix{T}};
     penfun  :: Penalty = NoPenalty(),
-    λ       :: T = 1.0,
-    penwt   :: Vector{T} = [ones(length(V)-1); 0.0],
-    σ2      :: Vector{T} = ones(length(V)),
+    λ       :: T = one(T),
+    penwt   :: AbstractVector{T} = [ones(T, length(V)-1); zero(T)],
+    σ2      :: AbstractVector{T} = ones(T, length(V)),
     maxiter :: Int = 1000,
-    tol     :: Float64 = 1e-6,
+    tol     :: AbstractFloat = 1e-6,
     verbose :: Bool = false
-    ) where {T <: Real}
+    ) where {T <: Real} 
 
     # initialize algorithm
     n = length(y)       # no. observations
@@ -192,43 +198,46 @@ end
 
 
 """
-    vcselectPath(y, X, V; penfun=NoPenalty(), penwt=[ones(length(V)-1); 0.0], 
+    vcselectpath(y, X, V; penfun=NoPenalty(), penwt=[ones(length(V)-1); 0.0], 
             nlambda=100, λpath=Float64[], σ2=ones(length(V)), maxiter=1000, tol=1e-6)
 
 Project `y` to null space of `X` and generate solution path of variance components 
 along varying lambda values.
 
 # Input  
-- `y`: response vector. 
-- `X`: covariate matrix.
-- `V`: vector of covariance matrices; (V1,...,Vm).
-- `penfun`: penalty function. Default is NoPenalty().
-- `penwt`: weights for penalty term. Default is (1,1,...1,0).
-- `nlambda`: number of tuning parameter values. Default is 100. 
-- `λpath`: user-supplied grid of tuning parameter values. 
+- `y`: response vector
+- `X`: covariate matrix 
+- `V`: vector of covariance matrices, (V[1],V[2],...,V[m],I)
+    note that V[end] should be identity matrix
+
+# Keyword 
+- `penfun`: penalty function, default is NoPenalty()
+- `penwt`: weights for penalty term, default is (1,1,...1,0)
+- `nlambda`: number of tuning parameter values, default is 100. 
+- `λpath`: user-supplied grid of tuning parameter values
         If unspeficied, internally generate a grid.
 - `σ2`: initial estimates.
 - `maxiter`: maximum number of iteration for MM loop.
-- `tol`: tolerance in objective value for MM loop.
-- `verbose`: display switch. 
+- `tol`: tolerance in difference of objective values for MM loop, default is 1e-6
+- `verbose`: display switch, default is false 
 
 # Output 
-- `σ2path`: solution path along varying lambda values. 
-        Each column gives estimated σ2 at specific lambda.
-- `objpath`: objective value path. 
-- `λpath`: tuning parameter path.
+- `σ2path`: matrix of estimated variance components at each tuning parameter `λ`,
+        each column gives vector of estimated variance components `σ2` at certain `λ`
+- `objpath`: vector of objective values at each tuning parameter `λ`
+- `λpath`: vector of tuning parameter values used 
 """
-function vcselectPath(
-    y       :: Vector{T},
-    X       :: Matrix{T},
-    V       :: Vector{Matrix{T}};
+function vcselectpath(
+    y       :: AbstractVector{T},
+    X       :: AbstractMatrix{T},
+    V       :: AbstractVector{AbstractMatrix{T}};
     penfun  :: Penalty = NoPenalty(),
-    penwt   :: Vector{T} = [ones(length(V)-1); 0.0],
+    penwt   :: AbstractVector{T} = [ones(length(V)-1, T); zero(T)],
     nlambda :: Int = 100, 
-    λpath   :: Vector{T} = Float64[],
-    σ2      :: Vector{T} = ones(length(V)),
+    λpath   :: AbstractVector{T} = zeros(T, nlambda),
+    σ2      :: AbstractVector{T} = ones(length(V), T),
     maxiter :: Int = 1000,
-    tol     :: Float64 = 1e-6,
+    tol     :: AbstractFloat = 1e-6,
     verbose :: Bool = false
     ) where {T <: Real}
 
@@ -236,7 +245,7 @@ function vcselectPath(
     ynew, Vnew = projectToNullSpace(y, X, V)
 
     # call vcselectPath function 
-    σ2path, objpath, λpath = vcselectPath(ynew, Vnew; penfun=penfun, penwt=penwt, 
+    σ2path, objpath, λpath = vcselectpath(ynew, Vnew; penfun=penfun, penwt=penwt, 
                             nlambda=nlambda, λpath=λpath, σ2=σ2, maxiter=maxiter, tol=tol)
 
     # output 
@@ -248,41 +257,44 @@ end
 
 
 """
-    vcselectPath(y, V; penfun=NoPenalty(), penwt=[ones(length(V)-1); 0.0], 
+    vcselectpath(y, V; penfun=NoPenalty(), penwt=[ones(length(V)-1); 0.0], 
             nlambda=100, λpath=Float64[], σ2=ones(length(V)), maxiter=1000, tol=1e-6)
 
 Generate solution path of variance components along varying lambda values.
 
-# Input  
-- `y`: response vector. 
-- `X`: covariate matrix.
-- `V`: vector of covariance matrices; (V1,...,Vm).
-- `penfun`: penalty function. Default is NoPenalty().
-- `penwt`: weights for penalty term. Default is (1,1,...1,0).
-- `nlambda`: number of tuning parameter values. Default is 100. 
-- `λpath`: user-supplied grid of tuning parameter values. 
+# Input
+- `y`: response vector
+- `X`: covariate matrix 
+- `V`: vector of covariance matrices, (V[1],V[2],...,V[m],I)
+        note that V[end] should be identity matrix
+
+# Keyword 
+- `penfun`: penalty function, default is NoPenalty()
+- `penwt`: weights for penalty term, default is (1,1,...1,0).
+- `nlambda`: number of tuning parameter values, default is 100. 
+- `λpath`: user-supplied grid of tuning parameter values
         If unspeficied, internally generate a grid.
 - `σ2`: initial estimates.
 - `maxiter`: maximum number of iteration for MM loop.
-- `tol`: tolerance in objective value for MM loop.
-- `verbose`: display switch. 
+- `tol`: tolerance in difference of objective values for MM loop, default is 1e-6
+- `verbose`: display switch, default is false 
 
 # Output 
-- `σ2path`: solution path along varying lambda values. 
-        Each column gives estimated σ2 at specific lambda.
-- `objpath`: objective value path. 
-- `λpath`: tuning parameter path.
+- `σ2path`: matrix of estimated variance components at each tuning parameter `λ`,
+        each column gives vector of estimated variance components `σ2` at certain `λ`
+- `objpath`: vector of objective values at each tuning parameter `λ`
+- `λpath`: vector of tuning parameter values used 
 """
-function vcselectPath(
-    y       :: Vector{T},
-    V       :: Vector{Matrix{T}};
+function vcselectpath(
+    y       :: AbstractVector{T},
+    V       :: AbstractVector{AbstractMatrix{T}};
     penfun  :: Penalty = NoPenalty(),
-    penwt   :: Vector{T} = [ones(length(V)-1); 0.0],
+    penwt   :: AbstractVector{T} = [ones(length(V)-1, T); zero(T)],
     nlambda :: Int = 100, 
-    λpath   :: Vector{T} = T[],
-    σ2      :: Vector{T} = ones(length(V)),
+    λpath   :: AbstractVector{T} = zeros(T, nlambda),
+    σ2      :: AbstractVector{T} = ones(length(V), T),
     maxiter :: Int = 1000,
-    tol     :: Float64 = 1e-6,
+    tol     :: AbstractFloat = 1e-6,
     verbose :: Bool = false
     ) where {T <: Real}
 
