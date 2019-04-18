@@ -6,12 +6,13 @@ Project `y` to null space of `transpose(X)` and transform `V` accordingly.
 # Input 
 - `y`: response vector to be transformed. 
 - `X`: covariate matrix, response `y` is projected onto the null space of transpose(X) 
-- `V`: vector of covariance matrices to be transformed, (V[1],V[2],...,V[m],I)
+- `V`: vector of covariance matrices to be transformed, `(V[1],V[2],...,V[m],I)`
     note that V[end] should be identity matrix
 
 # Ouptut 
 - `ynew`: projected response vector
-- `Vnew`: projected vector of covariance matrices
+- `Vnew`: projected vector of covariance matrices, 
+    frobenius norm of `V[i]` equals to 1 for all `i`
 - `B`: matrix whose columns are basis vectors of the null space of transpose(X) 
 
 """
@@ -29,14 +30,21 @@ function projectontonull(
     # projected response vector 
     ynew = B' * y 
 
+    # dimension of null space 
+    s = size(B, 2) 
+
+    # no. of variance components subject to selection 
+    m = length(V) - 1
+
     # transformed covariance matrices 
     Vnew = similar(V)
-    for i in 1:(length(V) - 1) 
-        mul!(Vnew[i], B' * V[i], B)
-        # make sure frobenius norm equals to 1
+    Vnew[end] = Matrix{eltype(B)}(I, s, s) ./ √s
+    for i in 1:m
+        Vnew[i] = BLAS.gemm('T', 'N', B, V[i] * B)
+        # divide by its frobenius norm  
         Vnew[i] ./= norm(Vnew[i])
     end 
-    
+
     # output 
     return ynew, Vnew, B 
 
