@@ -127,14 +127,14 @@ function vcselect(
     niters = 0
     for iter in 1:maxiter
         # update variance components
-        fill!(Ω, 0.0)
+        fill!(Ω, 0)
         for j in 1:m
             # move onto the next variance component if previous iterate is 0
             if iszero(σ2[j]) 
                 continue 
             # set to 0 and move onto the next variance component if penalty weight is 0
             elseif iszero(penwt[j]) 
-                σ2[j] = 0.0
+                σ2[j] = zero(T)
                 continue 
             end 
 
@@ -144,10 +144,10 @@ function vcselect(
             const2 = dot(w, v) # const2 = y' * Ωinv * V[j] * Ωinv * y
 
             # update variance component under specified penalty 
-            if !isa(penfun, NoPenalty) && penwt[j] > 0.0
+            if !isa(penfun, NoPenalty) && penwt[j] > 0
               # set variance component to zero if weight = Inf 
-              if penwt[j] == Inf
-                  σ2[j] = 0.0
+              if isinf(penwt[j])
+                  σ2[j] = zero(T)
               else
                   penstrength = λ * penwt[j]
                   # L1 penalty 
@@ -257,7 +257,7 @@ function vcselectpath(
     penfun  :: Penalty = NoPenalty(),
     penwt   :: AbstractVector{T} = [ones(length(V)-1, T); zero(T)],
     nlambda :: Int = 100, 
-    λpath   :: AbstractVector{T} = zeros(T, nlambda),
+    λpath   :: AbstractVector{T} = ones(T, nlambda),
     σ2      :: AbstractVector{T} = ones(length(V), T),
     maxiter :: Int = 1000,
     tol     :: AbstractFloat = 1e-6,
@@ -314,7 +314,7 @@ function vcselectpath(
     penfun  :: Penalty = NoPenalty(),
     penwt   :: AbstractVector{T} = [ones(length(V)-1, T); zero(T)],
     nlambda :: Int = 100, 
-    λpath   :: AbstractVector{T} = zeros(T, nlambda),
+    λpath   :: AbstractVector{T} = ones(T, nlambda),
     σ2      :: AbstractVector{T} = ones(length(V), T),
     maxiter :: Int = 1000,
     tol     :: AbstractFloat = 1e-6,
@@ -335,8 +335,8 @@ function vcselectpath(
         m = length(V) - 1
 
         # initialize solution path 
-        σ2path = zeros(m + 1, nlambda)
-        objpath = zeros(nlambda)
+        σ2path = zeros(T, m + 1, nlambda)
+        objpath = zeros(T, nlambda)
 
         # create solution path 
         for iter in 1:length(λpath)
