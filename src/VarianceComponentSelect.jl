@@ -5,7 +5,7 @@ using LinearAlgebra
 using StatsBase
 using Distributions 
 
-export vcselect, vcselectPath, maxlambda, projectToNullSpace
+export vcselect, vcselectpath, maxlambda, projectontonull
 
 include("vcselect.jl")
 include("maxlambda.jl")
