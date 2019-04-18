@@ -1,52 +1,43 @@
 """
-    projectToNullSpace(y, X, V; tol=1e-6)
+    projectontonull(y, X, V)
 
-Project `y` to null space of `X` and transform `V` accordingly.
+Project `y` to null space of `transpose(X)` and transform `V` accordingly.
 
 # Input 
 - `y`: response vector to be transformed. 
-- `X`: covariate matrix whose null space `y` is projected to.
-- `V`: vector of covariance matrices to be transformed. 
-- `tol`: if any diagonal entries  `Q` matrix in QR decomposition has its absolute
-    value smaller or equal to `tol`, then it is considered 0. That column is considered a
-    basis vector of null space of `I-X(X'X)^{-1}X'`. Default is 1e-6. 
+- `X`: covariate matrix, response `y` is projected onto the null space of transpose(X) 
+- `V`: vector of covariance matrices to be transformed, (V[1],V[2],...,V[m],I)
+    note that V[end] should be identity matrix
 
 # Ouptut 
-- `ynew`: projected response vector.
-- `Vnew`: projected vector of covariance matrices. 
+- `ynew`: projected response vector
+- `Vnew`: projected vector of covariance matrices
+- `B`: matrix whose columns are basis vectors of the null space of transpose(X) 
 
 """
-function projectToNullSpace(
-    y    :: Vector{T},
-    X    :: Matrix{T},
-    V    :: Vector{Matrix{T}};
-    tol  :: Float64 = 1e-6
+function projectontonull(
+    y    :: AbstractVector{T},
+    X    :: AbstractMatrix{T},
+    V    :: AbstractVector{AbstractMatrix{T}}
     ) where {T <: Real}
 
-    # number of groups 
-    m = length(V) - 1
+    # basis of nullspace of transpose(X), `N(X')`
+    Xt = similar(X')
+    transpose!(Xt, X)
+    B = nullspace(Xt)
 
-    ## REML: find B s.t. columns of B span the null space of X' and B'B = I
-    # pivoted QR factorization of I-X(X'X)^{-1}X'
-    QRfact = qr(I - X * inv(cholesky(X' * X)) * X', Val(true))
-    # extract orthonormal basis of C(I-P)
-    B = QRfact.Q[:, abs.(diag(QRfact.R)) .> tol] 
-    # REML transformed response vector 
-    ynew = B' * y
-    # REML transformed covariance matrices 
-    Vnew  = Array{Matrix{T}}(undef, m + 1)
-    for i in 1:(m + 1)
-        Vnew[i] = B' * V[i] * B  
-    end  
+    # projected response vector 
+    ynew = B' * y 
 
-    # make sure frobenius norm of Vi equals to 1 
-    for i in 1:(m + 1)
-        if norm(Vnew[i]) != 1
-            Vnew[i] ./= norm(Vnew[i])
-        end 
+    # transformed covariance matrices 
+    Vnew = similar(V)
+    for i in 1:(length(V) - 1) 
+        mul!(Vnew[i], B' * V[i], B)
+        # make sure frobenius norm equals to 1
+        Vnew[i] ./= norm(Vnew[i])
     end 
     
     # output 
-    return ynew, Vnew 
+    return ynew, Vnew, B 
 
 end 
