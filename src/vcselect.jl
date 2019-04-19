@@ -21,6 +21,7 @@ call `vcselect(y, V; penfun, λ, penwt, σ2, maxiter, tol, verbose)`
 
 # Output
 - `σ2`: vector of estimated variance components 
+- `beta`: estimated fixed effects parameter, using REML estimates
 - `obj`: objective value at the estimated variance components 
 - `niter`: number of iterations to convergence
 - `Ω`: covariance matrix evaluated at the estimated variance components
@@ -42,8 +43,27 @@ function vcselect(
     ynew, Vnew = projectontonull(y, X, V)
 
     # call vcselect 
-    σ2, obj, niters, Ω, Ωinv = vcselect(ynew, Vnew; penfun=penfun, λ=λ, penwt=penwt, σ2=σ2,
+    σ2, obj, niters, Ωtmp, Ωinvtmp = vcselect(ynew, Vnew; penfun=penfun, λ=λ, penwt=penwt, σ2=σ2,
                                         maxiter=maxiter, tol=tol, verbose=verbose)
+
+    # update Ω with estimated variance components 
+    Ω = zeros(T, size(V[1]))
+    for i in eachindex(σ2)
+        if iszero(σ2[i])
+            continue 
+        else 
+            axpy!(σ2[i], V[i], Ω) # Ω .+= σ2[i] * V[i]
+        end 
+    end 
+
+    # inverse using cholesky 
+    Ωchol = cholesky(Ω)
+    Ωinv = inv(Ωchol)
+
+    # estimate fixed effects: pinv(X'*Ωinv*X)(X'*Ωinv*y)
+    beta = zeros(T, size(X, 2))
+    lmul!(X', Ωinv) # overwiting Ωinv with X'*Ωinv
+    ldiv!(beta, pinv(Ωinv * X), Ωinv * y)
 
     return σ2, obj, niters, Ω, Ωinv;
 end
@@ -112,7 +132,7 @@ function vcselect(
     for j in 1:m
         pen += penwt[j] * value(penfun, √σ2[j])
     end
-    loglConst = (1//2) * n * log(2π)
+    loglConst = (1//2) * n * log(2π) # (has to be n-r; refer to Searle, Casella)
     obj += loglConst + λ * pen
     if verbose
         println("iter = 0")
@@ -268,11 +288,12 @@ function vcselectpath(
     ynew, Vnew = projectontonull(y, X, V)
 
     # call vcselectPath function 
-    σ2path, objpath, λpath = vcselectpath(ynew, Vnew; penfun=penfun, penwt=penwt, 
+    σ2path, betapath, objpath, λpath = vcselectpath(ynew, Vnew; penfun=penfun, penwt=penwt, 
                             nlambda=nlambda, λpath=λpath, σ2=σ2, maxiter=maxiter, tol=tol)
 
+
     # output 
-    return σ2path, objpath, λpath 
+    return σ2path, betapath, objpath, λpath,  
 
 
 end 
@@ -337,6 +358,7 @@ function vcselectpath(
         # initialize solution path 
         σ2path = zeros(T, m + 1, nlambda)
         objpath = zeros(T, nlambda)
+        #betapath = zeros(T, , )
 
         # create solution path 
         for iter in 1:length(λpath)
