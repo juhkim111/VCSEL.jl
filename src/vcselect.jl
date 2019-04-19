@@ -65,7 +65,7 @@ function vcselect(
     lmul!(X', Ωinv) # overwiting Ωinv with X'*Ωinv
     ldiv!(beta, pinv(Ωinv * X), Ωinv * y)
 
-    return σ2, obj, niters, Ω, Ωinv;
+    return σ2, beta, obj, niters, Ω, Ωinv;
 end
 
 """
@@ -277,23 +277,44 @@ function vcselectpath(
     penfun  :: Penalty = NoPenalty(),
     penwt   :: AbstractVector{T} = [ones(length(V)-1, T); zero(T)],
     nlambda :: Int = 100, 
-    λpath   :: AbstractVector{T} = ones(T, nlambda),
+    λpath   :: AbstractVector{T} = T[],
     σ2      :: AbstractVector{T} = ones(length(V), T),
     maxiter :: Int = 1000,
     tol     :: AbstractFloat = 1e-6,
     verbose :: Bool = false
     ) where {T <: Real}
 
-    # project response vector and covariance matrices 
-    ynew, Vnew = projectontonull(y, X, V)
+    if !isempty(λpath) 
+        nlambda = length(λpath)
+    end
+    
+    ## generate solution path based on penalty 
+    if penfun != NoPenalty() 
 
-    # call vcselectPath function 
-    σ2path, betapath, objpath, λpath = vcselectpath(ynew, Vnew; penfun=penfun, penwt=penwt, 
-                            nlambda=nlambda, λpath=λpath, σ2=σ2, maxiter=maxiter, tol=tol)
+        # create a lambda grid if not specified  
+        if isempty(λpath) 
+            maxλ = maxlambda(y, V; penfun=penfun, penwt=penwt)
+            λpath = range(0, stop=maxλ, length=nlambda)
+        end 
 
+        # initialize solution path 
+        σ2path = zeros(T, length(V), nlambda)
+        objpath = zeros(T, nlambda)
+        betapath = zeros(T, size(X, 2), nlambda)
+
+        # create solution path 
+        for iter in 1:length(λpath)
+            λ = λpath[iter]
+            σ2path[:, iter], betapath[:, iter], objpath[iter], = vcselect(y, X, V; 
+                penfun=penfun, λ=λ, penwt=penwt, σ2=σ2, maxiter=maxiter, tol=tol, verbose=verbose)
+        end
+
+    else # if no penalty, there is no lambda grid 
+        σ2path, betapath, objpath, = vcselect(y, X, V; penfun=penfun)
+    end 
 
     # output 
-    return σ2path, betapath, objpath, λpath,  
+    return σ2path, betapath, objpath, λpath
 
 
 end 
@@ -308,7 +329,6 @@ Generate solution path of variance components along varying lambda values.
 
 # Input
 - `y`: response vector
-- `X`: covariate matrix 
 - `V`: vector of covariance matrices, (V[1],V[2],...,V[m],I)
         note that V[end] should be identity matrix
 
@@ -358,7 +378,6 @@ function vcselectpath(
         # initialize solution path 
         σ2path = zeros(T, m + 1, nlambda)
         objpath = zeros(T, nlambda)
-        #betapath = zeros(T, , )
 
         # create solution path 
         for iter in 1:length(λpath)
