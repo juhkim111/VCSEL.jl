@@ -33,6 +33,7 @@ end
 y = X * β + Ωchol.L * randn(n)
 
 ynew, Vnew, B = projectontonull(y, X, V)
+@test B'B ≈ I 
 @test all(B'*X .≈ 0)
 for i in 1:(m + 1)
     @test norm(Vnew[i]) ≈ 1
