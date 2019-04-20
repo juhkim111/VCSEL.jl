@@ -11,7 +11,9 @@ call `vcselect(y, V; penfun, λ, penwt, σ2, maxiter, tol, verbose)`
         note that V[end] should be identity matrix
 
 # Keyword
-- `penfun`: penalty function, e.g., NoPenalty() (default), L1Penalty(), MCPPenalty(γ = 2.0)
+- `penfun`: penalty function, e.g., NoPenalty() (default), L1Penalty(), MCPPenalty()
+        γ for MCPPenalty() is 2.0 by default,
+        if different γ (say 3.0) is desired, simply do MCPPenalty(3.0)
 - `λ`: penalty strength, default is 1.0
 - `penwt`: vector of penalty weights, default is (1,1,...1,0)
 - `σ2`: initial values, default is (1,1,...,1)
@@ -43,8 +45,8 @@ function vcselect(
     ynew, Vnew = projectontonull(y, X, V)
 
     # call vcselect 
-    σ2, obj, niters, Ωtmp, Ωinvtmp = vcselect(ynew, Vnew; penfun=penfun, λ=λ, penwt=penwt, σ2=σ2,
-                                        maxiter=maxiter, tol=tol, verbose=verbose)
+    σ2, obj, niters, Ωtmp, Ωinvtmp = vcselect(ynew, Vnew; penfun=penfun, λ=λ, penwt=penwt, 
+                            σ2=σ2, maxiter=maxiter, tol=tol, verbose=verbose)
 
     # update Ω with estimated variance components 
     Ω = zeros(T, size(V[1]))
@@ -62,7 +64,7 @@ function vcselect(
 
     # estimate fixed effects: pinv(X'*Ωinv*X)(X'*Ωinv*y)
     beta = zeros(T, size(X, 2))
-    lmul!(X', Ωinv) # overwiting Ωinv with X'*Ωinv
+    lmul!(X', Ωinv) # overwriting Ωinv with X'*Ωinv
     ldiv!(beta, pinv(Ωinv * X), Ωinv * y)
 
     return σ2, beta, obj, niters, Ω, Ωinv;
