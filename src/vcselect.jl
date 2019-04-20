@@ -32,7 +32,7 @@ call `vcselect(y, V; penfun, λ, penwt, σ2, maxiter, tol, verbose)`
 function vcselect( 
     y       :: AbstractVector{T},
     X       :: AbstractMatrix{T},
-    V       :: AbstractVector{AbstractMatrix{T}};
+    V       :: AbstractVector{Matrix{T}};
     penfun  :: Penalty = NoPenalty(),
     λ       :: T = one(T),
     penwt   :: AbstractVector{T} = [ones(T, length(V)-1); zero(T)],
@@ -103,7 +103,7 @@ Minimization is achieved via majorization-minimization (MM) algorithm.
 """
 function vcselect( 
     y       :: AbstractVector{T},
-    V       :: AbstractVector{AbstractMatrix{T}};
+    V       :: AbstractVector{Matrix{T}};
     penfun  :: Penalty = NoPenalty(),
     λ       :: T = one(T),
     penwt   :: AbstractVector{T} = [ones(T, length(V)-1); zero(T)],
@@ -275,7 +275,7 @@ along varying lambda values.
 function vcselectpath(
     y       :: AbstractVector{T},
     X       :: AbstractMatrix{T},
-    V       :: AbstractVector{AbstractMatrix{T}};
+    V       :: AbstractVector{Matrix{T}};
     penfun  :: Penalty = NoPenalty(),
     penwt   :: AbstractVector{T} = [ones(length(V)-1, T); zero(T)],
     nlambda :: Int = 100, 
@@ -353,7 +353,7 @@ Generate solution path of variance components along varying lambda values.
 """
 function vcselectpath(
     y       :: AbstractVector{T},
-    V       :: AbstractVector{AbstractMatrix{T}};
+    V       :: AbstractVector{Matrix{T}};
     penfun  :: Penalty = NoPenalty(),
     penwt   :: AbstractVector{T} = [ones(length(V)-1, T); zero(T)],
     nlambda :: Int = 100, 
