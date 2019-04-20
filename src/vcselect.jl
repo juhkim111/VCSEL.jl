@@ -277,10 +277,10 @@ function vcselectpath(
     X       :: AbstractMatrix{T},
     V       :: AbstractVector{Matrix{T}};
     penfun  :: Penalty = NoPenalty(),
-    penwt   :: AbstractVector{T} = [ones(length(V)-1, T); zero(T)],
+    penwt   :: AbstractVector{T} = [ones(T, length(V)-1); zero(T)],
     nlambda :: Int = 100, 
     λpath   :: AbstractVector{T} = T[],
-    σ2      :: AbstractVector{T} = ones(length(V), T),
+    σ2      :: AbstractVector{T} = ones(T,length(V)),
     maxiter :: Int = 1000,
     tol     :: AbstractFloat = 1e-6,
     verbose :: Bool = false
@@ -355,10 +355,10 @@ function vcselectpath(
     y       :: AbstractVector{T},
     V       :: AbstractVector{Matrix{T}};
     penfun  :: Penalty = NoPenalty(),
-    penwt   :: AbstractVector{T} = [ones(length(V)-1, T); zero(T)],
+    penwt   :: AbstractVector{T} = [ones(T, length(V)-1); zero(T)],
     nlambda :: Int = 100, 
     λpath   :: AbstractVector{T} = ones(T, nlambda),
-    σ2      :: AbstractVector{T} = ones(length(V), T),
+    σ2      :: AbstractVector{T} = ones(T, length(V)),
     maxiter :: Int = 1000,
     tol     :: AbstractFloat = 1e-6,
     verbose :: Bool = false
