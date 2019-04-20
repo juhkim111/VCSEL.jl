@@ -19,7 +19,7 @@ Project `y` to null space of `transpose(X)` and transform `V` accordingly.
 function projectontonull(
     y    :: AbstractVector{T},
     X    :: AbstractMatrix{T},
-    V    :: AbstractVector{AbstractMatrix{T}}
+    V    :: AbstractVector{Matrix{T}}
     ) where {T <: Real}
 
     # basis of nullspace of transpose(X), `N(X')`
@@ -49,3 +49,4 @@ function projectontonull(
     return ynew, Vnew, B 
 
 end 
+

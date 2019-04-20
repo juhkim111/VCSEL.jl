@@ -21,7 +21,7 @@ Find the value of λ where all σ turns 0. At any value greater than λ, all σ'
 """
 function maxlambda(
     y       :: AbstractVector{T},
-    V       :: AbstractVector{AbstractMatrix{T}};
+    V       :: AbstractVector{Matrix{T}};
     penfun  :: Penalty = NoPenalty(),
     penwt   :: AbstractVector{T} = [ones(T, length(V)-1); zero(T)],
     maxiter :: Int = 500,
