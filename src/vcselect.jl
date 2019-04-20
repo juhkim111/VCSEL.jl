@@ -64,8 +64,8 @@ function vcselect(
 
     # estimate fixed effects: pinv(X'*Ωinv*X)(X'*Ωinv*y)
     beta = zeros(T, size(X, 2))
-    lmul!(X', Ωinv) # overwriting Ωinv with X'*Ωinv
-    ldiv!(beta, pinv(Ωinv * X), Ωinv * y)
+    Ωinv = BLAS.gemm('T', 'N', X, Ωinv) # overwriting Ωinv with X'*Ωinv
+    beta = pinv(Ωinv * X) \ Ωinv * y
 
     return σ2, beta, obj, niters, Ω, Ωinv;
 end
