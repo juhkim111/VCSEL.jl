@@ -32,9 +32,9 @@ end
 Ωchol = cholesky(Ω)
 y = X * β + Ωchol.L * randn(n)
 
-ynew, Vnew, B = projectontonull(y, X, V)
+ynew, Vnew, B = nullprojection(y, X, V)
 @test B'B ≈ I 
-@test all(B'*X .≈ 0)
+@test isapprox(maximum(abs.(B'*X)), 0; atol=1e-8) #all(B'*X .≈ 0)
 for i in 1:(m + 1)
     @test norm(Vnew[i]) ≈ 1
 end 
