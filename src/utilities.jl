@@ -1,5 +1,5 @@
 """
-    projectontonull(y, X, V)
+    nullprojection(y, X, V)
 
 Project `y` to null space of `transpose(X)` and transform `V` accordingly.
 
@@ -16,7 +16,7 @@ Project `y` to null space of `transpose(X)` and transform `V` accordingly.
 - `B`: matrix whose columns are basis vectors of the null space of transpose(X) 
 
 """
-function projectontonull(
+function nullprojection(
     y    :: AbstractVector{T},
     X    :: AbstractMatrix{T},
     V    :: AbstractVector{Matrix{T}}
@@ -37,10 +37,13 @@ function projectontonull(
     m = length(V) - 1
 
     # transformed covariance matrices 
-    Vnew = similar(V)
+    Vnew = Vector{Matrix{Float64}}(undef, m + 1)
+    #Vnew = similar(V)
     Vnew[end] = Matrix{eltype(B)}(I, s, s) ./ √s
+    tmp = zeros(size(X, 1), s)
     for i in 1:m
-        Vnew[i] = BLAS.gemm('T', 'N', B, V[i] * B)
+        mul!(tmp, V[i], B)
+        Vnew[i] = BLAS.gemm('T', 'N', B, tmp)
         # divide by its frobenius norm  
         Vnew[i] ./= norm(Vnew[i])
     end 
