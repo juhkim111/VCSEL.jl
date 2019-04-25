@@ -36,6 +36,10 @@ y = X * β + Ωchol.L * randn(n)
 temp, = vcselectpath(y, X, V)
 @test all(temp .>= 0)
 
+@info "variance component selection with no penalty"
+temp, = vcselectpath(y, V)
+@test all(temp .>= 0)
+
 @info "variance component selection with lasso penalty at λ = 2.0 "
 σ2, obj, = vcselect(y, X, V; penfun=L1Penalty(), λ=2.0)
 @test all(σ2 .>= 0)
