@@ -59,7 +59,7 @@ function vcselect(
     end 
 
     # inverse using cholesky 
-    Ωchol = cholesky(Ω)
+    Ωchol = cholesky(Symmetric(Ω))
 
     # estimate fixed effects: pinv(X'*Ωinv*X)(X'*Ωinv*y)
     XtΩinvX = BLAS.gemm('T', 'N', X, Ωchol \ X)
@@ -67,7 +67,7 @@ function vcselect(
 
     beta = pinv(XtΩinvX) * beta
 
-    return σ2, beta, obj, niters; #, Ω;
+    return σ2, beta, obj, niters, Ω;
 end
 
 """
