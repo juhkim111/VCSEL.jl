@@ -25,7 +25,7 @@ call `vcselect(y, V; penfun, λ, penwt, σ2, maxiter, tol, verbose)`
 - `σ2`: vector of estimated variance components 
 - `beta`: estimated fixed effects parameter, using REML estimates
 - `obj`: objective value at the estimated variance components 
-- `niter`: number of iterations to convergence
+- `niters`: number of iterations to convergence
 - `Ω`: covariance matrix evaluated at the estimated variance components
 - `Ωinv`: precision (inverse covariance) matrix evaluated at the estimated variance components
 """
@@ -97,7 +97,7 @@ Minimization is achieved via majorization-minimization (MM) algorithm.
 # Output
 - `σ2`: vector of estimated variance components 
 - `obj`: objective value at the estimated variance components 
-- `niter`: number of iterations to convergence
+- `niters`: number of iterations to convergence
 - `Ω`: covariance matrix evaluated at the estimated variance components
 - `Ωinv`: precision (inverse covariance) matrix evaluated at the estimated variance components
 """
@@ -287,37 +287,41 @@ function vcselectpath(
     verbose :: Bool = false
     ) where {T <: Real}
 
-    if !isempty(λpath) 
-        nlambda = length(λpath)
-    end
     
     ## generate solution path based on penalty 
     if penfun != NoPenalty() 
 
         # create a lambda grid if not specified  
         if isempty(λpath) 
-            maxλ = maxlambda(y, V; penfun=penfun, penwt=penwt)
+            ynew, Vnew = nullprojection(y, X, V)
+            maxλ = maxlambda(ynew, Vnew; penfun=penfun, penwt=penwt)
             λpath = range(0, stop=maxλ, length=nlambda)
+        else # if lambda grid specified, make sure nlambda matches 
+            nlambda = length(λpath)
         end 
 
+        # no. groups 
+        m = length(V) - 1
+
         # initialize solution path 
-        σ2path = zeros(T, length(V), nlambda)
+        σ2path = zeros(T, m + 1, nlambda)
         objpath = zeros(T, nlambda)
-        betapath = zeros(T, size(X, 2), nlambda)
+        niterspath = zeros(Int, nlambda)
 
         # create solution path 
         for iter in 1:length(λpath)
             λ = λpath[iter]
-            σ2path[:, iter], betapath[:, iter], objpath[iter], = vcselect(y, X, V; 
-                penfun=penfun, λ=λ, penwt=penwt, σ2=σ2, maxiter=maxiter, tol=tol, verbose=verbose)
+            σ2path[:, iter], betapath[:, iter], objpath[iter], niterspath[iter], = 
+                vcselect(y, X, V; penfun=penfun, λ=λ, penwt=penwt, σ2=σ2, maxiter=maxiter, 
+                tol=tol, verbose=verbose)
         end
 
     else # if no penalty, there is no lambda grid 
-        σ2path, betapath, objpath, = vcselect(y, X, V; penfun=penfun)
+        σ2path, betapath, objpath, niterspath, = vcselect(y, X, V; penfun=penfun)
     end 
 
     # output 
-    return σ2path, betapath, objpath, λpath
+    return σ2path, betapath, objpath, λpath, niterspath 
 
 
 end 
@@ -351,6 +355,7 @@ Generate solution path of variance components along varying lambda values.
         each column gives vector of estimated variance components `σ2` at certain `λ`
 - `objpath`: vector of objective values at each tuning parameter `λ`
 - `λpath`: vector of tuning parameter values used 
+- `niterspath`: vector of no. of iterations to convergence 
 """
 function vcselectpath(
     y       :: AbstractVector{T},
@@ -373,6 +378,8 @@ function vcselectpath(
         if isempty(λpath) 
             maxλ = maxlambda(y, V; penfun=penfun, penwt=penwt)
             λpath = range(0, stop=maxλ, length=nlambda)
+        else # if lambda grid specified, make sure nlambda matches 
+            nlambda = length(λpath)
         end 
 
         # no. groups 
@@ -381,20 +388,22 @@ function vcselectpath(
         # initialize solution path 
         σ2path = zeros(T, m + 1, nlambda)
         objpath = zeros(T, nlambda)
+        niterspath = zeros(Int, nlambda)
 
         # create solution path 
-        for iter in 1:length(λpath)
+        for iter in 1:nlambda
             λ = λpath[iter]
-            σ2path[:, iter], objpath[iter], = vcselect(y, V; penfun=penfun, λ=λ, 
-                        penwt=penwt, σ2=σ2, maxiter=maxiter, tol=tol, verbose=verbose)
+            σ2path[:, iter], objpath[iter], niterspath[iter] = vcselect(y, V; 
+                    penfun=penfun, λ=λ, penwt=penwt, σ2=σ2, maxiter=maxiter, 
+                    tol=tol, verbose=verbose)
         end
 
     else # if no penalty, there is no lambda grid 
-        σ2path, objpath, = vcselect(y, V; penfun=penfun)
+        σ2path, objpath, niterspath, = vcselect(y, V; penfun=penfun)
     end 
 
     # output 
-    return σ2path, objpath, λpath 
+    return σ2path, objpath, λpath, niterspath
 
 
 end 
