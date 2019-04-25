@@ -42,10 +42,10 @@ function vcselect(
     verbose :: Bool = false
     ) where {T <: Real}
 
-    ynew, Vnew = projectontonull(y, X, V)
+    ynew, Vnew = nullprojection(y, X, V)
 
     # call vcselect 
-    σ2, obj, niters, Ωtmp, Ωinvtmp = vcselect(ynew, Vnew; penfun=penfun, λ=λ, penwt=penwt, 
+    σ2, obj, niters = vcselect(ynew, Vnew; penfun=penfun, λ=λ, penwt=penwt, 
                             σ2=σ2, maxiter=maxiter, tol=tol, verbose=verbose)
 
     # update Ω with estimated variance components 
@@ -60,14 +60,14 @@ function vcselect(
 
     # inverse using cholesky 
     Ωchol = cholesky(Ω)
-    Ωinv = inv(Ωchol)
 
     # estimate fixed effects: pinv(X'*Ωinv*X)(X'*Ωinv*y)
-    beta = zeros(T, size(X, 2))
-    Ωinv = BLAS.gemm('T', 'N', X, Ωinv) # overwriting Ωinv with X'*Ωinv
-    beta = pinv(Ωinv * X) \ Ωinv * y
+    XtΩinvX = BLAS.gemm('T', 'N', X, Ωchol \ X)
+    beta = BLAS.gemv('T', X, Ωchol \ y) # overwriting Ωinv with X'*Ωinv
 
-    return σ2, beta, obj, niters, Ω, Ωinv;
+    beta = pinv(XtΩinvX) * beta
+
+    return σ2, beta, obj, niters; #, Ω;
 end
 
 """
@@ -205,8 +205,9 @@ function vcselect(
             Ω[i, i] += σ2[m + 1]
         end 
         # update Ωchol, Ωinv, v 
-        Ωchol = cholesky(Symmetric(Ω))
-        Ωinv  = inv(Ωchol)
+        Ωchol = cholesky!(Symmetric(Ω))
+        #Ωchol = cholesky(Symmetric(Ω))
+        Ωinv[:]  = inv(Ωchol)
         mul!(v, Ωinv, y)
 
         # update objective value 
@@ -238,7 +239,7 @@ function vcselect(
       niters = maxiter
     end
 
-    return σ2, obj, niters, Ω, Ωinv;
+    return σ2, obj, niters; #, Ω, Ωinv;
 end
 
 
