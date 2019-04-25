@@ -307,6 +307,7 @@ function vcselectpath(
         σ2path = zeros(T, m + 1, nlambda)
         objpath = zeros(T, nlambda)
         niterspath = zeros(Int, nlambda)
+        betapath = zeros(T, size(X, 2), nlambda)
 
         # create solution path 
         for iter in 1:length(λpath)
