@@ -1,6 +1,8 @@
 module UtilitiesTest
 
-using Random, LinearAlgebra, Test, VarianceComponentSelect, PenaltyFunctions
+using Random, LinearAlgebra, Test, PenaltyFunctions # VarianceComponentSelect
+include("./src/VarianceComponentSelect.jl")
+using .VarianceComponentSelect
 
 Random.seed!(123)
 
@@ -35,10 +37,12 @@ y = X * β + Ωchol.L * randn(n)
 ynew, Vnew, B = nullprojection(y, X, V)
 @test B'B ≈ I 
 @test isapprox(maximum(abs.(B'*X)), 0; atol=1e-8) #all(B'*X .≈ 0)
-for i in 1:(m + 1)
-    @test norm(Vnew[i]) ≈ 1
-end 
+@testset "onenorm" begin
+  for i in 1:(m + 1)
+      @test norm(Vnew[i]) ≈ 1
+  end
+end  
 
-
+@test betaestimate(y, X, Ω) == betaestimate(y, X, Ωchol)
 
 end 
