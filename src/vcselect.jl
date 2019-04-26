@@ -58,16 +58,9 @@ function vcselect(
         end 
     end 
 
-    # inverse using cholesky 
-    Ωchol = cholesky(Symmetric(Ω))
+    β = betaestimate(y, X, Ω)
 
-    # estimate fixed effects: pinv(X'*Ωinv*X)(X'*Ωinv*y)
-    XtΩinvX = BLAS.gemm('T', 'N', X, Ωchol \ X)
-    beta = BLAS.gemv('T', X, Ωchol \ y) # overwriting Ωinv with X'*Ωinv
-
-    beta = pinv(XtΩinvX) * beta
-
-    return σ2, beta, obj, niters, Ω;
+    return σ2, β, obj, niters, Ω;
 end
 
 """
@@ -234,12 +227,22 @@ function vcselect(
 
     end # end of iteration loop
 
+    # construct Ω matrix 
+    Ω = zeros(T, n, n)
+    for i in eachindex(σ2)
+        if iszero(σ2[i])
+            continue 
+        else 
+            axpy!(σ2[i], V[i], Ω) # Ω .+= σ2[i] * V[i]
+        end 
+    end 
+
     # output
     if niters == 0
       niters = maxiter
     end
 
-    return σ2, obj, niters; #, Ω, Ωinv;
+    return σ2, obj, niters, Ω, Ωinv;
 end
 
 
@@ -291,9 +294,11 @@ function vcselectpath(
     ## generate solution path based on penalty 
     if penfun != NoPenalty() 
 
+        # project y and V onto nullspace of X
+        ynew, Vnew = nullprojection(y, X, V)
+
         # create a lambda grid if not specified  
         if isempty(λpath) 
-            ynew, Vnew = nullprojection(y, X, V)
             maxλ = maxlambda(ynew, Vnew; penfun=penfun, penwt=penwt)
             λpath = range(0, stop=maxλ, length=nlambda)
         else # if lambda grid specified, make sure nlambda matches 
@@ -303,26 +308,28 @@ function vcselectpath(
         # no. groups 
         m = length(V) - 1
 
-        # initialize solution path 
+        # initialize arrays
         σ2path = zeros(T, m + 1, nlambda)
         objpath = zeros(T, nlambda)
         niterspath = zeros(Int, nlambda)
-        betapath = zeros(T, size(X, 2), nlambda)
+        βpath = zeros(T, size(X, 2), nlambda)
 
         # create solution path 
         for iter in 1:length(λpath)
             λ = λpath[iter]
-            σ2path[:, iter], betapath[:, iter], objpath[iter], niterspath[iter], = 
-                vcselect(y, X, V; penfun=penfun, λ=λ, penwt=penwt, σ2=σ2, maxiter=maxiter, 
-                tol=tol, verbose=verbose)
+            @time σ2path[:, iter], objpath[iter], niterspath[iter], = vcselect(ynew, Vnew; 
+                penfun=penfun, λ=λ, penwt=penwt, σ2=σ2, maxiter=maxiter, tol=tol, 
+                verbose=verbose) # 
+            βpath[:, iter] = betaestimate(y, X, V, σ2path[:, iter])
+            println(niterspath[iter]) # 
         end
 
     else # if no penalty, there is no lambda grid 
-        σ2path, betapath, objpath, niterspath, = vcselect(y, X, V; penfun=penfun)
+        σ2path, βpath, objpath, niterspath, = vcselect(y, X, V; penfun=penfun)
     end 
 
     # output 
-    return σ2path, betapath, objpath, λpath, niterspath 
+    return σ2path, βpath, objpath, λpath, niterspath 
 
 
 end 
@@ -394,9 +401,10 @@ function vcselectpath(
         # create solution path 
         for iter in 1:nlambda
             λ = λpath[iter]
-            σ2path[:, iter], objpath[iter], niterspath[iter] = vcselect(y, V; 
+            @time σ2path[:, iter], objpath[iter], niterspath[iter] = vcselect(y, V; 
                     penfun=penfun, λ=λ, penwt=penwt, σ2=σ2, maxiter=maxiter, 
                     tol=tol, verbose=verbose)
+            println(niterspath[iter]) # 
         end
 
     else # if no penalty, there is no lambda grid 
