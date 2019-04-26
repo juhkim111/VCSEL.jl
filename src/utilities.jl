@@ -93,8 +93,6 @@ function betaestimate(
     return β
 
 end 
-
-
 """
     betaestimate(y, X, Ω)
 
@@ -106,20 +104,24 @@ where `Ω` being `∑ σ2[i] * V[i]` where `σ2` is the REML estimate.
 # Input
 - `y`: response vector
 - `X`: covariate matrix 
-- `Ω`: overall covariance matrix constructed using REML estimate of variance components
-
+- `Ω`: overall covariance matrix constructed using REML estimate of variance components or
+    cholesky factorization of the overall covariance matrix 
 # Output 
-- `β`: fixed effects estimate
+- `β`: fixed effects estimate Ω supplied is a Cholesky object, default is false
 """
 function betaestimate( 
     y   :: AbstractVector{T},
     X   :: AbstractMatrix{T},
-    Ω   :: AbstractMatrix{T}
+    Ω   :: Union{AbstractMatrix{T}, Cholesky}
     ) where {T <: Real}
 
-    # inverse using cholesky 
-    Ωchol = cholesky!(Symmetric(Ω))
-
+    # if not cholesky factorized, perform cholesky 
+    if typeof(Ω) <: Cholesky
+        Ωchol = Ω
+    else
+        Ωchol = cholesky(Symmetric(Ω))
+    end 
+  
     # estimate fixed effects: pinv(X'*Ωinv*X)(X'*Ωinv*y)
     XtΩinvX = BLAS.gemm('T', 'N', X, Ωchol \ X)
     β = BLAS.gemv('T', X, Ωchol \ y) # overwriting Ωinv with X'*Ωinv
