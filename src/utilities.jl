@@ -53,3 +53,78 @@ function nullprojection(
 
 end 
 
+"""
+    betaestimate(y, X, V, σ2)
+
+Estimate fixed effects using REML estimate of variance components.
+Estimate of beta is 
+        `beta = pinv(X'*Ωinv*X)(X'*Ωinv*y)`
+where `Ω` being `∑ σ2[i] * V[i]` where `σ2` is the REML estimate.
+
+# Input
+- `y`: response vector
+- `X`: covariate matrix 
+- `V`: vector of covariance matrices, (V[1],V[2],...,V[m],I)
+        note that V[end] should be identity matrix
+- `σ2`: REML estimate of variance components 
+
+# Output 
+- `β`: fixed effects estimate
+"""
+function betaestimate( 
+    y   :: AbstractVector{T},
+    X   :: AbstractMatrix{T},
+    V   :: AbstractVector{Matrix{T}},
+    σ2  :: AbstractVector{T}
+    ) where {T <: Real}
+
+    # update Ω with estimated variance components 
+    Ω = zeros(T, size(V[1]))
+    for i in eachindex(σ2)
+        if iszero(σ2[i])
+            continue 
+        else 
+            axpy!(σ2[i], V[i], Ω) # Ω .+= σ2[i] * V[i]
+        end 
+    end 
+
+    β = betaestimate(y, X, Ω)
+
+    return β
+
+end 
+
+
+"""
+    betaestimate(y, X, Ω)
+
+Estimate fixed effects using REML estimate of variance components.
+Estimate of beta is 
+        `beta = pinv(X'*Ωinv*X)(X'*Ωinv*y)`
+where `Ω` being `∑ σ2[i] * V[i]` where `σ2` is the REML estimate.
+
+# Input
+- `y`: response vector
+- `X`: covariate matrix 
+- `Ω`: overall covariance matrix constructed using REML estimate of variance components
+
+# Output 
+- `β`: fixed effects estimate
+"""
+function betaestimate( 
+    y   :: AbstractVector{T},
+    X   :: AbstractMatrix{T},
+    Ω   :: AbstractMatrix{T}
+    ) where {T <: Real}
+
+    # inverse using cholesky 
+    Ωchol = cholesky!(Symmetric(Ω))
+
+    # estimate fixed effects: pinv(X'*Ωinv*X)(X'*Ωinv*y)
+    XtΩinvX = BLAS.gemm('T', 'N', X, Ωchol \ X)
+    β = BLAS.gemv('T', X, Ωchol \ y) # overwriting Ωinv with X'*Ωinv
+    β = pinv(XtΩinvX) * β
+
+    return β
+
+end 
