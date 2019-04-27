@@ -279,7 +279,6 @@ function vcselect(
     λ       :: T = one(T),
     penwt   :: AbstractVector{T} = [ones(T, length(V)-1); zero(T)],
     σ2      :: AbstractVector{T} = ones(T, length(V)),
-    #Ω       :: AbstractMatrix{T} = zeros(T, size(V[1])), 
     maxiter :: Int = 1000,
     tol     :: AbstractFloat = 1e-6,
     verbose :: Bool = false
@@ -294,7 +293,7 @@ function vcselect(
     Ωchol = cholesky(Symmetric(Ω))
     Ωinv = inv(Ωchol) 
 
-    σ2, obj, niters, Ω = vcselect(y, V, Ωchol, Ωinv; penfun=pennfun, λ=λ, penwt=penwt,
+    σ2, obj, niters, Ω = vcselect(y, V, Ωchol, Ωinv; penfun=penfun, λ=λ, penwt=penwt,
             σ2=σ2, Ω=Ω, maxiter=maxiter, tol=tol, verbose=verbose)
 
     return σ2, obj, niters, Ω
@@ -381,12 +380,7 @@ function vcselectpath(
 
     # output 
     return σ2path, βpath, objpath, λpath, niterspath 
-
-
 end 
-
-
-
 """
     vcselectpath(y, V; penfun=NoPenalty(), penwt=[ones(length(V)-1); 0.0], 
             nlambda=100, λpath=Float64[], σ2=ones(length(V)), maxiter=1000, tol=1e-6)
@@ -451,7 +445,7 @@ function vcselectpath(
         for j in 1:length(V)
             Ω .+= σ2[j] .* V[j]
         end
-        Ωchol = cholesky(Symmetric(Ω))
+        Ωchol = cholesky!(Symmetric(Ω))
         Ωinv = inv(Ωchol)
 
         # create solution path 
@@ -468,6 +462,5 @@ function vcselectpath(
 
     # output 
     return σ2path, objpath, λpath, niterspath
-
 
 end 
