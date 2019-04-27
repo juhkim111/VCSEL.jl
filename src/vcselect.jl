@@ -58,6 +58,7 @@ function vcselect(
         end 
     end 
 
+    # estimate fixed effects 
     β = betaestimate(y, X, Ω)
 
     return σ2, β, obj, niters, Ω;
@@ -77,6 +78,8 @@ Minimization is achieved via majorization-minimization (MM) algorithm.
 - `y`: response vector
 - `V`: vector of covariance matrices, (V[1],V[2],...,V[m],I)
         note that V[end] should be identity matrix
+- `Ωchol`: initial cholesky facotorization of overall covariance matrix `Ω`
+- `Ωinv`: initial inverse matrix of overall covariance matrix `Ω`
 
 # Keyword
 - `penfun`: penalty function, e.g., NoPenalty() (default), L1Penalty(), MCPPenalty(γ = 2.0)
@@ -94,7 +97,7 @@ Minimization is achieved via majorization-minimization (MM) algorithm.
 - `Ω`: covariance matrix evaluated at the estimated variance components
 - `Ωinv`: precision (inverse covariance) matrix evaluated at the estimated variance components
 """
-function vcselect( 
+function vcselect!( 
     y       :: AbstractVector{T},
     V       :: AbstractVector{Matrix{T}},
     Ωchol   :: Cholesky{T, <:AbstractMatrix},
@@ -195,7 +198,6 @@ function vcselect(
         end 
         # update Ωchol, Ωinv, v 
         Ωchol = cholesky!(Symmetric(Ω))
-        #Ωchol = cholesky(Symmetric(Ω))
         Ωinv[:] = inv(Ωchol)
         mul!(v, Ωinv, y)
 
@@ -293,7 +295,7 @@ function vcselect(
     Ωchol = cholesky(Symmetric(Ω))
     Ωinv = inv(Ωchol) 
 
-    σ2, obj, niters, Ω = vcselect(y, V, Ωchol, Ωinv; penfun=penfun, λ=λ, penwt=penwt,
+    σ2, obj, niters, Ω = vcselect!(y, V, Ωchol, Ωinv; penfun=penfun, λ=λ, penwt=penwt,
             σ2=σ2, Ω=Ω, maxiter=maxiter, tol=tol, verbose=verbose)
 
     return σ2, obj, niters, Ω
@@ -326,8 +328,10 @@ along varying lambda values.
 # Output 
 - `σ2path`: matrix of estimated variance components at each tuning parameter `λ`,
         each column gives vector of estimated variance components `σ2` at certain `λ`
+- `βpath`: matrix of estimated fixed effects at each tuning parameter `λ`
 - `objpath`: vector of objective values at each tuning parameter `λ`
 - `λpath`: vector of tuning parameter values used 
+- `niterspath`: vector of no. of iterations to convergence 
 """
 function vcselectpath(
     y       :: AbstractVector{T},
@@ -343,40 +347,53 @@ function vcselectpath(
     verbose :: Bool = false
     ) where {T <: Real}
 
-    
-    ## generate solution path based on penalty 
-    if penfun != NoPenalty() 
+    # project y and V onto nullspace of X
+    ynew, Vnew = nullprojection(y, X, V)
 
-        # project y and V onto nullspace of X
-        ynew, Vnew = nullprojection(y, X, V)
+    # 
+    σ2path, objpath, λpath, niterspath = vcselectpath(ynew, Vnew;
+        penfun=penfun, penwt, nlambda=nlambda, λpath=λpath, σ2=σ2, maxiter=maxiter,
+        tol=tol, verbose=verbose)
 
-        # create a lambda grid if not specified  
-        if isempty(λpath) 
-            maxλ = maxlambda(ynew, Vnew; penfun=penfun, penwt=penwt)
-            λpath = range(0, stop=maxλ, length=nlambda)
-        else # if lambda grid specified, make sure nlambda matches 
-            nlambda = length(λpath)
-        end 
-
-        # initialize arrays
-        σ2path = zeros(T,length(V), nlambda)
-        objpath = zeros(T, nlambda)
-        niterspath = zeros(Int, nlambda)
-        βpath = zeros(T, size(X, 2), nlambda)
-
-        # create solution path 
-        for iter in 1:nlambda
-            λ = λpath[iter]
-            @time σ2path[:, iter], objpath[iter], niterspath[iter], = vcselect(ynew, Vnew; 
-                penfun=penfun, λ=λ, penwt=penwt, σ2=σ2, maxiter=maxiter, tol=tol, 
-                verbose=verbose) # 
-            βpath[:, iter] = betaestimate(y, X, V, σ2path[:, iter])
-            println(niterspath[iter]) # 
-        end
-
-    else # if no penalty, there is no lambda grid 
-        σ2path, βpath, objpath, niterspath, = vcselect(y, X, V; penfun=penfun)
+    # 
+    βpath = zeros(T, size(X, 2), nlambda)
+    for iter in 1:length(λpath)
+        βpath[:, iter] = betaestimate(y, X, V, view(σ2path, :, iter))
     end 
+    
+    # ## generate solution path based on penalty 
+    # if penfun != NoPenalty() 
+
+    #     # project y and V onto nullspace of X
+    #     ynew, Vnew = nullprojection(y, X, V)
+
+    #     # create a lambda grid if not specified  
+    #     if isempty(λpath) 
+    #         maxλ = maxlambda(ynew, Vnew; penfun=penfun, penwt=penwt)
+    #         λpath = range(0, stop=maxλ, length=nlambda)
+    #     else # if lambda grid specified, make sure nlambda matches 
+    #         nlambda = length(λpath)
+    #     end 
+
+    #     # initialize arrays
+    #     σ2path = zeros(T,length(V), nlambda)
+    #     objpath = zeros(T, nlambda)
+    #     niterspath = zeros(Int, nlambda)
+    #     βpath = zeros(T, size(X, 2), nlambda)
+
+    #     # create solution path 
+    #     for iter in 1:nlambda
+    #         λ = λpath[iter]
+    #         @time σ2path[:, iter], objpath[iter], niterspath[iter], = vcselect(ynew, Vnew; 
+    #             penfun=penfun, λ=λ, penwt=penwt, σ2=σ2, maxiter=maxiter, tol=tol, 
+    #             verbose=verbose) # 
+    #         βpath[:, iter] = betaestimate(y, X, V, σ2path[:, iter])
+    #         println(niterspath[iter]) # 
+    #     end
+
+    # else # if no penalty, there is no lambda grid 
+    #     σ2path, βpath, objpath, niterspath, = vcselect(y, X, V; penfun=penfun)
+    # end 
 
     # output 
     return σ2path, βpath, objpath, λpath, niterspath 
@@ -451,7 +468,7 @@ function vcselectpath(
         # create solution path 
         for iter in 1:nlambda
             @time σ2path[:, iter], objpath[iter], niterspath[iter], = 
-                    vcselect(y, V, Ωchol, Ωinv; penfun=penfun, λ=λpath[iter], penwt=penwt, 
+                    vcselect!(y, V, Ωchol, Ωinv; penfun=penfun, λ=λpath[iter], penwt=penwt, 
                     σ2=σ2, maxiter=maxiter, tol=tol, verbose=verbose)
             println("iter = $iter, niters=$(niterspath[iter])") # 
         end
