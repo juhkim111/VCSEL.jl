@@ -352,7 +352,7 @@ function vcselectpath(
 
     # 
     σ2path, objpath, λpath, niterspath = vcselectpath(ynew, Vnew;
-        penfun=penfun, penwt, nlambda=nlambda, λpath=λpath, σ2=σ2, maxiter=maxiter,
+        penfun=penfun, penwt=penwt, nlambda=nlambda, λpath=λpath, σ2=σ2, maxiter=maxiter,
         tol=tol, verbose=verbose)
 
     # 
