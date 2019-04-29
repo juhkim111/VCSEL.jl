@@ -106,6 +106,7 @@ where `Ω` being `∑ σ2[i] * V[i]` where `σ2` is the REML estimate.
 - `X`: covariate matrix 
 - `Ω`: overall covariance matrix constructed using REML estimate of variance components or
     cholesky factorization of the overall covariance matrix 
+    
 # Output 
 - `β`: fixed effects estimate Ω supplied is a Cholesky object, default is false
 """
