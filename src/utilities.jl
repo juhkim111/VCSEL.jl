@@ -106,7 +106,7 @@ where `Ω` being `∑ σ2[i] * V[i]` where `σ2` is the REML estimate.
 - `X`: covariate matrix 
 - `Ω`: overall covariance matrix constructed using REML estimate of variance components or
     cholesky factorization of the overall covariance matrix 
-    
+
 # Output 
 - `β`: fixed effects estimate Ω supplied is a Cholesky object, default is false
 """
@@ -129,5 +129,74 @@ function betaestimate(
     β = pinv(XtΩinvX) * β
 
     return β
+
+end 
+"""
+    plotsolpath(solpath, λpath; title="Solution Path", xlab="λ", ylab="σ2", 
+            xmin=minimum(λpath), xmax=minimum(λpath), tol=1e-6)
+
+Output plot of solution path at varying λ values. First, calculate rank of each variance 
+component based on the order in which it enters solution path. 
+
+# Input
+- `solpath`: solution path (in numeric matrix) to be plotted, each column should 
+        represent variance components at specific λ 
+        as in output from `vcselect`, `vcselectpath`
+- `λpath`: vector of tuning parameter λ values 
+
+# Keyword 
+- `title`: title of the figure, default is "Solution Path"
+- `xlab`: x-axis label, default is minimum of λpath
+- `ylab`: y-axis label, default is maximum of λpath
+- `tol`: if a variance componnent is greater than tol, it 
+
+# Output 
+- 
+"""
+function plotsolpath(
+    solpath :: AbstractMatrix{T},
+    λpath   :: AbstractVector{T};
+    title   :: AbstractString = "Solution Path",
+    xlab    :: AbstractString = "\\lambda",
+    xmin    :: AbstractFloat = minimum(λpath),
+    xmax    :: AbstractFloat = maximum(λpath),
+    ylab    :: AbstractString = "\\sigma^2",
+    tol     :: Float64=1e-6
+) where {T <: Real}
+
+    # size of solution path 
+    novarcomp, nlambda = size(solpath)
+
+    # initialize array for ranking 
+    ranking = Int[]
+
+    # go through solution path and find the order in which variance component enters
+    for col in nlambda:-1:2
+    tmp = findall(x -> x > tol, view(solpath, 1:(novarcomp-1), col))
+    for j in tmp 
+        if !(j in ranking)
+        push!(ranking, j)
+        end
+    end
+    end 
+    rest = setdiff(1:(novarcomp-1), ranking)
+    rest = [rest; novarcomp]
+
+    # transpose solpath s.t. each row is estimates at particular lambda
+    tr_solpath = solpath'
+
+    # label in the permuted order 
+    legendlabel = "\\sigma^{2}[$(ranking[1])]"
+    for i in ranking[2:end]
+        legendlabel = hcat(legendlabel, "\\sigma^{2}[$i]")
+    end
+    for i in 1:length(rest)
+        legendlabel = hcat(legendlabel, "")
+    end 
+
+    # plot permuted solution path (decreasing order)
+    plot(λpath, tr_solpath[:, [ranking; rest]], label=legendlabel, 
+        xaxis=(xlab, (xmin, xmax)), yaxis=(ylab), width=0.6, legendtitle="ranking")
+    title!(title)     
 
 end 
