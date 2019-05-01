@@ -137,6 +137,7 @@ end
 
 Output plot of solution path at varying λ values. First, calculate rank of each variance 
 component based on the order in which it enters solution path. 
+Use backend such as `gr()`.
 
 # Input
 - `solpath`: solution path (in numeric matrix) to be plotted, each column should 
