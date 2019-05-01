@@ -78,14 +78,14 @@ Minimization is achieved via majorization-minimization (MM) algorithm.
 - `y`: response vector
 - `V`: vector of covariance matrices, (V[1],V[2],...,V[m],I)
         note that V[end] should be identity matrix
-- `Ωchol`: initial cholesky facotorization of overall covariance matrix `Ω`
-- `Ωinv`: initial inverse matrix of overall covariance matrix `Ω`
 
 # Keyword
 - `penfun`: penalty function, e.g., NoPenalty() (default), L1Penalty(), MCPPenalty(γ = 2.0)
 - `λ`: penalty strength, default is 1.0
 - `penwt`: vector of penalty weights, default is (1,1,...1,0)
 - `σ2`: initial values, default is (1,1,...,1)
+- `Ω`: initial overall covariance matrix `Ω`
+- `Ωinv`: initial inverse matrix of overall covariance matrix `Ω`
 - `maxiter`: maximum number of iterations, default is 1000
 - `tol`: tolerance in difference of objective values for MM loop, default is 1e-6
 - `verbose`: display switch, default is false 
@@ -97,16 +97,15 @@ Minimization is achieved via majorization-minimization (MM) algorithm.
 - `Ω`: covariance matrix evaluated at the estimated variance components
 - `Ωinv`: precision (inverse covariance) matrix evaluated at the estimated variance components
 """
-function vcselect!( 
+function vcselect( 
     y       :: AbstractVector{T},
-    V       :: AbstractVector{Matrix{T}},
-    Ωchol   :: Cholesky{T, <:AbstractMatrix},
-    Ωinv    :: AbstractMatrix{T};
+    V       :: Vector{Matrix{T}};
     penfun  :: Penalty = NoPenalty(),
     λ       :: T = one(T),
     penwt   :: AbstractVector{T} = [ones(T, length(V)-1); zero(T)],
     σ2      :: AbstractVector{T} = ones(T, length(V)),
     Ω       :: AbstractMatrix{T} = zeros(T, size(V[1])), 
+    Ωinv    :: AbstractMatrix{T} = zeros(T, size(V[1])),
     maxiter :: Int = 1000,
     tol     :: AbstractFloat = 1e-6,
     verbose :: Bool = false
@@ -115,12 +114,15 @@ function vcselect!(
     # initialize algorithm
     n = length(y)       # no. observations
     m = length(V) - 1   # no. variance components
-   
-    # # copy 
-    # Ωchol = copy(Ωchol_init)
-    # Ωinv = copy(Ωinv_init)
-
+    Ω = fill!(Ω, 0)     # covariance matrix 
+    for j in 1:length(V)
+        Ω .+= σ2[j] .* V[j]
+    end
+    Ωchol = cholesky!(Symmetric(Ω))
+    Ωinv = inv(Ωchol) 
     v = Ωinv * y
+    w = similar(v) 
+    loglConst = (1//2) * n * log(2π) 
     obj = (1//2) * logdet(Ωchol) + (1//2) * dot(y, v) # objective value 
     pen = 0.0
     for j in 1:m
@@ -128,14 +130,14 @@ function vcselect!(
     end
     loglConst = (1//2) * n * log(2π) 
     obj += loglConst + λ * pen
+
+    # display 
     if verbose
         println("iter = 0")
         println("σ2   = ", σ2)
         println("obj  = ", obj)
-    end
-
-    # pre-allocate memory 
-    w = similar(v)
+        objvec = obj
+    end    
 
     # MM loop 
     niters = 0
@@ -215,6 +217,7 @@ function vcselect!(
             println("iter = ", iter)
             println("σ2   = ", σ2)
             println("obj  = ", obj)
+            objvec = [objvec; obj] 
         end
 
         # check convergence
@@ -240,67 +243,12 @@ function vcselect!(
       niters = maxiter
     end
 
-    return σ2, obj, niters, Ω;
-end
-
-"""
-    vcselect(y, V; penfun, λ, penwt, σ2, maxiter, tol, verbose)
-
-Select variance components at specified lambda by minimizing penalized negative 
-log-likelihood of variance component model. 
-The objective function to minimize is
-  `0.5n*log(2π) + 0.5logdet(Ω) + 0.5y'*inv(Ω)*y + λ * sum(penwt.*penfun(σ))`
-where `Ω = σ2[1]*V[1] + ... + σ2[end]*V[end]` and `V[end] = I`
-Minimization is achieved via majorization-minimization (MM) algorithm. 
-
-# Input
-- `y`: response vector
-- `V`: vector of covariance matrices, (V[1],V[2],...,V[m],I)
-        note that V[end] should be identity matrix
-
-# Keyword
-- `penfun`: penalty function, e.g., NoPenalty() (default), L1Penalty(), MCPPenalty(γ = 2.0)
-- `λ`: penalty strength, default is 1.0
-- `penwt`: vector of penalty weights, default is (1,1,...1,0)
-- `σ2`: initial values, default is (1,1,...,1)
-- `maxiter`: maximum number of iterations, default is 1000
-- `tol`: tolerance in difference of objective values for MM loop, default is 1e-6
-- `verbose`: display switch, default is false 
-
-# Output
-- `σ2`: vector of estimated variance components 
-- `obj`: objective value at the estimated variance components 
-- `niters`: number of iterations to convergence
-- `Ω`: covariance matrix evaluated at the estimated variance components
-- `Ωinv`: precision (inverse covariance) matrix evaluated at the estimated variance components
-"""
-function vcselect( 
-    y       :: AbstractVector{T},
-    V       :: AbstractVector{Matrix{T}};
-    penfun  :: Penalty = NoPenalty(),
-    λ       :: T = one(T),
-    penwt   :: AbstractVector{T} = [ones(T, length(V)-1); zero(T)],
-    σ2      :: AbstractVector{T} = ones(T, length(V)),
-    maxiter :: Int = 1000,
-    tol     :: AbstractFloat = 1e-6,
-    verbose :: Bool = false
-    ) where {T <: Real} 
-
-    # initialize algorithm
-    Ω = zeros(size(V[1]))     # covariance matrix 
-    for j in 1:length(V)
-        Ω .+= σ2[j] .* V[j]
+    if verbose 
+        return σ2, obj, niters, Ω, objvec;
+    else 
+        return σ2, obj, niters, Ω;
     end
-
-    Ωchol = cholesky(Symmetric(Ω))
-    Ωinv = inv(Ωchol) 
-
-    σ2, obj, niters, Ω = vcselect!(y, V, Ωchol, Ωinv; penfun=penfun, λ=λ, penwt=penwt,
-            σ2=σ2, Ω=Ω, maxiter=maxiter, tol=tol, verbose=verbose)
-
-    return σ2, obj, niters, Ω
 end
-
 """
     vcselectpath(y, X, V; penfun=NoPenalty(), penwt=[ones(length(V)-1); 0.0], 
             nlambda=100, λpath=Float64[], σ2=ones(length(V)), maxiter=1000, tol=1e-6)
@@ -360,40 +308,6 @@ function vcselectpath(
     for iter in 1:length(λpath)
         βpath[:, iter] = betaestimate(y, X, V, view(σ2path, :, iter))
     end 
-    
-    # ## generate solution path based on penalty 
-    # if penfun != NoPenalty() 
-
-    #     # project y and V onto nullspace of X
-    #     ynew, Vnew = nullprojection(y, X, V)
-
-    #     # create a lambda grid if not specified  
-    #     if isempty(λpath) 
-    #         maxλ = maxlambda(ynew, Vnew; penfun=penfun, penwt=penwt)
-    #         λpath = range(0, stop=maxλ, length=nlambda)
-    #     else # if lambda grid specified, make sure nlambda matches 
-    #         nlambda = length(λpath)
-    #     end 
-
-    #     # initialize arrays
-    #     σ2path = zeros(T,length(V), nlambda)
-    #     objpath = zeros(T, nlambda)
-    #     niterspath = zeros(Int, nlambda)
-    #     βpath = zeros(T, size(X, 2), nlambda)
-
-    #     # create solution path 
-    #     for iter in 1:nlambda
-    #         λ = λpath[iter]
-    #         @time σ2path[:, iter], objpath[iter], niterspath[iter], = vcselect(ynew, Vnew; 
-    #             penfun=penfun, λ=λ, penwt=penwt, σ2=σ2, maxiter=maxiter, tol=tol, 
-    #             verbose=verbose) # 
-    #         βpath[:, iter] = betaestimate(y, X, V, σ2path[:, iter])
-    #         println(niterspath[iter]) # 
-    #     end
-
-    # else # if no penalty, there is no lambda grid 
-    #     σ2path, βpath, objpath, niterspath, = vcselect(y, X, V; penfun=penfun)
-    # end 
 
     # output 
     return σ2path, βpath, objpath, λpath, niterspath 
@@ -444,6 +358,7 @@ function vcselectpath(
     ## generate solution path based on penalty 
     if penfun != NoPenalty() 
 
+        println("maybe here")
         # create a lambda grid if not specified  
         if isempty(λpath) 
             maxλ = maxlambda(y, V; penfun=penfun, penwt=penwt)
@@ -457,24 +372,18 @@ function vcselectpath(
         objpath = zeros(T, nlambda)
         niterspath = zeros(Int, nlambda)
 
-        #initialize Ω
-        Ω = zeros(T, size(V[1]))
-        for j in 1:length(V)
-            Ω .+= σ2[j] .* V[j]
-        end
-        Ωchol = cholesky!(Symmetric(Ω))
-        Ωinv = inv(Ωchol)
-
         # create solution path 
-        for iter in 1:nlambda
-            @time σ2path[:, iter], objpath[iter], niterspath[iter], = 
-                    vcselect!(y, V, Ωchol, Ωinv; penfun=penfun, λ=λpath[iter], penwt=penwt, 
+        for iter in 1:nlambda 
+            @time σ2, objpath[iter], niterspath[iter], = 
+                    vcselect(y, V; penfun=penfun, λ=λpath[iter], penwt=penwt, 
                     σ2=σ2, maxiter=maxiter, tol=tol, verbose=verbose)
+            σ2path[:, iter] = σ2
             println("iter = $iter, niters=$(niterspath[iter])") # 
         end
 
     else # if no penalty, there is no lambda grid 
-        σ2path, objpath, niterspath, = vcselect(y, V; penfun=penfun)
+        σ2path, objpath, niterspath, = vcselect(y, V; 
+                penfun=penfun, maxiter=maxiter, tol=tol, verbose=verbose)
     end 
 
     # output 
