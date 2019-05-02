@@ -150,7 +150,7 @@ Use backend such as `gr()`.
 - `xlab`: x-axis label, default is minimum of λpath
 - `ylab`: y-axis label, default is maximum of λpath
 - `tol`: a variance component less than `tol` is considered zero, default is 1e-6
-- `linewidth`: line width, default is 0.7
+- `linewidth`: line width, default is 1.0
 
 # Output 
 - plot of solution path 
@@ -163,7 +163,7 @@ function plotsolpath(
     xmin      :: AbstractFloat = minimum(λpath),
     xmax      :: AbstractFloat = maximum(λpath),
     ylab      :: AbstractString = "\\sigma^2",
-    linewidth :: AbstractFloat = 0.7,
+    linewidth :: AbstractFloat = 1.0,
     tol       :: Float64=1e-6
 ) where {T <: Real}
 
