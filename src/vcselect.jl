@@ -272,7 +272,7 @@ along varying lambda values.
 - `maxiter`: maximum number of iteration for MM loop.
 - `tol`: tolerance in difference of objective values for MM loop, default is 1e-6
 - `verbose`: display switch, default is false 
-- `fixedestimates`: indicator of whether user wants fixed effects parameter 
+- `fixedeffects`: whether user wants fixed effects parameter 
         to be estimated and returned, default is false 
 
 # Output 
@@ -295,7 +295,7 @@ function vcselectpath(
     maxiter :: Int = 1000,
     tol     :: AbstractFloat = 1e-6,
     verbose :: Bool = false,
-    fixedestimates :: Bool = false 
+    fixedeffects :: Bool = false 
     ) where {T <: Real}
 
     # project y and V onto nullspace of X
@@ -307,7 +307,7 @@ function vcselectpath(
         tol=tol, verbose=verbose)
 
     # if user wants fixed effects estimates, estimate β
-    if fixedestimates 
+    if fixedeffects 
         βpath = zeros(T, size(X, 2), nlambda)
         for iter in 1:length(λpath)
             βpath[:, iter] = betaestimate(y, X, V, view(σ2path, :, iter))
