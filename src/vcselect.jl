@@ -278,10 +278,10 @@ along varying lambda values.
 # Output 
 - `σ2path`: matrix of estimated variance components at each tuning parameter `λ`,
         each column gives vector of estimated variance components `σ2` at certain `λ`
-- `βpath`: matrix of estimated fixed effects at each tuning parameter `λ`
 - `objpath`: vector of objective values at each tuning parameter `λ`
 - `λpath`: vector of tuning parameter values used 
 - `niterspath`: vector of no. of iterations to convergence 
+- `βpath`: matrix of estimated fixed effects at each tuning parameter `λ`
 """
 function vcselectpath(
     y       :: AbstractVector{T},
@@ -314,7 +314,7 @@ function vcselectpath(
         end 
 
         # output 
-        return σ2path, βpath, objpath, λpath, niterspath 
+        return σ2path, objpath, λpath, niterspath, βpath
     else 
         return σ2path, objpath, λpath, niterspath
     end 
@@ -380,11 +380,10 @@ function vcselectpath(
 
         # create solution path 
         for iter in 1:nlambda 
-            @time σ2, objpath[iter], niterspath[iter], = 
+            σ2, objpath[iter], niterspath[iter], = 
                     vcselect(y, V; penfun=penfun, λ=λpath[iter], penwt=penwt, 
                     σ2=σ2, maxiter=maxiter, tol=tol, verbose=verbose)
-            σ2path[:, iter] = σ2
-            println("iter = $iter, niters=$(niterspath[iter])") # 
+            σ2path[:, iter] = σ2 
         end
 
     else # if no penalty, there is no lambda grid 
