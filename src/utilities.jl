@@ -132,6 +132,23 @@ function betaestimate(
 
 end 
 """
+    checkfrobnorm!(V)
+
+Check if frobenius norm of Vi in V equals to 1. If not, divide by its norm. 
+"""
+function checkfrobnorm!(
+    V :: AbstractVector{Matrix{T}}
+) where {T <: Real}
+
+    frobnorm = 0
+    for Vi in V
+        frobnorm = norm(Vi) 
+        if frobnorm != 1
+            Vi ./= frobnorm
+        end
+    end 
+end 
+"""
     plotsolpath(solpath, λpath; title="Solution Path", xlab="λ", ylab="σ2", 
             xmin=minimum(λpath), xmax=minimum(λpath), tol=1e-6)
 
