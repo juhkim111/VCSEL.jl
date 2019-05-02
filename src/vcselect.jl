@@ -272,6 +272,8 @@ along varying lambda values.
 - `maxiter`: maximum number of iteration for MM loop.
 - `tol`: tolerance in difference of objective values for MM loop, default is 1e-6
 - `verbose`: display switch, default is false 
+- `fixedestimates`: indicator of whether user wants fixed effects parameter 
+        to be estimated and returned, default is false 
 
 # Output 
 - `σ2path`: matrix of estimated variance components at each tuning parameter `λ`,
@@ -292,7 +294,8 @@ function vcselectpath(
     σ2      :: AbstractVector{T} = ones(T, length(V)),
     maxiter :: Int = 1000,
     tol     :: AbstractFloat = 1e-6,
-    verbose :: Bool = false
+    verbose :: Bool = false,
+    fixedestimates :: Bool = false 
     ) where {T <: Real}
 
     # project y and V onto nullspace of X
@@ -303,14 +306,18 @@ function vcselectpath(
         penfun=penfun, penwt=penwt, nlambda=nlambda, λpath=λpath, σ2=σ2, maxiter=maxiter,
         tol=tol, verbose=verbose)
 
-    # 
-    βpath = zeros(T, size(X, 2), nlambda)
-    for iter in 1:length(λpath)
-        βpath[:, iter] = betaestimate(y, X, V, view(σ2path, :, iter))
-    end 
+    # if user wants fixed effects estimates, estimate β
+    if fixedestimates 
+        βpath = zeros(T, size(X, 2), nlambda)
+        for iter in 1:length(λpath)
+            βpath[:, iter] = betaestimate(y, X, V, view(σ2path, :, iter))
+        end 
 
-    # output 
-    return σ2path, βpath, objpath, λpath, niterspath 
+        # output 
+        return σ2path, βpath, objpath, λpath, niterspath 
+    else 
+        return σ2path, objpath, λpath, niterspath
+    end 
 end 
 """
     vcselectpath(y, V; penfun=NoPenalty(), penwt=[ones(length(V)-1); 0.0], 
@@ -358,7 +365,6 @@ function vcselectpath(
     ## generate solution path based on penalty 
     if penfun != NoPenalty() 
 
-        println("maybe here")
         # create a lambda grid if not specified  
         if isempty(λpath) 
             maxλ = maxlambda(y, V; penfun=penfun, penwt=penwt)
