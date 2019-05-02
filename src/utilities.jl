@@ -149,20 +149,22 @@ Use backend such as `gr()`.
 - `title`: title of the figure, default is "Solution Path"
 - `xlab`: x-axis label, default is minimum of λpath
 - `ylab`: y-axis label, default is maximum of λpath
-- `tol`: if a variance componnent is greater than tol, it 
+- `tol`: a variance component less than `tol` is considered zero, default is 1e-6
+- `linewidth`: line width, default is 0.7
 
 # Output 
-- 
+- plot of solution path 
 """
 function plotsolpath(
-    solpath :: AbstractMatrix{T},
-    λpath   :: AbstractVector{T};
-    title   :: AbstractString = "Solution Path",
-    xlab    :: AbstractString = "\\lambda",
-    xmin    :: AbstractFloat = minimum(λpath),
-    xmax    :: AbstractFloat = maximum(λpath),
-    ylab    :: AbstractString = "\\sigma^2",
-    tol     :: Float64=1e-6
+    solpath   :: AbstractMatrix{T},
+    λpath     :: AbstractVector{T};
+    title     :: AbstractString = "Solution Path",
+    xlab      :: AbstractString = "\\lambda",
+    xmin      :: AbstractFloat = minimum(λpath),
+    xmax      :: AbstractFloat = maximum(λpath),
+    ylab      :: AbstractString = "\\sigma^2",
+    linewidth :: AbstractFloat = 0.7,
+    tol       :: Float64=1e-6
 ) where {T <: Real}
 
     # size of solution path 
@@ -197,7 +199,7 @@ function plotsolpath(
 
     # plot permuted solution path (decreasing order)
     plot(λpath, tr_solpath[:, [ranking; rest]], label=legendlabel, 
-        xaxis=(xlab, (xmin, xmax)), yaxis=(ylab), width=0.6, legendtitle="ranking")
+        xaxis=(xlab, (xmin, xmax)), yaxis=(ylab), width=linewidth, legendtitle="ranking")
     title!(title)     
 
 end 
