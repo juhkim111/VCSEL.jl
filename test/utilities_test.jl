@@ -1,8 +1,6 @@
 module UtilitiesTest
 
-using Random, LinearAlgebra, Test, PenaltyFunctions # VarianceComponentSelect
-include("./src/VarianceComponentSelect.jl")
-using .VarianceComponentSelect
+using Random, LinearAlgebra, Test, PenaltyFunctions, VarianceComponentSelect
 
 Random.seed!(123)
 
