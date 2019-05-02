@@ -30,20 +30,19 @@ function maxlambda(
 
     # initialize values 
     n = length(y)
-    σ02 = dot(y, y) / n
+    σ2_0 = dot(y, y) / n
     m = length(V) - 1
 
     # initialize array 
-    λpath = Array{T}(undef, m)
+    λpath = Array{Float64}(undef, m)
     Vy = similar(y)
 
     # use derivative to find plausible lambda for each of `m` variance components 
     for i in eachindex(λpath)
         mul!(Vy, V[i], y) 
-        λpath[i] = (1 / penwt[i]) * (-tr(V[i]) / (2 * σ02) +
-                dot(y, Vy) / (2 * σ02^2))
+        λpath[i] = (1 / penwt[i]) * (-tr(V[i]) / σ2_0 +
+                dot(y, Vy) / σ2_0^2)
     end
-
     # find maximum among m different lambdas
     tempλ = maximum(λpath)
     σ2 = zeros(length(V))
@@ -78,7 +77,6 @@ function maxlambda(
       σ2_c, = vcselect(y, V, penfun=penfun, λ=c, penwt=penwt)
 
       if maximum(view(σ2_a, 1:m)) < tol 
-      #if all(σ2_a[1:end-1] .< tol)
         b = a
         a = b / 2
       # given that at least one σ2 at a is non-zero, if difference between
@@ -86,7 +84,6 @@ function maxlambda(
       elseif maximum(abs, view(σ2_b, 1:m) - view(σ2_a, 1:m)) < tol || (b-a) < 0.01
         break
       elseif maximum(view(σ2_c, 1:m)) > tol 
-      #elseif any(σ2_c[1:end-1] .> tol)
         a = c
       else
         b = c
