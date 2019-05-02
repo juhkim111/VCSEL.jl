@@ -359,7 +359,7 @@ First, let's estimate `σ2` using no penalty.
 @time σ2, beta, obj, niters, = vcselect(y, X, V)
 ```
 
-     10.509790 seconds (12.91 M allocations: 1.135 GiB, 4.61% gc time)
+      9.591699 seconds (12.91 M allocations: 1.135 GiB, 3.95% gc time)
 
 
 
@@ -483,7 +483,7 @@ Here we obtain solution path using three different penalties: lasso (`L1Penalty(
         vcselectpath(y, X, V; penfun=L1Penalty(), fixedestimates=true)
 ```
 
-     86.699288 seconds (24.09 M allocations: 11.958 GiB, 3.22% gc time)
+     72.692033 seconds (24.09 M allocations: 11.958 GiB, 3.69% gc time)
 
 
 
@@ -501,7 +501,7 @@ Here we obtain solution path using three different penalties: lasso (`L1Penalty(
         fixedestimates=true)
 ```
 
-     52.225425 seconds (56.16 k allocations: 10.068 GiB, 3.79% gc time)
+     50.714407 seconds (56.16 k allocations: 10.068 GiB, 3.86% gc time)
 
 
 
@@ -518,7 +518,7 @@ Here we obtain solution path using three different penalties: lasso (`L1Penalty(
         vcselectpath(y, X, V; penfun=MCPPenalty(), fixedestimates=true)
 ```
 
-     89.818078 seconds (54.77 k allocations: 15.396 GiB, 4.84% gc time)
+     85.900394 seconds (9.49 M allocations: 15.897 GiB, 4.10% gc time)
 
 
 
@@ -603,13 +603,14 @@ using Plots; gr()
 
 ```julia
 plotsolpath(σ2path_lasso, λpath_lasso; 
-    title="Solution Path (lasso penalty)", xlab="\\lambda", ylab="\\sigma^2")
+    title="Solution Path (lasso penalty)", xlab="\\lambda", ylab="\\sigma^2",
+    linewidth=1.2)
 ```
 
 
 
 
-![svg](skat_lasso.svg)
+![svg](output_51_0.svg)
 
 
 
@@ -617,13 +618,13 @@ plotsolpath(σ2path_lasso, λpath_lasso;
 ```julia
 plotsolpath(σ2path_adlasso, λpath_adlasso; 
     title="Solution Path (adaptive lasso penalty)", 
-    xlab="\\lambda", ylab="\\sigma^2")
+    xlab="\\lambda", ylab="\\sigma^2", linewidth=1.2)
 ```
 
 
 
 
-![svg](skat_adlasso.svg)
+![svg](output_52_0.svg)
 
 
 
@@ -631,13 +632,13 @@ plotsolpath(σ2path_adlasso, λpath_adlasso;
 ```julia
 plotsolpath(σ2path_mcp2, λpath_mcp2; 
     title="Solution Path (MCP penalty, \\gamma=2.0)", 
-    xlab="\\lambda", ylab="\\sigma^2")
+    xlab="\\lambda", ylab="\\sigma^2", linewidth=1.2)
 ```
 
 
 
 
-![svg](skat_mcp2.svg)
+![svg](output_53_0.svg)
 
 
 
@@ -649,7 +650,7 @@ For MCP penalty, we used the default value `γ=2.0`. Instead, let's try `γ=2.69
         vcselectpath(y, X, V; penfun=MCPPenalty(2.69))
 ```
 
-     77.301041 seconds (45.22 k allocations: 13.423 GiB, 4.93% gc time)
+     93.202163 seconds (78.40 k allocations: 13.425 GiB, 4.61% gc time)
 
 
 
@@ -663,12 +664,12 @@ For MCP penalty, we used the default value `γ=2.0`. Instead, let's try `γ=2.69
 ```julia
 plotsolpath(σ2path_mcp269, λpath_mcp269; 
     title="Solution Path (MCP penalty, \\gamma=2.69)", 
-    xlab="\\lambda", ylab="\\sigma^2")
+    xlab="\\lambda", ylab="\\sigma^2", linewidth=1.2)
 ```
 
 
 
 
-![svg](skat_mcp269.svg)
+![svg](output_56_0.svg)
 
 
