@@ -1,7 +1,9 @@
 module UtilitiesTest
 
-using Random, LinearAlgebra, Test, PenaltyFunctions, VarianceComponentSelect
-
+#using Random, LinearAlgebra, Test, PenaltyFunctions, VarianceComponentSelect
+using Random, LinearAlgebra, Test, PenaltyFunctions
+include("../src/VarianceComponentSelect.jl")
+using .VarianceComponentSelect
 Random.seed!(123)
 
 # generate data from an univariate response variance component model 
@@ -11,13 +13,21 @@ p = 3     # no. covariates
 X = randn(n, p)
 β = ones(p)
 
+# generate vector of covariance matrix 
 V  = Array{Matrix{Float64}}(undef, m + 1)
 for i = 1:m
   Vi = randn(n, 50)
   V[i] = Vi * Vi'
-  V[i] = V[i] ./ norm(V[i])
 end
-V[m + 1] = Matrix(I, n, n) ./ √n
+V[m + 1] = Matrix(I, n, n)
+
+# make sure frobenius norm equals to 1 
+checkfrobnorm!(V)
+@testset "check frob norm 1" begin 
+  for Vi in V 
+    @test norm(Vi) ≈ 1
+  end 
+end 
 
 # truth 
 σ2 = zeros(m + 1)
@@ -32,15 +42,17 @@ end
 Ωchol = cholesky(Ω)
 y = X * β + Ωchol.L * randn(n)
 
-ynew, Vnew, B = nullprojection(y, X, V)
-@test B'B ≈ I 
-@test isapprox(maximum(abs.(B'*X)), 0; atol=1e-8) #all(B'*X .≈ 0)
-@testset "onenorm" begin
+@testset "projection onto null space of X" begin
+  ynew, Vnew, B = nullprojection(y, X, V)
   for i in 1:(m + 1)
       @test norm(Vnew[i]) ≈ 1
   end
-end  
+  @test B'B ≈ I 
+  @test isapprox(maximum(abs.(B'*X)), 0; atol=1e-8) #all(B'*X .≈ 0)
+end 
 
-@test betaestimate(y, X, Ω) == betaestimate(y, X, Ωchol)
+@testset "estimate fixed effects" begin 
+  @test betaestimate(y, X, Ω) == betaestimate(y, X, Ωchol)
+end 
 
 end 
