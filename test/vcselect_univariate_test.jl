@@ -1,9 +1,6 @@
 module UnivariateTest
 
-#using Random, LinearAlgebra, VarianceComponentSelect, PenaltyFunctions, Test
-using Random, LinearAlgebra, PenaltyFunctions, Test, Profile 
-include("../src/VarianceComponentSelect.jl")
-using .VarianceComponentSelect
+using Random, LinearAlgebra, VarianceComponentSelect, PenaltyFunctions, Test
 
 Random.seed!(123)
 

@@ -1,9 +1,6 @@
 module UtilitiesTest
 
-#using Random, LinearAlgebra, Test, PenaltyFunctions, VarianceComponentSelect
-using Random, LinearAlgebra, Test, PenaltyFunctions
-include("../src/VarianceComponentSelect.jl")
-using .VarianceComponentSelect
+using Random, LinearAlgebra, Test, PenaltyFunctions, VarianceComponentSelect
 Random.seed!(123)
 
 # generate data from an univariate response variance component model 
