@@ -8,7 +8,8 @@ using StatsBase
 using Distributions 
 using Plots 
 
-export vcselect, vcselectpath, maxlambda, nullprojection, betaestimate, plotsolpath
+export vcselect, vcselectpath, maxlambda, nullprojection, 
+        betaestimate, checkfrobnorm!, plotsolpath
 
 include("vcselect.jl")
 include("maxlambda.jl")
