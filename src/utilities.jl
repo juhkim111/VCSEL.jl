@@ -6,15 +6,15 @@ Project `y` to null space of `transpose(X)` and transform `V` accordingly.
 # Input 
 - `y`: response vector to be transformed. 
 - `X`: covariate matrix, response `y` is projected onto the null space of transpose(X) 
-- `V`: vector of covariance matrices to be transformed, `(V[1],V[2],...,V[m],I)`
-    note that V[end] should be identity matrix
+- `V`: vector of covariance matrices, (V[1],V[2],...,V[m],I/√n)
+    note that each V[i] needs to have frobenius norm 1, and that V[end] should be 
+    identity matrix divided by √n   
 
 # Ouptut 
 - `ynew`: projected response vector
 - `Vnew`: projected vector of covariance matrices, 
     frobenius norm of `V[i]` equals to 1 for all `i`
 - `B`: matrix whose columns are basis vectors of the null space of transpose(X) 
-
 """
 function nullprojection(
     y    :: AbstractVector{T},
@@ -149,15 +149,55 @@ function checkfrobnorm!(
     end 
 end 
 """
-    plotsolpath(solpath, λpath; title="Solution Path", xlab="λ", ylab="σ2", 
-            xmin=minimum(λpath), xmax=minimum(λpath), tol=1e-6)
-
-Output plot of solution path at varying λ values. First, calculate rank of each variance 
-component based on the order in which it enters solution path. 
-Use backend such as `gr()`.
+    rankvarcomps(σ2path; tol=1e-6)
 
 # Input
-- `solpath`: solution path (in numeric matrix) to be plotted, each column should 
+- `σ2path`: solution path (in numeric matrix), each column should 
+    represent estimated variance components at specific λ 
+    as in output from `vcselect`, `vcselectpath`
+
+# Keyword 
+- `tol`: a variance component less than `tol` is considered zero, default is 1e-6 
+
+# Output 
+- `ranking`: rank of each variance component based on the order in which it enters 
+    solution path
+- `rest`: rest of the variance components that are estimated to be zero at all λ > 0
+"""
+function rankvarcomps(
+    σ2path :: AbstractMatrix{T};
+    tol    :: Float64=1e-6
+    ) where {T <: Real}
+
+    # size of solution path 
+    novarcomp, nlambda = size(σ2path)
+
+    # initialize array for ranking 
+    ranking = Int[]
+
+    # go through solution path and find the order in which variance component enters
+    for col in nlambda:-1:2
+        tmp = findall(x -> x > tol, view(σ2path, 1:(novarcomp-1), col))
+        for j in tmp 
+            if !(j in ranking)
+                push!(ranking, j)
+            end
+        end
+    end 
+    # rest of the variance components that are estimated to be zero at all λ > 0
+    rest = setdiff(1:(novarcomp-1), ranking)
+    rest = [rest; novarcomp]
+
+    return ranking, rest 
+end 
+"""
+    plotsolpath(σ2path, λpath; title="Solution Path", xlab="λ", ylab="σ2", 
+            xmin=minimum(λpath), xmax=minimum(λpath), tol=1e-6)
+
+Output plot of solution path at varying λ values. Use backend such as `gr()`.
+
+# Input
+- `σ2path`: solution path (in numeric matrix) to be plotted, each column should 
         represent variance components at specific λ 
         as in output from `vcselect`, `vcselectpath`
 - `λpath`: vector of tuning parameter λ values 
@@ -166,44 +206,30 @@ Use backend such as `gr()`.
 - `title`: title of the figure, default is "Solution Path"
 - `xlab`: x-axis label, default is minimum of λpath
 - `ylab`: y-axis label, default is maximum of λpath
-- `tol`: a variance component less than `tol` is considered zero, default is 1e-6
 - `linewidth`: line width, default is 1.0
 
 # Output 
 - plot of solution path 
 """
 function plotsolpath(
-    solpath   :: AbstractMatrix{T},
+    σ2path    :: AbstractMatrix{T},
     λpath     :: AbstractVector{T};
     title     :: AbstractString = "Solution Path",
     xlab      :: AbstractString = "\\lambda",
     xmin      :: AbstractFloat = minimum(λpath),
     xmax      :: AbstractFloat = maximum(λpath),
     ylab      :: AbstractString = "\\sigma^2",
-    linewidth :: AbstractFloat = 1.0,
-    tol       :: Float64=1e-6
+    linewidth :: AbstractFloat = 1.0
 ) where {T <: Real}
 
     # size of solution path 
-    novarcomp, nlambda = size(solpath)
+    novarcomp, nlambda = size(σ2path)
 
-    # initialize array for ranking 
-    ranking = Int[]
-
-    # go through solution path and find the order in which variance component enters
-    for col in nlambda:-1:2
-    tmp = findall(x -> x > tol, view(solpath, 1:(novarcomp-1), col))
-    for j in tmp 
-        if !(j in ranking)
-        push!(ranking, j)
-        end
-    end
-    end 
-    rest = setdiff(1:(novarcomp-1), ranking)
-    rest = [rest; novarcomp]
+    # get ranking of variance components
+    ranking, rest = rankvarcomps(σ2path)
 
     # transpose solpath s.t. each row is estimates at particular lambda
-    tr_solpath = solpath'
+    tr_σ2path = σ2path'
 
     # label in the permuted order 
     legendlabel = "\\sigma^{2}[$(ranking[1])]"
@@ -215,7 +241,7 @@ function plotsolpath(
     end 
 
     # plot permuted solution path (decreasing order)
-    plot(λpath, tr_solpath[:, [ranking; rest]], label=legendlabel, 
+    plot(λpath, tr_σ2path[:, [ranking; rest]], label=legendlabel, 
         xaxis=(xlab, (xmin, xmax)), yaxis=(ylab), width=linewidth, legendtitle="ranking")
     title!(title)     
 
