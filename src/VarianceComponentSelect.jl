@@ -2,10 +2,8 @@ __precompile__()
 
 module VarianceComponentSelect
 
-using PenaltyFunctions
-using LinearAlgebra 
-using StatsBase
-using Distributions 
+using PenaltyFunctions, LinearAlgebra, StatsBase, Distributions, Reexport
+@reexport using PenaltyFunctions
 
 export vcselect, vcselectpath, maxlambda, nullprojection, 
         betaestimate, checkfrobnorm!, plotsolpath

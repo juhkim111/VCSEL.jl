@@ -1,6 +1,6 @@
 module UnivariateTest
 
-using Random, LinearAlgebra, VarianceComponentSelect, PenaltyFunctions, Test
+using Random, LinearAlgebra, VarianceComponentSelect, Test
 
 Random.seed!(123)
 
