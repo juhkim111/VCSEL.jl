@@ -7,7 +7,7 @@ using PenaltyFunctions, LinearAlgebra, StatsBase, Distributions, Reexport, Plots
 @reexport using Plots 
 
 export vcselect, vcselectpath, maxlambda, nullprojection, 
-        betaestimate, checkfrobnorm!, plotsolpath
+        betaestimate, checkfrobnorm!, rankvarcomps, plotsolpath
 
 include("vcselect.jl")
 include("maxlambda.jl")
