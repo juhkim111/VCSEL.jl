@@ -7,8 +7,9 @@ call `vcselect(y, V; penfun, λ, penwt, σ2, maxiter, tol, verbose)`
 # Input
 - `y`: response vector
 - `X`: covariate matrix 
-- `V`: vector of covariance matrices, (V[1],V[2],...,V[m],I)
-        note that V[end] should be identity matrix
+- `V`: vector of covariance matrices, (V[1],V[2],...,V[m],I/√n)
+    note that each V[i] needs to have frobenius norm 1, and that V[end] should be 
+    identity matrix divided by √n
 
 # Keyword
 - `penfun`: penalty function, e.g., NoPenalty() (default), L1Penalty(), MCPPenalty()
@@ -20,6 +21,8 @@ call `vcselect(y, V; penfun, λ, penwt, σ2, maxiter, tol, verbose)`
 - `maxiter`: maximum number of iterations, default is 1000
 - `tol`: tolerance in difference of objective values for MM loop, default is 1e-6
 - `verbose`: display switch, default is false 
+- `checkfrobnorm`: if true, makes sures elements of `V` have frobenius norm 1.
+    Default is true 
 
 # Output
 - `σ2`: vector of estimated variance components 
@@ -27,7 +30,6 @@ call `vcselect(y, V; penfun, λ, penwt, σ2, maxiter, tol, verbose)`
 - `obj`: objective value at the estimated variance components 
 - `niters`: number of iterations to convergence
 - `Ω`: covariance matrix evaluated at the estimated variance components
-- `Ωinv`: precision (inverse covariance) matrix evaluated at the estimated variance components
 """
 function vcselect( 
     y             :: AbstractVector{T},
@@ -84,8 +86,9 @@ Minimization is achieved via majorization-minimization (MM) algorithm.
 
 # Input
 - `y`: response vector
-- `V`: vector of covariance matrices, (V[1],V[2],...,V[m],I)
-        note that V[end] should be identity matrix
+- `V`: vector of covariance matrices, (V[1],V[2],...,V[m],I/√n)
+    note that each V[i] needs to have frobenius norm 1, and 
+    that V[end] should be identity matrix divided by √n
 
 # Keyword
 - `penfun`: penalty function, e.g., NoPenalty() (default), L1Penalty(), MCPPenalty(γ = 2.0)
@@ -97,13 +100,15 @@ Minimization is achieved via majorization-minimization (MM) algorithm.
 - `maxiter`: maximum number of iterations, default is 1000
 - `tol`: tolerance in difference of objective values for MM loop, default is 1e-6
 - `verbose`: display switch, default is false 
+- `checkfrobnorm`: if true, makes sures elements of `V` have frobenius norm 1.
+    Default is true 
 
 # Output
 - `σ2`: vector of estimated variance components 
 - `obj`: objective value at the estimated variance components 
 - `niters`: number of iterations to convergence
 - `Ω`: covariance matrix evaluated at the estimated variance components
-- `Ωinv`: precision (inverse covariance) matrix evaluated at the estimated variance components
+- `objvec`: vector of objective values at each iteration 
 """
 function vcselect( 
     y             :: AbstractVector{T},
@@ -298,17 +303,17 @@ along varying lambda values.
 - `βpath`: matrix of estimated fixed effects at each tuning parameter `λ`
 """
 function vcselectpath(
-    y       :: AbstractVector{T},
-    X       :: AbstractMatrix{T},
-    V       :: AbstractVector{Matrix{T}};
-    penfun  :: Penalty = NoPenalty(),
-    penwt   :: AbstractVector{T} = [ones(T, length(V)-1); zero(T)],
-    nlambda :: Int = 100, 
-    λpath   :: AbstractVector{T} = T[],
-    σ2      :: AbstractVector{T} = ones(T, length(V)),
-    maxiter :: Int = 1000,
-    tol     :: AbstractFloat = 1e-6,
-    verbose :: Bool = false,
+    y            :: AbstractVector{T},
+    X            :: AbstractMatrix{T},
+    V            :: AbstractVector{Matrix{T}};
+    penfun       :: Penalty = NoPenalty(),
+    penwt        :: AbstractVector{T} = [ones(T, length(V)-1); zero(T)],
+    nlambda      :: Int = 100, 
+    λpath        :: AbstractVector{T} = T[],
+    σ2           :: AbstractVector{T} = ones(T, length(V)),
+    maxiter      :: Int = 1000,
+    tol          :: AbstractFloat = 1e-6,
+    verbose      :: Bool = false,
     fixedeffects :: Bool = false 
     ) where {T <: Real}
 
