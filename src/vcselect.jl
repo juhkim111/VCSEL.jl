@@ -30,23 +30,31 @@ call `vcselect(y, V; penfun, λ, penwt, σ2, maxiter, tol, verbose)`
 - `Ωinv`: precision (inverse covariance) matrix evaluated at the estimated variance components
 """
 function vcselect( 
-    y       :: AbstractVector{T},
-    X       :: AbstractMatrix{T},
-    V       :: AbstractVector{Matrix{T}};
-    penfun  :: Penalty = NoPenalty(),
-    λ       :: T = one(T),
-    penwt   :: AbstractVector{T} = [ones(T, length(V)-1); zero(T)],
-    σ2      :: AbstractVector{T} = ones(T, length(V)),
-    maxiter :: Int = 1000,
-    tol     :: AbstractFloat = 1e-6,
-    verbose :: Bool = false
+    y             :: AbstractVector{T},
+    X             :: AbstractMatrix{T},
+    V             :: AbstractVector{Matrix{T}};
+    penfun        :: Penalty = NoPenalty(),
+    λ             :: T = one(T),
+    penwt         :: AbstractVector{T} = [ones(T, length(V)-1); zero(T)],
+    σ2            :: AbstractVector{T} = ones(T, length(V)),
+    maxiter       :: Int = 1000,
+    tol           :: AbstractFloat = 1e-6,
+    verbose       :: Bool = false,
+    checkfrobnorm :: Bool = true
     ) where {T <: Real}
 
+    if checkfrobnorm 
+        # check frob norm equals to 1 
+        checkfrobnorm!(V)
+    end 
+
+    # project onto null space 
     ynew, Vnew = nullprojection(y, X, V)
 
     # call vcselect 
     σ2, obj, niters, = vcselect(ynew, Vnew; penfun=penfun, λ=λ, penwt=penwt, 
-                            σ2=σ2, maxiter=maxiter, tol=tol, verbose=verbose)
+                            σ2=σ2, maxiter=maxiter, tol=tol, verbose=verbose,
+                            checkfrobnorm=false)
 
     # update Ω with estimated variance components 
     Ω = zeros(T, size(V[1]))
@@ -98,18 +106,24 @@ Minimization is achieved via majorization-minimization (MM) algorithm.
 - `Ωinv`: precision (inverse covariance) matrix evaluated at the estimated variance components
 """
 function vcselect( 
-    y       :: AbstractVector{T},
-    V       :: Vector{Matrix{T}};
-    penfun  :: Penalty = NoPenalty(),
-    λ       :: T = one(T),
-    penwt   :: AbstractVector{T} = [ones(T, length(V)-1); zero(T)],
-    σ2      :: AbstractVector{T} = ones(T, length(V)),
-    Ω       :: AbstractMatrix{T} = zeros(T, size(V[1])), 
-    Ωinv    :: AbstractMatrix{T} = zeros(T, size(V[1])),
-    maxiter :: Int = 1000,
-    tol     :: AbstractFloat = 1e-6,
-    verbose :: Bool = false
+    y             :: AbstractVector{T},
+    V             :: Vector{Matrix{T}};
+    penfun        :: Penalty = NoPenalty(),
+    λ             :: T = one(T),
+    penwt         :: AbstractVector{T} = [ones(T, length(V)-1); zero(T)],
+    σ2            :: AbstractVector{T} = ones(T, length(V)),
+    Ω             :: AbstractMatrix{T} = zeros(T, size(V[1])), 
+    Ωinv          :: AbstractMatrix{T} = zeros(T, size(V[1])),
+    maxiter       :: Int = 1000,
+    tol           :: AbstractFloat = 1e-6,
+    verbose       :: Bool = false,
+    checkfrobnorm :: Bool = true
     ) where {T <: Real} 
+
+    # check frob norm equals to 1 
+    if checkfrobnorm 
+        checkfrobnorm!(V)
+    end 
 
     # initialize algorithm
     n = length(y)       # no. observations
@@ -361,6 +375,7 @@ function vcselectpath(
     verbose :: Bool = false
     ) where {T <: Real}
 
+    checkfrobnorm!(V)
 
     ## generate solution path based on penalty 
     if penfun != NoPenalty() 
@@ -382,13 +397,14 @@ function vcselectpath(
         for iter in 1:nlambda 
             σ2, objpath[iter], niterspath[iter], = 
                     vcselect(y, V; penfun=penfun, λ=λpath[iter], penwt=penwt, 
-                    σ2=σ2, maxiter=maxiter, tol=tol, verbose=verbose)
+                    σ2=σ2, maxiter=maxiter, tol=tol, verbose=verbose, checkfrobnorm=false)
             σ2path[:, iter] = σ2 
         end
 
     else # if no penalty, there is no lambda grid 
         σ2path, objpath, niterspath, = vcselect(y, V; 
-                penfun=penfun, maxiter=maxiter, tol=tol, verbose=verbose)
+                penfun=penfun, maxiter=maxiter, tol=tol, verbose=verbose, 
+                checkfrobnorm=false)
     end 
 
     # output 
