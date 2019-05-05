@@ -1,4 +1,4 @@
-export vcselect, vcselectpath
+export vcselect, 
 
 """
     vcselect(Y, V, penfun, λ, penwt, Σ)
@@ -24,63 +24,148 @@ response. The objective function is `0.5logdet(Ω) + 0.5(vecY)'*inv(Ω)*(vecY) +
 - `Ωinv`: precision (inverse covariance) matrix evaluated at the minimizer
 """
 function vcselect(
-    Y       :: AbstractMatrix{T},
-    V       :: AbstractVector{Matrix{T}};
-    penfun  :: Penalty = NoPenalty(),
-    λ       :: T = one(T),
-    penwt   :: AbstractVector = [ones(T, length(V)-1); zero(T)],
-    Σ       :: AbstractArray = fill(Matrix(1.0I, size(Y, 2), size(Y, 2)), length(V)),
-    Ω       :: AbstractMatrix{T} = zeros(T, size(V[1])), 
-    Ωinv    :: AbstractMatrix{T} = zeros(T, size(V[1])),
-    maxiter :: Int = 1000,
-    tol     :: AbstractFloat = 1e-6,
-    verbose :: Bool = false
+    Y             :: AbstractMatrix{T},
+    V             :: AbstractVector{Matrix{T}};
+    penfun        :: Penalty = NoPenalty(),
+    λ             :: T = one(T),
+    penwt         :: AbstractVector = [ones(T, length(V)-1); zero(T)],
+    Σ             :: AbstractArray = fill(Matrix(1.0I, size(Y, 2), size(Y, 2)), length(V)),
+    Ω             :: AbstractMatrix{T} = zeros(T, prod(size(Y)), prod(size(Y))), 
+    Ωinv          :: AbstractMatrix{T} = zeros(T, Ω),
+    maxiter       :: Int = 1000,
+    tol           :: AbstractFloat = 1e-6,
+    verbose       :: Bool = false,
+    checkfrobnorm :: Bool = true 
     ) where {T <: Real}
 
-    # initialize algorithm 
-    n, d = size(Y)
-    nvarcomps = length(V) 
-    fill!(Ω, 0)     # covariance matrix 
-    for j in 1:length(V)
-        Ω .+= σ2[j] .* V[j]
-    end
+    # check frob norm equals to 1 
+    if checkfrobnorm 
+        checkfrobnorm!(V)
+    end 
 
+    # initialize algorithm 
+    n, d = size(Y)          # size of response matrix 
+    nvarcomps = length(V)   # no. of variance components
+    fill!(Ω, 0)             # covariance matrix 
+    for j in 1:nvarcomps
+        kronaxpy!(Σ[j], V[j], Ω)
+    end
+    Ωchol = cholesky!(Symmetric(Ω))
+    Ωinv[:] = inv(Ωchol) 
+    vecY = vec(Y)
+    v = Ωinv * vecY   
+    obj = (1//2) * logdet(Ωchol) + (1//2) * dot(vecY, v) # objective value 
+    pen = 0.0
+    for j in 1:(nvarcomps - 1)
+        pen += penwt[j] * value(penfun, √tr(Σ[j]))
+    end
+    loglConst = (1//2) * n * d * log(2π)
+    obj += loglConst + λ * pen
 
     # reshape 
-    R = reshape(Ωinv * vec(Y), n, d)
+    R = reshape(Ωinv * vecY, n, d)
 
-    # `Ikron1 = I_d ⊗ 1_n` 
-    Ikron1 = kron(Matrix(I, d, d), ones(n))
+    # `I_d ⊗ 1_n` 
+    kron_I_one = kron(Matrix(I, d, d), ones(n))
+
+    # `1_d 1_d' ⊗ V[i]`
+    kron_ones_V = similar(V)
+    for i in 1:nvarcomps 
+        kron_ones_V[i] = kron(ones(d, d), V[i])
+    end 
+
+    # pre-allocate memory 
+    W = similar(Ω)
+    Linv = similar(Σ[1])
+
+    # display 
+    if verbose
+        println("iter = 0")
+        #println("Σ   = ", Σ)
+        println("obj  = ", obj)
+        objvec = obj
+    end  
 
     # MM loop 
-    for i in 1:nvarcomps
-        # `tmp = (Ikron1)' * [kron(ones(d, d), vcobs.V[i]) .* Ωinv] * (Ikron1)`
-        tmp = kron(ones(d, d), vcobs.V[i]) .* Ωinv
-        lmul!(Ikron1', tmp), rmul!(tmp, Ikron1)
+    niters = 0 
+    for iter in 1:maxiter 
+        fill!(Ω, 0)
+        # update variance components
+        for i in 1:nvarcomps
+            # `W = (kron_I_one)' * [kron(ones(d, d), V[i]) .* Ωinv] * (kron_I_one)`
+            W = kron_ones_V[i] .* Ωinv
+            lmul!(kron_I_one', W), rmul!(W, kron_I_one)
 
-        # add penalty unless it's the last variance component 
-        if isa(penfun, L1Penalty) && i < nvarcomps
-            # `tmp += (penstrength / tr(vcm.Σ[i])) * Matrix(I, d, d)`
-            axpy!((λ * penwt[i] / tr(vcm.Σ[i])), Matrix(I, d, d), tmp)
-            # or use for loop to add diagonal elemetns 
-            # tmpconst = λ * penwt[i] / tr(vcm.Σ[i])
-            # for j in 1:d
-            #     tmp[j, j] .+= tmpconst  
-            # end             
+            # add penalty unless it's the last variance component 
+            if isa(penfun, L1Penalty) && i < nvarcomps
+                # `tmp += (penstrength / tr(vcm.Σ[i])) * Matrix(I, d, d)`
+                # axpy!((λ * penwt[i] / tr(Σ[i])), Matrix(I, d, d), tmp)
+                # or use for loop to add diagonal elemetns 
+                penconst = λ * penwt[i] / tr(Σ[i])
+                for j in 1:d
+                    W[j, j] .+= penconst  
+                end             
+            end 
+
+            L = cholesky!(Symmetric(W))
+            Linv[:] = inv(L)
+
+            # `vcm.Σ[i] = Linv' * sqrt((R*vcm.Σ[i]*L)' * vcobs.V[i] * (R*vcm.Σ[i]*L)) * Linv`
+            W = R * (Σ[i] * L.L)
+            Σ[i] = sqrt(BLAS.gemm('T', 'N', W, V[i] * W))
+            lmul!(Linv', Σ[i]), rmul!(Σ[i], Linv)
         end 
 
-        L = cholesky!(Hermitian(tmp)).L
-        Linv = inv(L)
+        # update Ω
+        for j in 1:nvarcomps 
+            kronaxpy!(Σ[j], V[j], Ω)
+        end
 
-        # `vcm.Σ[i] = Linv' * sqrt((R*vcm.Σ[i]*L)' * vcobs.V[i] * (R*vcm.Σ[i]*L)) * Linv`
-        tmp2 = R * (vcm.Σ[i] * L)
-        vcm.Σ[i] = sqrt(BLAS.gemm('T', 'N', tmp2, vcobs.V[i] * tmp2))
-        lmul!(Linv', vcm.Σ[i]), rmul!(vcm.Σ[i], Linv)
-    end 
+        # update Ωchol, Ωinv, v, R
+        Ωchol = cholesky!(Symmetric(Ω))
+        Ωinv[:] = inv(Ωchol)
+        mul!(v, Ωinv, vecY)
+        R = reshape(Ωinv * vecY, n, d)
+
+        # update objective value 
+        objold = obj 
+        obj = (1//2) * logdet(Ωchol) + (1//2) * dot(vecY, v) # objective value 
+        pen = 0.0
+        for j in 1:(nvarcomps - 1)
+            pen += penwt[j] * value(penfun, √tr(Σ[j]))
+        end
+        obj += loglConst + λ * pen
+
+        # display current iterate if specified 
+        if verbose
+            println("iter = ", iter)
+            println("obj  = ", obj)
+            objvec = [objvec; obj] 
+        end
+
+        # check convergence
+        if abs(obj - objold) < tol * (abs(objold) + 1)
+            niters = iter
+            break
+        end
+    end # end of iteration 
     
-
-
+    # construct final Ω matrix
+    fill!(Ω, 0)
+    for j in 1:nvarcomps 
+        kronaxpy!(Σ[j], V[j], Ω)
+    end
     
+    # output
+    if niters == 0
+        niters = maxiter
+    end
+
+    if verbose 
+        return Σ, obj, niters, Ω, objvec;
+    else 
+        return Σ, obj, niters, Ω;
+    end
 
 end 
 """
