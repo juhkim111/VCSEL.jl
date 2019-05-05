@@ -1,3 +1,5 @@
+export vcselect, vcselectpath
+
 """
     vcselect(y, X, V; penfun, λ, penwt, σ2, maxiter, tol, verbose)
 

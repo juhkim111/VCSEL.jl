@@ -1,3 +1,6 @@
+export nullprojection, fixedeffects, plotsolpath, 
+    checkfrobnorm!, rankvarcomps
+
 """
     nullprojection(y, X, V)
 
@@ -54,7 +57,7 @@ function nullprojection(
 end 
 
 """
-    betaestimate(y, X, V, σ2)
+    fixedeffects(y, X, V, σ2)
 
 Estimate fixed effects using REML estimate of variance components.
 Estimate of beta is 
@@ -71,7 +74,7 @@ where `Ω` being `∑ σ2[i] * V[i]` where `σ2` is the REML estimate.
 # Output 
 - `β`: fixed effects estimate
 """
-function betaestimate( 
+function fixedeffects( 
     y   :: AbstractVector{T},
     X   :: AbstractMatrix{T},
     V   :: AbstractVector{Matrix{T}},
@@ -88,13 +91,13 @@ function betaestimate(
         end 
     end 
 
-    β = betaestimate(y, X, Ω)
+    β = fixedeffects(y, X, Ω)
 
     return β
 
 end 
 """
-    betaestimate(y, X, Ω)
+    fixedeffects(y, X, Ω)
 
 Estimate fixed effects using REML estimate of variance components.
 Estimate of beta is 
@@ -110,7 +113,7 @@ where `Ω` being `∑ σ2[i] * V[i]` where `σ2` is the REML estimate.
 # Output 
 - `β`: fixed effects estimate Ω supplied is a Cholesky object, default is false
 """
-function betaestimate( 
+function fixedeffects( 
     y   :: AbstractVector{T},
     X   :: AbstractMatrix{T},
     Ω   :: Union{AbstractMatrix{T}, Cholesky}
