@@ -143,7 +143,6 @@ function vcselect(
     Ωinv = inv(Ωchol) 
     v = Ωinv * y
     w = similar(v) 
-    loglConst = (1//2) * n * log(2π) 
     obj = (1//2) * logdet(Ωchol) + (1//2) * dot(y, v) # objective value 
     pen = 0.0
     for j in 1:m
