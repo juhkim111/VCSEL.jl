@@ -1,4 +1,4 @@
-export vcselect, 
+export vcselect
 
 """
     vcselect(Y, V, penfun, λ, penwt, Σ)
