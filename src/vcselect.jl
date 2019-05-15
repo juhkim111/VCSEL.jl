@@ -71,7 +71,7 @@ function vcselect(
     end 
 
     # estimate fixed effects 
-    β = betaestimate(y, X, Ω)
+    β = fixedeffects(y, X, Ω)
 
     return σ2, β, obj, niters, Ω;
 end
@@ -330,7 +330,7 @@ function vcselectpath(
     if fixedeffects 
         βpath = zeros(T, size(X, 2), nlambda)
         for iter in 1:length(λpath)
-            βpath[:, iter] = betaestimate(y, X, V, view(σ2path, :, iter))
+            βpath[:, iter] = fixedeffects(y, X, V, view(σ2path, :, iter))
         end 
 
         # output 
