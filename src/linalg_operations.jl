@@ -1,4 +1,4 @@
-export nullprojection, fixedeffects
+export nullprojection, fixedeffects, kronaxpy!, clamp_diagonal!
 
 """
     nullprojection(y, X, V)
@@ -142,7 +142,7 @@ function kronaxpy!(
     A :: AbstractVecOrMat{T},
     X :: AbstractVecOrMat{T}, 
     Y :: AbstractVecOrMat{T}
-    ) where {T <: Real}
+    ) where {T}
 
     # retrieve matrix sizes
     m, n = size(A, 1), size(A, 2)
@@ -159,4 +159,18 @@ function kronaxpy!(
         end
     end
     Y
+end
+"""
+Clamp the diagonal entries of matrix `A` to `[lo, hi]`.
+"""
+function clamp_diagonal!(
+    A  :: Matrix{T}, 
+    lo :: T, 
+    hi :: T
+    ) where {T}
+
+    @inbounds @simd for i in 1:minimum(size(A))
+        A[i, i] = clamp(A[i, i], lo, hi)
+    end
+    A
 end
