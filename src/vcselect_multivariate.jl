@@ -1,31 +1,40 @@
 export vcselect
 
 """
-    vcselect(Y, V; penfun=NoPenalty(), λ=1.0, penwt, Σ)
+    vcselect(Y, V; penfun, λ, penwt, Σ)
 
 Minimize penalized log-likelihood of variance component model with multivariate
-response. The objective function is `0.5logdet(Ω) + 0.5(vecY)'*inv(Ω)*(vecY) +
-λ * sum(penwt.*penfun(√tr(Σ)))`, where `Ω = Σ[1]⊗V[1] + ... + Σ[end]⊗V[end]`.
+response. The objective function to minimize is
+    `0.5n*d*log(2π) + 0.5logdet(Ω) + 0.5(vecY)'*inv(Ω)*(vecY) + λ * sum(penwt.*penfun(√tr(Σ)))`, 
+where `Ω = Σ[1]⊗V[1] + ... + Σ[end]⊗V[end]`, `V[end] = I`, and `(n,d)` is dimension of `Y`.
+Minimization is achieved via majorization-minimization (MM) algorithm. 
 
 # Input
-- `Y::Vector`: response matrix
-- `V::Vector{Matrix}`: covariance matrices
+- `Y`: response matrix
+- `V`: vector of covariance matrices, `(V[1],V[2],...,V[m],I)`
+    note (1) `V[end]` should be identity matrix or identity matrix divided by √n
+    note (2) each `V[i]` needs to have frobenius norm 1, 
+            if not, `vcselect` internally divides each `V[i]` by its frobenius norm by default 
 
 # Keyword 
-- `penfun`: penalty function, e.g., NoPenalty() (default), L1Penalty(), MCPPenalty()
-- `λ`: penalty strength
-- `penwt::Vector`: vector of penalty weights. penwt[end] must equal to 0.
-- `Σ::Vector`: initial values
-- `maxiter::Int`: maximum number of iterations
-- `tolfun`: tolerance in objective value
-- `verbose`: display switch
+- `penfun`: penalty function, e.g., `NoPenalty()` (default), `L1Penalty()`, `MCPPenalty(γ = 2.0)`
+- `λ`: penalty strength, default is 1.0
+- `penwt`: vector of penalty weights where penwt[end] must equal to 0, 
+        default is (1,1,...,1,0)
+- `Σ`: initial values, default is (I,I,...,I) where I is dxd identity matrix
+- `maxiter`: maximum number of iterations, default is 1000
+- `tol`: tolerance in difference of objective values for MM loop, default is 1e-6
+- `verbose`: display switch, default is false 
+- `checkfrobnorm`: if true, makes sures elements of `V` have frobenius norm 1.
+        default is true 
 
 # Output
-- `Σ`: minimizer
-- `obj`: objevtive value at the minimizer
-- `niter`: number of iterations
-- `Ω`: covariance matrix evaluated at the minimizer
-- `Ωinv`: precision (inverse covariance) matrix evaluated at the minimizer
+- `Σ`: vector of estimated variance components
+- `obj`: objective value at the estimated variance components
+- `niters`: number of iterations to convergence
+- `Ω`: covariance matrix evaluated at the estimated variance components
+- `objvec`: vector of objective values at each iteration, 
+    returned only if `verbose` is true
 """
 function vcselect(
     Y             :: AbstractMatrix{T},
@@ -37,7 +46,7 @@ function vcselect(
     Ω             :: AbstractMatrix{T} = zeros(T, prod(size(Y)), prod(size(Y))), 
     Ωinv          :: AbstractMatrix{T} = zeros(T, prod(size(Y)), prod(size(Y))),
     maxiter       :: Int = 1000,
-    tolfun        :: AbstractFloat = 1e-6,
+    tol           :: AbstractFloat = 1e-6,
     atol          :: AbstractFloat = 1e-16,
     verbose       :: Bool = false,
     checkfrobnorm :: Bool = true 
@@ -169,7 +178,7 @@ function vcselect(
         end
 
         # check convergence
-        if abs(obj - objold) < tolfun * (abs(objold) + 1)
+        if abs(obj - objold) < tol * (abs(objold) + 1)
             niters = iter
             break
         end
