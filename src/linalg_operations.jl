@@ -6,20 +6,21 @@ export nullprojection, fixedeffects, kronaxpy!, clamp_diagonal!
 Project `y` to null space of `transpose(X)` and transform `V` accordingly.
 
 # Input 
-- `y`: response vector to be transformed. 
+- `y`: response vector/matrix to be transformed
 - `X`: covariate matrix, response `y` is projected onto the null space of transpose(X) 
-- `V`: vector of covariance matrices, (V[1],V[2],...,V[m],I/√n)
-note that each V[i] needs to have frobenius norm 1, and that V[end] should be 
-identity matrix divided by √n   
+- `V`: vector of covariance matrices, `(V[1],V[2],...,V[m],I)`
+    note (1) `V[end]` should be identity matrix or identity matrix divided by √n
+    note (2) each `V[i]` needs to have frobenius norm 1, 
+            if not, `vcselect` internally divides each `V[i]` by its frobenius norm by default   
 
 # Ouptut 
-- `ynew`: projected response vector
+- `ynew`: projected response vector/matrix
 - `Vnew`: projected vector of covariance matrices, 
-frobenius norm of `V[i]` equals to 1 for all `i`
+    frobenius norm of `Vnew[i]` equals to 1 for all `i`
 - `B`: matrix whose columns are basis vectors of the null space of transpose(X) 
 """
 function nullprojection(
-    y    :: AbstractVector{T},
+    y    :: AbstractVecOrMat{T},
     X    :: AbstractMatrix{T},
     V    :: AbstractVector{Matrix{T}}
     ) where {T <: Real}
@@ -98,10 +99,10 @@ end
 """
     fixedeffects(y, X, Ω)
 
-Estimate fixed effects using REML estimate of variance components.
-Estimate of beta is 
+Estimate fixed effects using REML estimate of variance components, given `y` is a 
+univariate response. Estimate of beta is 
     `beta = pinv(X'*Ωinv*X)(X'*Ωinv*y)`
-where `Ω` being `∑ σ2[i] * V[i]` where `σ2` is the REML estimate.
+where `Ω` being `∑ σ2[i] * V[i]` where `σ2` is the REML estimates.
 
 # Input
 - `y`: response vector
@@ -110,7 +111,7 @@ where `Ω` being `∑ σ2[i] * V[i]` where `σ2` is the REML estimate.
 cholesky factorization of the overall covariance matrix 
 
 # Output 
-- `β`: fixed effects estimate Ω supplied is a Cholesky object, default is false
+- `β`: fixed effects estimate 
 """
 function fixedeffects( 
     y   :: AbstractVector{T},
@@ -131,6 +132,52 @@ function fixedeffects(
     β = pinv(XtΩinvX) * β
 
     return β
+
+end 
+"""
+    fixedeffects(Y, X, Ω)
+
+Estimate fixed effects using REML estimate of variance components, given `Y` is a 
+multivariate response. Let dimensions of `Y` and `X` be `nxd` and `nxp`, respectively. 
+Then fixed effects parameter `β` would be `pxd` matrix. 
+Estimate of `β` is obtained  
+    `vec(β̂) = pinv((I ⊗ X)' * Ωinv * (I ⊗ X))((I ⊗ X)' * Ωinv * vec(Y))`
+where `pinv` indicates Moore-Penrose pseudoinverse and 
+`Ω` denotes `sum(Σ[i] * V[i])` where `Σ` is the REML estimates.
+
+# Input
+- `Y`: response matrix
+- `X`: covariate matrix 
+- `Ω`: overall covariance matrix constructed using REML estimate of variance components or
+    cholesky factorization of the overall covariance matrix 
+
+# Output 
+- `β`: fixed effects estimate 
+"""
+function fixedeffects( 
+    Y   :: AbstractMatrix{T},
+    X   :: AbstractMatrix{T},
+    Ω   :: Union{AbstractMatrix{T}, Cholesky}
+    ) where {T <: Real}
+
+    # if not cholesky factorized, perform cholesky 
+    if typeof(Ω) <: Cholesky
+        Ωchol = Ω
+    else
+        Ωchol = cholesky(Symmetric(Ω))
+    end 
+
+    # dimension 
+    n, p = size(X)
+    d = size(Y, 2)
+
+    # estimate fixed effects
+    kron_I_X = kron(Matrix(I, d, d), X)
+    XtΩinvX = BLAS.gemm('T', 'N', kron_I_X, Ωchol \ kron_I_X)
+    β = BLAS.gemv('T', kron_I_X, Ωchol \ vec(Y)) 
+    β = pinv(XtΩinvX) * β
+
+    return reshape(β, p, d)
 
 end 
 """
