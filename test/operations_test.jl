@@ -1,7 +1,5 @@
 module OperationsTest
 
-
-
 using Random, LinearAlgebra, Test  #, VarianceComponentSelect
 
 include("../src/VarianceComponentSelect.jl")
@@ -9,6 +7,7 @@ using .VarianceComponentSelect
 
 Random.seed!(123)
 
+## univariate ## 
 # generate data from an univariate response variance component model 
 n = 100   # no. observations
 m = 10    # no. variance components
@@ -50,15 +49,23 @@ end
 #   @test betaestimate(y, X, Ω) == betaestimate(y, X, Ωchol)
 # end 
 
-#
+## multivariate ## 
+# generate data from a d-variate response variance component model
+n = 100       # no. observations
 d = 3         # no. categories
-nvarcomps = 5 
+p = 4         # no. covariates
+nvarcomps = 5 # no. variance components 
+X = randn(n, p)
+β = ones(p, d)
+
+# variance component matrices 
 Σ = [zeros(d, d) for i in 1:nvarcomps]
 for i in [1, 3, 5]
   Σi = randn(d, d)
   Σ[i] = Σi * Σi'
 end
-## make the first variance component 0 matrix
+
+# vector of covariance matrices; last one is identity matrix
 V  = Array{Matrix{Float64}}(undef, nvarcomps)
 for i = 1:(nvarcomps - 1)
   Vi = randn(n, 50)
@@ -81,6 +88,31 @@ end
     @test Ωnew ≈ Ω
 end
 
+# generate response vector 
+Ωchol = cholesky!(Symmetric(Ω))
+Y = X * β + reshape(Ωchol.L * randn(n*d), n, d)
+Ynew, Vnew, B = nullprojection(Y, X, V)
+@testset "projection onto null space of X" begin
+  for i in 1:nvarcomps
+      @test norm(Vnew[i]) ≈ 1
+  end
+  @test B'B ≈ I 
+  @test isapprox(maximum(abs.(B'*X)), 0; atol=1e-8) #all(B'*X .≈ 0)
+end 
+
+# call `vcselect` to get REML estimates
+Σ, obj, niters, = vcselect(Ynew, Vnew; penfun=L1Penalty(), λ=15.0)
+Ω = zeros(n*d, n*d)
+for j in eachindex(Σ)
+    if Σ[j] == zeros(d, d)
+        continue 
+    end 
+    kronaxpy!(Σ[j], V[j], Ω)
+end
+β̂ = fixedeffects(Y, X, Ω)
+@testset "estimate fixed effects parameter" begin 
+ @test size(β̂) == size(β)
+end 
 
 
 end 
