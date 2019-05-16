@@ -9,9 +9,10 @@ call `vcselect(y, V; penfun, λ, penwt, σ2, maxiter, tol, verbose)`
 # Input
 - `y`: response vector
 - `X`: covariate matrix 
-- `V`: vector of covariance matrices, (V[1],V[2],...,V[m],I/√n)
-    note that each V[i] needs to have frobenius norm 1, and that V[end] should be 
-    identity matrix divided by √n
+- `V`: vector of covariance matrices, (V[1],V[2],...,V[m],I)
+    note (1) V[end] should be identity matrix or identity matrix divided by √n
+    note (2) each V[i] needs to have frobenius norm 1, 
+            if not, `vcselect` internally divides each V[i] by its frobenius norm  
 
 # Keyword
 - `penfun`: penalty function, e.g., NoPenalty() (default), L1Penalty(), MCPPenalty()
@@ -83,19 +84,21 @@ Select variance components at specified lambda by minimizing penalized negative
 log-likelihood of variance component model. 
 The objective function to minimize is
   `0.5n*log(2π) + 0.5logdet(Ω) + 0.5y'*inv(Ω)*y + λ * sum(penwt.*penfun(σ))`
-where `Ω = σ2[1]*V[1] + ... + σ2[end]*V[end]` and `V[end] = I`
+where `Ω = σ2[1]*V[1] + ... + σ2[end]*V[end]`, `V[end] = I` and `n` is the length of `y`.
 Minimization is achieved via majorization-minimization (MM) algorithm. 
 
 # Input
 - `y`: response vector
-- `V`: vector of covariance matrices, (V[1],V[2],...,V[m],I/√n)
-    note that each V[i] needs to have frobenius norm 1, and 
-    that V[end] should be identity matrix divided by √n
+- `V`: vector of covariance matrices, `(V[1],V[2],...,V[m],I)`
+    note (1) `V[end]` should be identity matrix or identity matrix divided by √n
+    note (2) each `V[i]` needs to have frobenius norm 1, 
+            if not, `vcselect` internally divides each `V[i]` by its frobenius norm by default
 
 # Keyword
-- `penfun`: penalty function, e.g., NoPenalty() (default), L1Penalty(), MCPPenalty(γ = 2.0)
+- `penfun`: penalty function, e.g., `NoPenalty()` (default), `L1Penalty()`, `MCPPenalty(γ = 2.0)`
 - `λ`: penalty strength, default is 1.0
-- `penwt`: vector of penalty weights, default is (1,1,...1,0)
+- `penwt`: vector of penalty weights where penwt[end] must equal to 0, 
+        default is (1,1,...,1,0)
 - `σ2`: initial values, default is (1,1,...,1)
 - `Ω`: initial overall covariance matrix `Ω`
 - `Ωinv`: initial inverse matrix of overall covariance matrix `Ω`
@@ -103,14 +106,15 @@ Minimization is achieved via majorization-minimization (MM) algorithm.
 - `tol`: tolerance in difference of objective values for MM loop, default is 1e-6
 - `verbose`: display switch, default is false 
 - `checkfrobnorm`: if true, makes sures elements of `V` have frobenius norm 1.
-    Default is true 
+        default is true 
 
 # Output
 - `σ2`: vector of estimated variance components 
 - `obj`: objective value at the estimated variance components 
 - `niters`: number of iterations to convergence
 - `Ω`: covariance matrix evaluated at the estimated variance components
-- `objvec`: vector of objective values at each iteration 
+- `objvec`: vector of objective values at each iteration,
+        returned only if `verbose` is true
 """
 function vcselect( 
     y             :: AbstractVector{T},
@@ -279,8 +283,10 @@ along varying lambda values.
 # Input  
 - `y`: response vector
 - `X`: covariate matrix 
-- `V`: vector of covariance matrices, (V[1],V[2],...,V[m],I)
-    note that V[end] should be identity matrix
+- `V`: vector of covariance matrices, `(V[1],V[2],...,V[m],I)`
+    note (1) `V[end]` should be identity matrix or identity matrix divided by √n
+    note (2) each `V[i]` needs to have frobenius norm 1, 
+            if not, `vcselect` internally divides each `V[i]` by its frobenius norm by default
 
 # Keyword 
 - `penfun`: penalty function, default is NoPenalty()
@@ -347,8 +353,10 @@ Generate solution path of variance components along varying lambda values.
 
 # Input
 - `y`: response vector
-- `V`: vector of covariance matrices, (V[1],V[2],...,V[m],I)
-        note that V[end] should be identity matrix
+- `V`: vector of covariance matrices, `(V[1],V[2],...,V[m],I)`
+    note (1) `V[end]` should be identity matrix or identity matrix divided by √n
+    note (2) each `V[i]` needs to have frobenius norm 1, 
+            if not, `vcselect` internally divides each `V[i]` by its frobenius norm by default
 
 # Keyword 
 - `penfun`: penalty function, default is NoPenalty()
