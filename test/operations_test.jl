@@ -101,18 +101,21 @@ Ynew, Vnew, B = nullprojection(Y, X, V)
 end 
 
 # call `vcselect` to get REML estimates
-Σ, obj, niters, = vcselect(Ynew, Vnew; penfun=L1Penalty(), λ=15.0)
+Σ̂, obj, niters, = vcselect(Ynew, Vnew; penfun=L1Penalty(), λ=15.0)
 Ω = zeros(n*d, n*d)
-for j in eachindex(Σ)
-    if Σ[j] == zeros(d, d)
+for j in eachindex(Σ̂)
+    if Σ̂[j] == zeros(d, d)
         continue 
     end 
-    kronaxpy!(Σ[j], V[j], Ω)
+    kronaxpy!(Σ̂[j], V[j], Ω)
 end
 β̂ = fixedeffects(Y, X, Ω)
+β̂2 = fixedeffects(Y, X, V, Σ̂)
 @testset "estimate fixed effects parameter" begin 
- @test size(β̂) == size(β)
+   @test size(β̂) == size(β)
+   @test β̂ == β̂2
 end 
+
 
 
 end 
