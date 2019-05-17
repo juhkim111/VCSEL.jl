@@ -42,7 +42,7 @@ function vcselect(
     penfun        :: Penalty = NoPenalty(),
     λ             :: T = one(T),
     penwt         :: AbstractVector = [ones(T, length(V)-1); zero(T)],
-    Σ             :: AbstractArray = fill(Matrix(one(T) * I, size(Y, 2), size(Y, 2)), length(V)),
+    Σ             :: AbstractVector{Matrix{T}} = fill(Matrix(one(T) * I, size(Y, 2), size(Y, 2)), length(V)),
     maxiter       :: Int = 1000,
     tol           :: AbstractFloat = 1e-6,
     atol          :: AbstractFloat = 1e-16,
@@ -133,7 +133,7 @@ function vcselect(
     penfun        :: Penalty = NoPenalty(),
     λ             :: T = one(T),
     penwt         :: AbstractVector = [ones(T, length(V)-1); zero(T)],
-    Σ             :: AbstractArray = fill(Matrix(one(T) * I, size(Y, 2), size(Y, 2)), length(V)),
+    Σ             :: AbstractVector{Matrix{T}} = fill(Matrix(one(T) * I, size(Y, 2), size(Y, 2)), length(V)),
     Ω             :: AbstractMatrix{T} = zeros(T, prod(size(Y)), prod(size(Y))), 
     Ωinv          :: AbstractMatrix{T} = zeros(T, prod(size(Y)), prod(size(Y))),
     maxiter       :: Int = 1000,
@@ -341,7 +341,7 @@ function vcselectpath(
     penwt        :: AbstractVector{T} = [ones(T, length(V)-1); zero(T)],
     nlambda      :: Int = 100, 
     λpath        :: AbstractVector{T} = T[],
-    Σ            :: AbstractArray = fill(Matrix(one(T) * I, size(Y, 2), size(Y, 2)), length(V)),
+    Σ            :: AbstractVector{Matrix{T}} = fill(Matrix(one(T) * I, size(Y, 2), size(Y, 2)), length(V)),
     maxiter      :: Int = 1000,
     tol          :: AbstractFloat = 1e-6,
     atol         :: AbstractFloat = 1e-16,
@@ -352,6 +352,10 @@ function vcselectpath(
     # project y and V onto nullspace of X
     ynew, Vnew = nullprojection(Y, X, V)
 
+    # dimension 
+    p = size(X, 2)
+    d = size(Y, 2)
+
     # 
     Σpath, objpath, λpath, niterspath = vcselectpath(ynew, Vnew;
         penfun=penfun, penwt=penwt, nlambda=nlambda, λpath=λpath, σ2=σ2, maxiter=maxiter,
@@ -359,9 +363,10 @@ function vcselectpath(
 
     # if user wants fixed effects estimates, estimate β
     if fixedeffects 
-        βpath = zeros(T, size(X, 2), nlambda)
+        βpath = fill(Matrix{Float64}(undef, p, d), nlambda)
+        # zeros(T, size(X, 2), nlambda)
         for iter in 1:length(λpath)
-            βpath[:, iter] = fixedeffects(y, X, V, view(Σpath, :, iter))
+            βpath[iter] = fixedeffects(Y, X, V, view(Σpath, :, iter))
         end 
 
         # output 
@@ -410,14 +415,18 @@ function vcselectpath(
     penwt   :: AbstractVector{T} = [ones(T, length(V)-1); zero(T)],
     nlambda :: Int = 100, 
     λpath   :: AbstractVector{T} = T[],
-    Σ       :: AbstractArray = fill(Matrix(one(T) * I, size(Y, 2), size(Y, 2)), length(V)),
+    Σ       :: AbstractVector{Matrix{T}} = fill(Matrix(one(T) * I, size(Y, 2), size(Y, 2)), length(V)),
     maxiter :: Int = 1000,
     tol     :: AbstractFloat = 1e-6,
     atol    :: AbstractFloat = 1e-16,
     verbose :: Bool = false
     ) where {T <: Real}
 
+    # make sure frobenius norm of V[i] equals to 1 
     checkfrobnorm!(V)
+
+    # dimension of Y
+    n, d = size(Y)
 
     ## generate solution path based on penalty 
     if penfun != NoPenalty() 
@@ -431,7 +440,7 @@ function vcselectpath(
         end 
 
         # initialize arrays  
-        Σpath = zeros(T, length(V), nlambda)
+        Σpath = fill(Matrix{Float64}(undef, d, d), length(Σ), nlambda)
         objpath = zeros(T, nlambda)
         niterspath = zeros(Int, nlambda)
 
@@ -451,6 +460,5 @@ function vcselectpath(
 
     # output 
     return Σpath, objpath, λpath, niterspath
-
 
 end 
