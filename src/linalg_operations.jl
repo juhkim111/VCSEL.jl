@@ -67,8 +67,10 @@ where `Ω` being `∑ σ2[i] * V[i]` where `σ2` is the REML estimate.
 # Input
 - `y`: response vector
 - `X`: covariate matrix 
-- `V`: vector of covariance matrices, (V[1],V[2],...,V[m],I)
-    note that V[end] should be identity matrix
+- `V`: vector of covariance matrices, `(V[1],V[2],...,V[m],I)`
+    note (1) `V[end]` should be identity matrix or identity matrix divided by √n
+    note (2) each `V[i]` needs to have frobenius norm 1, 
+            if not, `vcselect` internally divides each `V[i]` by its frobenius norm by default   
 - `σ2`: REML estimate of variance components 
 
 # Output 
@@ -81,7 +83,7 @@ function fixedeffects(
     σ2  :: AbstractVector{T}
     ) where {T <: Real}
 
-# update Ω with estimated variance components 
+    # update Ω with estimated variance components 
     Ω = zeros(T, size(V[1]))
     for i in eachindex(σ2)
         if iszero(σ2[i])
@@ -92,6 +94,52 @@ function fixedeffects(
     end 
 
     β = fixedeffects(y, X, Ω)
+
+    return β
+
+end 
+"""
+    fixedeffects(Y, X, V, Σ)
+
+Estimate fixed effects using REML estimate of variance components, given `Y` is a 
+multivariate response. Let dimensions of `Y` and `X` be `nxd` and `nxp`, respectively. 
+Then fixed effects parameter `β` would be `pxd` matrix. 
+Estimate of `β` is obtained  
+    `vec(β̂) = pinv((I ⊗ X)' * Ωinv * (I ⊗ X))((I ⊗ X)' * Ωinv * vec(Y))`
+where `pinv` indicates Moore-Penrose pseudoinverse and 
+`Ω` denotes `sum(Σ[i] * V[i])` where `Σ` is the REML estimates.
+
+# Input
+- `Y`: response matrix
+- `X`: covariate matrix 
+- `V`: vector of covariance matrices, `(V[1],V[2],...,V[m],I)`
+    note (1) `V[end]` should be identity matrix or identity matrix divided by √n
+    note (2) each `V[i]` needs to have frobenius norm 1, 
+            if not, `vcselect` internally divides each `V[i]` by its frobenius norm by default   
+- `Σ`: REML estimate of variance components 
+
+# Output 
+- `β`: fixed effects estimate
+"""
+function fixedeffects( 
+    Y   :: AbstractMatrix{T},
+    X   :: AbstractMatrix{T},
+    V   :: AbstractVector{Matrix{T}},
+    Σ   :: AbstractVector{Matrix{T}}
+    ) where {T <: Real}
+
+    # update Ω with estimated variance components 
+    n, d = size(Y)
+    Ω = zeros(T, n*d, n*d)
+    for j in eachindex(Σ)
+        if isapprox(Σ[j], zeros(d, d))
+            continue 
+        end 
+        kronaxpy!(Σ[j], V[j], Ω)
+    end  
+
+    # fixed effects estimates 
+    β = fixedeffects(Y, X, Ω)
 
     return β
 
