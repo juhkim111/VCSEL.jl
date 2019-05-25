@@ -21,7 +21,7 @@ call `vcselect(Y, V; penfun, λ, penwt, σ2, maxiter, tol, verbose)`
         default is (1,1,...,1,0)
 - `Σ`: initial values, default is (I,I,...,I) where I is dxd identity matrix
 - `maxiter`: maximum number of iterations, default is 1000
-- `tol`: tolerance in difference of objective values for MM loop, default is 1e-6
+- `tol`: tolerance in difference of objective values for MM loop, default is 1e-15
 - `verbose`: display switch, default is false 
 - `checkfrobnorm`: if true, makes sures elements of `V` have frobenius norm 1.
         default is true 
@@ -44,8 +44,7 @@ function vcselect(
     penwt         :: AbstractVector = [ones(T, length(V)-1); zero(T)],
     Σ             :: AbstractVector{Matrix{T}} = fill(Matrix(one(T) * I, size(Y, 2), size(Y, 2)), length(V)),
     maxiter       :: Int = 1000,
-    tol           :: AbstractFloat = 1e-6,
-    atol          :: AbstractFloat = 1e-16,
+    tol           :: AbstractFloat = 1e-15,
     verbose       :: Bool = false,
     checkfrobnorm :: Bool = true 
     ) where {T <: Real}
@@ -61,11 +60,11 @@ function vcselect(
     # call vcselect 
     if verbose 
         Σ, obj, niters, _, objvec = vcselect(Ynew, Vnew; penfun=penfun, λ=λ, penwt=penwt, 
-                            Σ=Σ, maxiter=maxiter, tol=tol, atol=atol, verbose=verbose,
+                            Σ=Σ, maxiter=maxiter, tol=tol, verbose=verbose,
                             checkfrobnorm=false)
     else 
         Σ, obj, niters, = vcselect(Ynew, Vnew; penfun=penfun, λ=λ, penwt=penwt, 
-                            Σ=Σ, maxiter=maxiter, tol=tol, atol=atol, verbose=verbose,
+                            Σ=Σ, maxiter=maxiter, tol=tol, verbose=verbose,
                             checkfrobnorm=false)
     end 
 
@@ -114,7 +113,7 @@ Minimization is achieved via majorization-minimization (MM) algorithm.
         default is (1,1,...,1,0)
 - `Σ`: initial values, default is (I,I,...,I) where I is dxd identity matrix
 - `maxiter`: maximum number of iterations, default is 1000
-- `tol`: tolerance in difference of objective values for MM loop, default is 1e-6
+- `tol`: tolerance in difference of objective values for MM loop, default is 1e-15
 - `verbose`: display switch, default is false 
 - `checkfrobnorm`: if true, makes sures elements of `V` have frobenius norm 1.
         default is true 
@@ -137,8 +136,7 @@ function vcselect(
     Ω             :: AbstractMatrix{T} = zeros(T, prod(size(Y)), prod(size(Y))), 
     Ωinv          :: AbstractMatrix{T} = zeros(T, prod(size(Y)), prod(size(Y))),
     maxiter       :: Int = 1000,
-    tol           :: AbstractFloat = 1e-6,
-    atol          :: AbstractFloat = 1e-16,
+    tol           :: AbstractFloat = 1e-15,
     verbose       :: Bool = false,
     checkfrobnorm :: Bool = true 
     ) where {T <: Real}
@@ -202,7 +200,7 @@ function vcselect(
         for i in 1:nvarcomps
 
             # if previous iterate Σ[i] is close to zero matrix, move on to the next Σ[i+1]
-            if isapprox(Σ[i], zeros(d, d)) #; atol=atol)
+            if Σ[i] == zeros(d, d) 
                 continue 
             end 
 
@@ -240,7 +238,7 @@ function vcselect(
         # update variance component unless zero matrix 
         fill!(Ω, 0)
         for j in 1:nvarcomps
-            if isapprox(Σ[j], zeros(d, d); atol=atol)
+            if Σ[j] == zeros(d, d) 
                 continue 
             end 
             kronaxpy!(Σ[j], V[j], Ω)
@@ -299,7 +297,7 @@ end
 
 """
     vcselectpath(y, X, V; penfun=NoPenalty(), penwt=[ones(length(V)-1); 0.0], 
-            nlambda=100, λpath=Float64[], σ2=ones(length(V)), maxiter=1000, tol=1e-6)
+            nlambda=100, λpath=Float64[], σ2=ones(length(V)), maxiter=1000, tol=1e-15)
 
 Project `Y` to null space of `X` and generate solution path of variance components 
 along varying lambda values.
@@ -320,7 +318,7 @@ along varying lambda values.
     If unspeficied, internally generate a grid
 - `Σ`: initial estimates
 - `maxiter`: maximum number of iteration for MM loop
-- `tol`: tolerance in difference of objective values for MM loop, default is 1e-6
+- `tol`: tolerance in difference of objective values for MM loop, default is 1e-15
 - `verbose`: display switch, default is false 
 - `fixedeffects`: whether user wants fixed effects parameter 
     to be estimated and returned, default is false 
@@ -343,8 +341,7 @@ function vcselectpath(
     λpath        :: AbstractVector{T} = T[],
     Σ            :: AbstractVector{Matrix{T}} = fill(Matrix(one(T) * I, size(Y, 2), size(Y, 2)), length(V)),
     maxiter      :: Int = 1000,
-    tol          :: AbstractFloat = 1e-6,
-    atol         :: AbstractFloat = 1e-16,
+    tol          :: AbstractFloat = 1e-15,
     verbose      :: Bool = false,
     fixedeffects :: Bool = false 
     ) where {T <: Real}
@@ -379,7 +376,7 @@ end
 
 """
     vcselectpath(Y, V; penfun=NoPenalty(), penwt=[ones(length(V)-1); 0.0], 
-            nlambda=100, λpath=Float64[], σ2=ones(length(V)), maxiter=1000, tol=1e-6)
+            nlambda=100, λpath=Float64[], σ2=ones(length(V)), maxiter=1000, tol=1e-15)
 
 Generate solution path of variance components along varying lambda values.
 
@@ -398,7 +395,7 @@ Generate solution path of variance components along varying lambda values.
         If unspeficied, internally generate a grid
 - `Σ`: initial estimates.
 - `maxiter`: maximum number of iteration for MM loop.
-- `tol`: tolerance in difference of objective values for MM loop, default is 1e-6
+- `tol`: tolerance in difference of objective values for MM loop, default is 1e-15
 - `verbose`: display switch, default is false 
 
 # Output 
@@ -417,8 +414,7 @@ function vcselectpath(
     λpath   :: AbstractVector{T} = T[],
     Σ       :: AbstractVector{Matrix{T}} = fill(Matrix(one(T) * I, size(Y, 2), size(Y, 2)), length(V)),
     maxiter :: Int = 1000,
-    tol     :: AbstractFloat = 1e-6,
-    atol    :: AbstractFloat = 1e-16,
+    tol     :: AbstractFloat = 1e-15,
     verbose :: Bool = false
     ) where {T <: Real}
 
