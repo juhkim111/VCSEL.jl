@@ -1,3 +1,5 @@
+export maxlambda 
+
 """
 
     maxlambda(y, V; 
@@ -25,7 +27,7 @@ function maxlambda(
     penfun  :: Penalty = NoPenalty(),
     penwt   :: AbstractVector{T} = [ones(T, length(V)-1); zero(T)],
     maxiter :: Int = 500,
-    tol     :: AbstractFloat = 1e-6
+    tol     :: AbstractFloat = 1e-10
     ) where {T <: Real}
 
     # initialize values 
@@ -122,32 +124,38 @@ function maxlambda(
     penfun  :: Penalty = NoPenalty(),
     penwt   :: AbstractVector{T} = [ones(T, length(V)-1); zero(T)],
     maxiter :: Int = 500,
-    tol     :: AbstractFloat = 1e-6,
+    tol     :: AbstractFloat = 1e-10,
     tempλ   :: AbstractFloat = 50.0
     ) where {T <: Real}
 
     # initialize values 
     n, d = size(Y)
-    #σ2_0 = dot(y, y) / n
     nvarcomps = length(V) 
     m = length(V) - 1
 
-    # # initialize array 
-    # λpath = Array{Float64}(undef, m)
-    # Vy = similar(y)
+    # 
+    YtY = BLAS.gemm('T', 'N', Y, Y) # Yt * Y 
+    cholYtY = cholesky!(YtY)          
+    YtYinv = inv(cholYtY)
+    W = Y * YtYinv                  # Y * inv(Yt * Y)
+    const1 = -n * tr(YtYinv)
+    n2 = n^2
 
-    # # use derivative to find plausible lambda for each of `m` variance components 
-    # for i in eachindex(λpath)
-    #     mul!(Vy, V[i], y) 
-    #     λpath[i] = (1 / penwt[i]) * (-tr(V[i]) / σ2_0 +
-    #             dot(y, Vy) / σ2_0^2)
-    # end
-    # # find maximum among m different lambdas
-    # tempλ = maximum(λpath)
-    # σ2 = zeros(length(V))
-    # if tempλ <= 0
-	  #     tempλ = 30.0
-    # end
+    # initialize array 
+    λpath = Array{Float64}(undef, m)
+
+    # use derivative to find plausible lambda for each of `m` variance components 
+    for i in eachindex(λpath)
+        λpath[i] =  const1 * tr(V[i]) + 
+                n2 * tr(BLAS.gemm('T', 'N', W, V[i] * W))
+    end
+
+    # find maximum among m different lambdas
+    tempλ = maximum(λpath)
+    σ2 = zeros(length(V))
+    if tempλ <= 0
+	      tempλ = 30.0
+    end
 
     # make sure all estimated σ2 are 0 at current λ
     while true
@@ -191,5 +199,6 @@ function maxlambda(
     end
 
     maxλ = b
-    return maxλ
+
+    return maxλ, iter
 end
