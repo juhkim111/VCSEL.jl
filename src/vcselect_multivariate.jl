@@ -195,7 +195,7 @@ function vcselect(
     # display 
     if verbose
         println("iter = 0")
-        println("Σ    = ", Σ)
+        #println("Σ    = ", Σ)
         println("obj  = ", obj)
         objvec = obj
     end  
@@ -289,7 +289,7 @@ function vcselect(
         # display current iterate if specified 
         if verbose
             println("iter = ", iter)
-            println("Σ    = ", Σ)
+            #println("Σ    = ", Σ)
             println("obj  = ", obj)
             objvec = [objvec; obj] 
         end
@@ -457,9 +457,6 @@ function vcselectpath(
 
         # create a lambda grid if not specified  
         if isempty(λpath) 
-            #println("time for finding max lambda")
-            #@time maxλ, = maxlambda(Y, V; penfun=penfun, penwt=penwt)
-            #println("maxlambda=$maxλ")
             maxλ, = maxlambda(Y, V; penfun=penfun, penwt=penwt)
             λpath = range(0, stop=maxλ, length=nlambda)
         else # if lambda grid specified, make sure nlambda matches 
@@ -473,13 +470,6 @@ function vcselectpath(
         niterspath = zeros(Int, nlambda)
 
         # create solution path 
-        #println("time for creating solution path")
-        # @time for iter in 1:nlambda 
-        #     @time Σ, objpath[iter], niterspath[iter], = 
-        #             vcselect(Y, V; penfun=penfun, λ=λpath[iter], penwt=penwt, 
-        #             Σ=Σ, maxiter=maxiter, tol=tol, verbose=verbose, checkfrobnorm=false)
-        #     Σpath[:, iter] = Σ
-        # end
         for iter in 1:nlambda 
             Σ, objpath[iter], niterspath[iter], = 
                     vcselect(Y, V; penfun=penfun, λ=λpath[iter], penwt=penwt, 
