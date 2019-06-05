@@ -1,4 +1,4 @@
-export plotsolpath, checkfrobnorm!, rankvarcomps
+export plotsolpath, checkfrobnorm!, rankvarcomps, matarray2mat
 
 """
     checkfrobnorm!(V)
@@ -114,4 +114,31 @@ function plotsolpath(
         xaxis=(xlab, (xmin, xmax)), yaxis=(ylab), width=linewidth, legendtitle="ranking")
     title!(title)     
 
+end 
+
+"""
+    matarray2mat(matarray)
+
+Convert array of matrices to single matrix. All matrices in `matarray` should have 
+the same dimension. e.g. Σpath
+
+# Input 
+- `matarray`: array of matrices to be converted 
+
+# Output 
+- `mat`: single matrix containing all matrices in `Σpath`
+"""
+function matarray2mat(matarray)
+  
+    nvarcomps, nlambda = size(matarray)
+    d = size(matarray[1, 1], 1)
+    mat = zeros(nvarcomps * d, nlambda * d)
+  
+    for r in 1:nvarcomps
+      for c in 1:nlambda 
+        mat[(r * d - d + 1):(r * d), (c * d - d + 1):(c * d)] = matarray[r, c]
+      end 
+    end 
+  
+    return mat 
 end 
