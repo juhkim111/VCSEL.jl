@@ -21,7 +21,7 @@ call `vcselect(Y, V; penfun, λ, penwt, σ2, maxiter, tol, verbose)`
         default is (1,1,...,1,0)
 - `Σ`: initial values, default is (I,I,...,I) where I is dxd identity matrix
 - `maxiter`: maximum number of iterations, default is 1000
-- `tol`: tolerance in difference of objective values for MM loop, default is 1e-15
+- `tol`: tolerance in difference of objective values for MM loop, default is 1e-6
 - `verbose`: display switch, default is false 
 - `checkfrobnorm`: if true, makes sures elements of `V` have frobenius norm 1.
         default is true 
@@ -44,7 +44,7 @@ function vcselect(
     penwt         :: AbstractVector = [ones(T, length(V)-1); zero(T)],
     Σ             :: AbstractVector{Matrix{T}} = fill(Matrix(one(T) * I, size(Y, 2), size(Y, 2)), length(V)),
     maxiter       :: Int = 1000,
-    tol           :: AbstractFloat = 1e-15,
+    tol           :: AbstractFloat = 1e-6,
     verbose       :: Bool = false,
     checkfrobnorm :: Bool = true 
     ) where {T <: Real}
@@ -113,7 +113,7 @@ Minimization is achieved via majorization-minimization (MM) algorithm.
         default is (1,1,...,1,0)
 - `Σ`: initial values, default is (I,I,...,I) where I is dxd identity matrix
 - `maxiter`: maximum number of iterations, default is 1000
-- `tol`: tolerance in difference of objective values for MM loop, default is 1e-15
+- `tol`: tolerance in difference of objective values for MM loop, default is 1e-6
 - `verbose`: display switch, default is false 
 - `checkfrobnorm`: if true, makes sures elements of `V` have frobenius norm 1.
         default is true 
@@ -131,12 +131,12 @@ function vcselect(
     V             :: AbstractVector{Matrix{T}};
     penfun        :: Penalty = NoPenalty(),
     λ             :: T = one(T),
-    penwt         :: AbstractVector = [ones(T, length(V)-1); zero(T)],
+    penwt         :: AbstractVector{T} = [ones(T, length(V)-1); zero(T)],
     Σ             :: AbstractVector{Matrix{T}} = fill(Matrix(one(T) * I, size(Y, 2), size(Y, 2)), length(V)),
     Ω             :: AbstractMatrix{T} = zeros(T, prod(size(Y)), prod(size(Y))), 
-    Ωinv          :: AbstractMatrix{T} = zeros(T, prod(size(Y)), prod(size(Y))),
+    Ωinv          :: AbstractMatrix{T} = zeros(T, size(Ω)),
     maxiter       :: Int = 1000,
-    tol           :: AbstractFloat = 1e-15,
+    tol           :: AbstractFloat = 1e-6,
     verbose       :: Bool = false,
     checkfrobnorm :: Bool = true 
     ) where {T <: Real}
@@ -162,13 +162,17 @@ function vcselect(
     vecY = vec(Y)
     ΩinvY = Ωinv * vecY   
     obj = (1//2) * logdet(Ωchol) + (1//2) * dot(vecY, ΩinvY) # objective value 
-    pen = 0.0
-    for j in 1:(nvarcomps - 1)
-        pen += penwt[j] * value(penfun, √tr(Σ[j]))
-    end
     loglConst = (1//2) * n * d * log(2π)
-    obj += loglConst + λ * pen
-
+    if !isa(penfun, NoPenalty)
+        pen = 0.0
+        for j in 1:(nvarcomps - 1)
+            pen += penwt[j] * value(penfun, √tr(Σ[j]))
+        end
+        obj += loglConst + λ * pen
+    else 
+        obj += loglConst 
+    end 
+    
     # reshape 
     R = reshape(ΩinvY, n, d)
 
@@ -177,9 +181,11 @@ function vcselect(
 
     # `1_d 1_d' ⊗ V[i]`
     kron_ones_V = similar(V)
-    for i in 1:nvarcomps 
-        kron_ones_V[i] = kron(ones(d, d), V[i])
+    ones_d = ones(d, d)
+    for i in 1:nvarcomps
+        kron_ones_V[i] = kron(ones_d, V[i])
     end 
+    #kron_ones_V[end] = kron(ones_d, Matrix(1.0I, n, n))
 
     # pre-allocate memory 
     W = similar(Ω)
@@ -189,20 +195,22 @@ function vcselect(
     # display 
     if verbose
         println("iter = 0")
+        println("Σ    = ", Σ)
         println("obj  = ", obj)
         objvec = obj
     end  
 
-    # MM loop 
+    ## MM loop 
     niters = 0 
     for iter in 1:maxiter 
-        # update variance components
+        ## update variance components
+        # fill!(Ω, 0)
         for i in 1:nvarcomps
 
             # if previous iterate Σ[i] is close to zero matrix, move on to the next Σ[i+1]
             if Σ[i] == zeros(d, d) 
                 continue 
-            end 
+            end
 
             # `W = (kron_I_one)' * [kron(ones(d, d), V[i]) .* Ωinv] * (kron_I_one)`
             W = kron_ones_V[i] .* Ωinv
@@ -230,20 +238,30 @@ function vcselect(
             Σ[i] = BLAS.gemm('N', 'T', storage.vectors * Diagonal(storage.values), storage.vectors)
             Σ[i] = BLAS.gemm('T', 'N', Linv, Σ[i] * Linv)
 
+            # # update 
+            # if Σ[i] == zeros(d, d) 
+            #     continue 
+            # end 
+
+            # # if i == nvarcomps 
+            # #     clamp_diagonal!(Σ[i], ϵ, T(Inf))
+            # # end 
+            # kronaxpy!(Σ[i], V[i], Ω)
         end 
 
-        # make sure the last variance component is pos. def.
         clamp_diagonal!(Σ[end], ϵ, T(Inf))
 
-        # update variance component unless zero matrix 
+        # update
         fill!(Ω, 0)
-        for j in 1:nvarcomps
+        for j in 1:nvarcomps 
             if Σ[j] == zeros(d, d) 
                 continue 
             end 
+    
             kronaxpy!(Σ[j], V[j], Ω)
+    
         end 
-
+      
         # update Ωchol, Ωinv, v, R
         Ωchol = cholesky!(Symmetric(Ω))
         Ωinv[:] = inv(Ωchol)
@@ -253,15 +271,25 @@ function vcselect(
         # update objective value 
         objold = obj 
         obj = (1//2) * logdet(Ωchol) + (1//2) * dot(vecY, ΩinvY) # objective value 
-        pen = 0.0
-        for j in 1:(nvarcomps - 1)
-            pen += penwt[j] * value(penfun, √tr(Σ[j]))
-        end
-        obj += loglConst + λ * pen
+        if !isa(penfun, NoPenalty)
+            pen = 0.0
+            for j in 1:(nvarcomps - 1)
+                if Σ[j] == zeros(d, d) 
+                    continue 
+                else 
+                    pen += penwt[j] * value(penfun, √tr(Σ[j]))
+                end 
+            end
+            obj += loglConst + λ * pen
+        else 
+            obj += loglConst 
+        end 
+        
 
         # display current iterate if specified 
         if verbose
             println("iter = ", iter)
+            println("Σ    = ", Σ)
             println("obj  = ", obj)
             objvec = [objvec; obj] 
         end
@@ -297,7 +325,7 @@ end
 
 """
     vcselectpath(y, X, V; penfun=NoPenalty(), penwt=[ones(length(V)-1); 0.0], 
-            nlambda=100, λpath=Float64[], σ2=ones(length(V)), maxiter=1000, tol=1e-15)
+            nlambda=100, λpath=Float64[], σ2=ones(length(V)), maxiter=1000, tol=1e-6)
 
 Project `Y` to null space of `X` and generate solution path of variance components 
 along varying lambda values.
@@ -318,7 +346,7 @@ along varying lambda values.
     If unspeficied, internally generate a grid
 - `Σ`: initial estimates
 - `maxiter`: maximum number of iteration for MM loop
-- `tol`: tolerance in difference of objective values for MM loop, default is 1e-15
+- `tol`: tolerance in difference of objective values for MM loop, default is 1e-6
 - `verbose`: display switch, default is false 
 - `fixedeffects`: whether user wants fixed effects parameter 
     to be estimated and returned, default is false 
@@ -341,7 +369,7 @@ function vcselectpath(
     λpath        :: AbstractVector{T} = T[],
     Σ            :: AbstractVector{Matrix{T}} = fill(Matrix(one(T) * I, size(Y, 2), size(Y, 2)), length(V)),
     maxiter      :: Int = 1000,
-    tol          :: AbstractFloat = 1e-15,
+    tol          :: AbstractFloat = 1e-6,
     verbose      :: Bool = false,
     fixedeffects :: Bool = false 
     ) where {T <: Real}
@@ -376,7 +404,7 @@ end
 
 """
     vcselectpath(Y, V; penfun=NoPenalty(), penwt=[ones(length(V)-1); 0.0], 
-            nlambda=100, λpath=Float64[], σ2=ones(length(V)), maxiter=1000, tol=1e-15)
+            nlambda=100, λpath=Float64[], σ2=ones(length(V)), maxiter=1000, tol=1e-6)
 
 Generate solution path of variance components along varying lambda values.
 
@@ -395,7 +423,7 @@ Generate solution path of variance components along varying lambda values.
         If unspeficied, internally generate a grid
 - `Σ`: initial estimates.
 - `maxiter`: maximum number of iteration for MM loop.
-- `tol`: tolerance in difference of objective values for MM loop, default is 1e-15
+- `tol`: tolerance in difference of objective values for MM loop, default is 1e-6
 - `verbose`: display switch, default is false 
 
 # Output 
@@ -414,7 +442,7 @@ function vcselectpath(
     λpath   :: AbstractVector{T} = T[],
     Σ       :: AbstractVector{Matrix{T}} = fill(Matrix(one(T) * I, size(Y, 2), size(Y, 2)), length(V)),
     maxiter :: Int = 1000,
-    tol     :: AbstractFloat = 1e-15,
+    tol     :: AbstractFloat = 1e-6,
     verbose :: Bool = false
     ) where {T <: Real}
 
@@ -429,7 +457,10 @@ function vcselectpath(
 
         # create a lambda grid if not specified  
         if isempty(λpath) 
-            maxλ = maxlambda(Y, V; penfun=penfun, penwt=penwt)
+            #println("time for finding max lambda")
+            #@time maxλ, = maxlambda(Y, V; penfun=penfun, penwt=penwt)
+            #println("maxlambda=$maxλ")
+            maxλ, = maxlambda(Y, V; penfun=penfun, penwt=penwt)
             λpath = range(0, stop=maxλ, length=nlambda)
         else # if lambda grid specified, make sure nlambda matches 
             nlambda = length(λpath)
@@ -437,14 +468,22 @@ function vcselectpath(
 
         # initialize arrays  
         Σpath = fill(Matrix{Float64}(undef, d, d), length(Σ), nlambda)
+        #Σpath = zeros(length(Σ) * d, nlambda * d)
         objpath = zeros(T, nlambda)
         niterspath = zeros(Int, nlambda)
 
         # create solution path 
+        #println("time for creating solution path")
+        # @time for iter in 1:nlambda 
+        #     @time Σ, objpath[iter], niterspath[iter], = 
+        #             vcselect(Y, V; penfun=penfun, λ=λpath[iter], penwt=penwt, 
+        #             Σ=Σ, maxiter=maxiter, tol=tol, verbose=verbose, checkfrobnorm=false)
+        #     Σpath[:, iter] = Σ
+        # end
         for iter in 1:nlambda 
             Σ, objpath[iter], niterspath[iter], = 
                     vcselect(Y, V; penfun=penfun, λ=λpath[iter], penwt=penwt, 
-                    σ2=σ2, maxiter=maxiter, tol=tol, verbose=verbose, checkfrobnorm=false)
+                    Σ=Σ, maxiter=maxiter, tol=tol, verbose=verbose, checkfrobnorm=false)
             Σpath[:, iter] = Σ
         end
 
