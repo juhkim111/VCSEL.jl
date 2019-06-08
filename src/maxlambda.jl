@@ -135,7 +135,7 @@ function maxlambda(
 
     # 
     YtY = BLAS.gemm('T', 'N', Y, Y) # Yt * Y 
-    cholYtY = cholesky!(YtY)          
+    cholYtY = cholesky!(Symmetric(YtY))          
     YtYinv = inv(cholYtY)
     W = Y * YtYinv                  # Y * inv(Yt * Y)
     const1 = -n * tr(YtYinv)
