@@ -1,6 +1,41 @@
 export nullprojection, fixedeffects, kronaxpy!, clamp_diagonal!
 
 """
+    objvalue(vcm; penfun, λ, penwt)
+
+Calculate objective value, i.e. negative log-likelihood of [`VCModel`](@ref) instance plus
+penalty terms. 
+
+# Input 
+
+# Keyword argument 
+
+# Output 
+
+"""
+function objvalue(
+    vcm    :: VCModel;
+    penfun :: Penalty = NoPenalty(),
+    λ      :: T = one(T),
+    penwt  :: AbstractVector{T} = [ones(T, length(V)-1); zero(T)]
+    ) where {T <: Real}
+   
+    obj = (1 // 2) * logdet(vcm.Ωchol) + (1 // 2) * dot(vcm.ynew, vcm.ΩinvY)
+    obj += (1 // 2) * prod(size(vcm)) * log(2π)
+
+    # add penalty term 
+    if !isa(penfun, NoPenalty)
+        pen = 0.0
+        for j in eachindex(vcm.Σ)
+            pen += penwt[j] * value(penfun, √tr(vcm.Σ[j]))
+        end 
+        obj += λ * pen
+    end 
+
+    return obj 
+end 
+
+"""
     nullprojection(y, X, V)
 
 Project `y` to null space of `transpose(X)` and transform `V` accordingly.
@@ -25,34 +60,38 @@ function nullprojection(
     V    :: AbstractVector{Matrix{T}}
     ) where {T <: Real}
 
-    # basis of nullspace of transpose(X), `N(X')`
-    Xt = similar(X')
-    transpose!(Xt, X)
-    B = nullspace(Xt)
+    if isempty(X)
+        return y, V, X
+    else
+        # basis of nullspace of transpose(X), `N(X')`
+        Xt = similar(X')
+        transpose!(Xt, X)
+        B = nullspace(Xt)
 
-    # projected response vector 
-    ynew = B' * y 
+        # projected response vector 
+        ynew = B' * y 
 
-    # dimension of null space 
-    s = size(B, 2) 
+        # dimension of null space 
+        s = size(B, 2) 
 
-    # no. of variance components subject to selection 
-    m = length(V) - 1
+        # no. of variance components subject to selection 
+        m = length(V) - 1
 
-    # transformed covariance matrices 
-    Vnew = Vector{Matrix{Float64}}(undef, m + 1)
-    #Vnew = similar(V)
-    Vnew[end] = Matrix{eltype(B)}(I, s, s) ./ √s
-    tmp = zeros(size(X, 1), s)
-    for i in 1:m
-        mul!(tmp, V[i], B)
-        Vnew[i] = BLAS.gemm('T', 'N', B, tmp)
-        # divide by its frobenius norm  
-        Vnew[i] ./= norm(Vnew[i])
+        # transformed covariance matrices 
+        Vnew = Vector{Matrix{Float64}}(undef, m + 1)
+        #Vnew = similar(V)
+        Vnew[end] = Matrix{eltype(B)}(I, s, s) ./ √s
+        tmp = zeros(size(X, 1), s)
+        for i in 1:m
+            mul!(tmp, V[i], B)
+            Vnew[i] = BLAS.gemm('T', 'N', B, tmp)
+            # divide by its frobenius norm  
+            Vnew[i] ./= norm(Vnew[i])
+        end 
+
+        # output 
+        return ynew, Vnew, B 
     end 
-
-    # output 
-    return ynew, Vnew, B 
 
 end 
 
