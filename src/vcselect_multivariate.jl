@@ -287,7 +287,7 @@ function vcselect(
         
 
         # display current iterate if specified 
-        if verbose
+        if verbose 
             println("iter = ", iter)
             #println("Σ    = ", Σ)
             println("obj  = ", obj)

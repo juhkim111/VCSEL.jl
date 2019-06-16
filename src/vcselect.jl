@@ -432,3 +432,141 @@ function vcselectpath(
     return σ2path, objpath, λpath, niterspath
 
 end 
+
+
+
+"""
+    vcselect!(vcm; penfun, λ, penwt, maxiters, tol, verbose)
+
+# Input 
+- `vcm` :: VCModel
+
+# Keyword Argument 
+- `penfun` :: Penalty: default is NoPenalty()
+- `λ`      
+- `penwt`     :: AbstractVector{T} = [ones(T, length(V)-1); zero(T)],
+- `maxiters`  :: Int = 1000,
+- `tol`       :: AbstractFloat = 1e-8,
+- `verbose`   :: Bool = false #,
+
+# Output 
+- 
+"""
+function vcselect!(
+    vcm       :: VCModel;
+    penfun    :: Penalty = NoPenalty(),
+    λ         :: Real = 1.0,
+    penwt     :: AbstractVector = [ones(nvarcomps(vcm)-1); 0.0],
+    maxiters  :: Int = 1000,
+    tol       :: Real = 1e-8,
+    verbose   :: Bool = false 
+    ) 
+
+    # initialize algorithm 
+    n, d = size(vcm)
+    m = nvarcomps(vcm) 
+
+    # working arrays 
+    kron_I_one = kron(Matrix(I, d, d), ones(n)) # dn x d
+    ones_d = ones(d, d)
+    for i in 1:m
+        vcm.kron_ones_V[i] = kron(ones_d, vcm.V[i])
+    end 
+
+    # initial objective value 
+    obj = objvalue(vcm; penfun=penfun, λ=λ, penwt=penwt)
+
+    # # display 
+    if verbose
+        # println("iter = 0")
+        # println("Σ    = ", vcm.Σ)
+        # println("obj  = ", obj)
+        objvec = obj
+    end  
+
+    ## MM loop 
+    niters = 0
+    for iter in 1:maxiters
+        for i in 1:m 
+            # if previous iterate is zero, move on to the next component
+            if vcm.Σ[i] == zeros(d, d)
+                continue 
+            # if penalty weight is zero, move onto the next component 
+            elseif iszero(penwt[i]) && i < m
+                vcm.Σ[i] = zeros(d, d)
+                continue 
+            end 
+
+            # `(kron_I_one)' * [kron(ones(d, d), V[i]) .* Ωinv] * (kron_I_one)`
+            vcm.Mndxnd = vcm.kron_ones_V[i] .* vcm.Ωinv 
+            vcm.Mdxd = BLAS.gemm('T', 'N', kron_I_one, vcm.Mndxnd * kron_I_one) # d x d
+
+            # add penalty unless it's the last variance component 
+            if isa(penfun, L1Penalty) && i < m 
+                penconst = λ * penwt[i] / √tr(vcm.Σ[i])
+                for j in 1:d
+                    vcm.Mdxd[j, j] += penconst  
+                end             
+            end 
+
+            vcm.L = cholesky!(Symmetric(vcm.Mdxd)).L
+            vcm.Linv[:] = inv(vcm.L)
+
+            # 
+            vcm.Mdxd = vcm.Σ[i] * vcm.L
+            vcm.Mnxd = vcm.R * vcm.Mdxd # n x d
+            vcm.Mdxd = BLAS.gemm('T', 'N', vcm.Mnxd, vcm.V[i] * vcm.Mnxd)
+
+            # 
+            storage = eigen!(Symmetric(vcm.Mdxd))
+            # if negative value, set it to 0
+            @inbounds for k in 1:d
+                storage.values[k] = storage.values[k] > 0 ? √storage.values[k] : 0
+            end 
+            vcm.Σ[i] = BLAS.gemm('N', 'T', storage.vectors * Diagonal(storage.values), storage.vectors)
+            vcm.Σ[i] = BLAS.gemm('T', 'N', vcm.Linv, vcm.Σ[i] * vcm.Linv)
+
+        end 
+
+        clamp_diagonal!(vcm.Σ[end], tol, Inf)
+
+        # update working arrays 
+        updateΩ!(vcm)
+        update_arrays!(vcm)
+
+        # update objective value 
+        objold = obj 
+        obj = objvalue(vcm; penfun=penfun, λ=λ, penwt=penwt)
+        
+        # display 
+        if verbose && iter == 1
+            println("iter = ", iter)
+            println("Σ    = ", vcm.Σ)
+            println("obj  = ", obj)
+            objvec = [objvec; obj] 
+        end
+
+        # check convergence 
+        if abs(obj - objold) < tol * (abs(obj) + 1)
+            niters = iter 
+            break 
+        end 
+
+    end # end of iteration 
+
+    # construct final Ω matrix
+    updateΩ!(vcm)
+
+    # output 
+    if niters == 0 
+        niters = maxiters
+    end 
+
+    if verbose 
+        return vcm.Σ, obj, niters, vcm.Ω, objvec;
+    else 
+        return vcm.Σ, obj, niters, vcm.Ω;
+    end 
+    
+
+end 

@@ -7,26 +7,31 @@ Calculate objective value, i.e. negative log-likelihood of [`VCModel`](@ref) ins
 penalty terms. 
 
 # Input 
+- `vcm`
 
-# Keyword argument 
+# Keyword Argument 
+- `penfun`
+- `λ`
+- `penwt`
 
 # Output 
+- `obj`
 
 """
 function objvalue(
     vcm    :: VCModel;
     penfun :: Penalty = NoPenalty(),
     λ      :: T = one(T),
-    penwt  :: AbstractVector{T} = [ones(T, length(V)-1); zero(T)]
+    penwt  :: AbstractVector{T} = [ones(T, nvarcomps(vcm)-1); zero(T)]
     ) where {T <: Real}
    
-    obj = (1 // 2) * logdet(vcm.Ωchol) + (1 // 2) * dot(vcm.ynew, vcm.ΩinvY)
+    obj = (1 // 2) * logdet(vcm.Ωchol) + (1 // 2) * dot(vcm.vecY, vcm.ΩinvY)
     obj += (1 // 2) * prod(size(vcm)) * log(2π)
 
     # add penalty term 
     if !isa(penfun, NoPenalty)
         pen = 0.0
-        for j in eachindex(vcm.Σ)
+        for j in 1:(nvarcomps(vcm) - 1)
             pen += penwt[j] * value(penfun, √tr(vcm.Σ[j]))
         end 
         obj += λ * pen
@@ -75,19 +80,18 @@ function nullprojection(
         s = size(B, 2) 
 
         # no. of variance components subject to selection 
-        m = length(V) - 1
+        m = length(V) 
 
         # transformed covariance matrices 
-        Vnew = Vector{Matrix{Float64}}(undef, m + 1)
-        #Vnew = similar(V)
-        Vnew[end] = Matrix{eltype(B)}(I, s, s) ./ √s
+        Vnew = Vector{Matrix{Float64}}(undef, m)
         tmp = zeros(size(X, 1), s)
-        for i in 1:m
+        for i in 1:(m - 1)
             mul!(tmp, V[i], B)
             Vnew[i] = BLAS.gemm('T', 'N', B, tmp)
             # divide by its frobenius norm  
             Vnew[i] ./= norm(Vnew[i])
         end 
+        Vnew[end] = Matrix{eltype(B)}(I, s, s) ./ √s
 
         # output 
         return ynew, Vnew, B 
