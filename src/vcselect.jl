@@ -160,7 +160,7 @@ function vcselect(
         println("iter = 0")
         println("σ2   = ", σ2)
         println("obj  = ", obj)
-        objvec = obj
+        #objvec = obj
     end    
 
     # MM loop 
@@ -248,7 +248,7 @@ function vcselect(
             println("iter = ", iter)
             println("σ2   = ", σ2)
             println("obj  = ", obj)
-            objvec = [objvec; obj] 
+            #objvec = [objvec; obj] 
         end
 
         # check convergence
@@ -275,7 +275,7 @@ function vcselect(
     end
 
     if verbose 
-        return σ2, obj, niters, Ω, objvec;
+        return σ2, obj, niters, Ω; #, objvec;
     else 
         return σ2, obj, niters, Ω;
     end
@@ -462,6 +462,35 @@ function vcselect!(
     verbose   :: Bool = false 
     ) 
 
+    # univariate update 
+    if length(vcm) == 1
+        varcomps, obj, niters, Ω = mm_update_σ2!(vcm; penfun=penfun, λ=λ, 
+            penwt=penwt, maxiters=maxiters, tol=tol, verbose=verbose)
+    # multivariate update 
+    elseif length(vcm) > 1
+        varcomps, obj, niters, Ω = mm_update_Σ!(vcm; penfun=penfun, λ=λ, 
+            penwt=penwt, maxiters=maxiters, tol=tol, verbose=verbose)
+    end 
+
+    # output 
+    return varcomps, obj, niters, Ω #, objvec
+end 
+
+"""
+    mm_update_Σ!(vcm; penfun, λ, penwt, maxiters, tol, verbose)
+
+Update `Σ` using MM algorithm.
+"""
+function mm_update_Σ!(
+    vcm :: VCModel;
+    penfun    :: Penalty = NoPenalty(),
+    λ         :: Real = 1.0,
+    penwt     :: AbstractVector = [ones(nvarcomps(vcm)-1); 0.0],
+    maxiters  :: Int = 1000,
+    tol       :: Real = 1e-8,
+    verbose   :: Bool = false 
+    ) 
+
     # initialize algorithm 
     n, d = size(vcm)
     m = nvarcomps(vcm) 
@@ -478,10 +507,9 @@ function vcselect!(
 
     # # display 
     if verbose
-        # println("iter = 0")
-        # println("Σ    = ", vcm.Σ)
-        # println("obj  = ", obj)
-        objvec = obj
+        println("iter = 0")
+        #println("Σ    = ", vcm.Σ)
+        println("obj  = ", obj)
     end  
 
     ## MM loop 
@@ -539,11 +567,10 @@ function vcselect!(
         obj = objvalue(vcm; penfun=penfun, λ=λ, penwt=penwt)
         
         # display 
-        if verbose && iter == 1
+        if verbose 
             println("iter = ", iter)
-            println("Σ    = ", vcm.Σ)
+            #println("Σ    = ", vcm.Σ)
             println("obj  = ", obj)
-            objvec = [objvec; obj] 
         end
 
         # check convergence 
@@ -563,10 +590,122 @@ function vcselect!(
     end 
 
     if verbose 
-        return vcm.Σ, obj, niters, vcm.Ω, objvec;
+        return vcm.Σ, obj, niters, vcm.Ω;
     else 
         return vcm.Σ, obj, niters, vcm.Ω;
     end 
-    
+
+end 
+
+"""
+    mm_update_σ2!(vcm; penfun, λ, penwt, maxiters, tol, verbose)
+
+Update `σ2` using MM algorithm. 
+"""
+function mm_update_σ2!(
+    vcm :: VCModel;
+    penfun    :: Penalty = NoPenalty(),
+    λ         :: Real = 1.0,
+    penwt     :: AbstractVector = [ones(nvarcomps(vcm)-1); 0.0],
+    maxiters  :: Int = 1000,
+    tol       :: Real = 1e-8,
+    verbose   :: Bool = false 
+    )
+
+    # initialize algorithm 
+    n = size(vcm)[1]
+    m = nvarcomps(vcm)
+
+    # initial objective value 
+    obj = objvalue(vcm; penfun=penfun, λ=λ, penwt=penwt)
+  
+    # display 
+    if verbose
+        println("iter = 0")
+        println("σ2   = ", vcm.Σ)
+        println("obj  = ", obj)
+    end    
+  
+    # MM loop 
+    niters = 0
+    for iter in 1:maxiters
+          # update variance components
+          for j in 1:(m - 1)
+              # move onto the next variance component if previous iterate is 0
+              if iszero(vcm.Σ[j]) 
+                  continue 
+              # set to 0 and move onto the next variance component if penalty weight is 0
+              elseif iszero(penwt[j]) 
+                  vcm.Σ[j] = 0
+                  continue 
+              end 
+  
+              # compute constants  
+              const1 = dot(vcm.Ωinv, vcm.V[j]) # const1 = tr(Ωinv * V[j])
+              mul!(vcm.Mnxd, vcm.V[j], vcm.ΩinvY)
+              const2 = dot(vcm.Mnxd, vcm.ΩinvY) # const2 = y' * Ωinv * V[j] * Ωinv * y
+  
+              # update variance component under specified penalty 
+              if !isa(penfun, NoPenalty) 
+                    penstrength = λ * penwt[j]
+                    # L1 penalty 
+                    if isa(penfun, L1Penalty)  
+                        vcm.Σ[j] *= √(const2 / (const1 + penstrength / sqrt(vcm.Σ[j])))
+                    # MCP penalty 
+                    elseif isa(penfun, MCPPenalty) 
+                        if vcm.Σ[j] <= (penfun.γ * λ)^2
+                            vcm.Σ[j] *= 
+                            √(const2 / (const1 + (λ / sqrt(vcm.Σ[j])) - (1 / penfun.γ)))
+                        else 
+                            vcm.Σ[j] *= √(const2 / const1)  
+                        end 
+                    end 
+              # update variance component under no penalty 
+              elseif isa(penfun, NoPenalty)
+                Σ[j] *= √(const2 / const1)
+              end
+  
+          end # end of for loop over j
+
+          # update last variance component and Ω
+          vcm.Σ[end] *= √(dot(vcm.ΩinvY, vcm.ΩinvY) / tr(vcm.Ωinv))
+          
+          # update working arrays 
+          updateΩ!(vcm)
+          update_arrays!(vcm)
+  
+          # update objective value 
+          objold = obj
+          obj = objvalue(vcm; penfun=penfun, λ=λ, penwt=penwt)
+  
+          # display current iterate if specified 
+          if verbose
+              println("iter = ", iter)
+              println("σ2   = ", vcm.Σ)
+              println("obj  = ", obj)
+              #objvec = [objvec; obj] 
+          end
+  
+          # check convergence
+          if abs(obj - objold) < tol * (abs(obj) + 1)
+              niters = iter
+              break
+          end
+  
+      end # end of iteration 
+  
+      # construct Ω matrix 
+      updateΩ!(vcm)
+  
+      # output
+      if niters == 0
+        niters = maxiters
+      end
+  
+      if verbose 
+          return vcm.Σ, obj, niters, vcm.Ω; # objvec;
+      else 
+          return vcm.Σ, obj, niters, vcm.Ω;
+      end
 
 end 

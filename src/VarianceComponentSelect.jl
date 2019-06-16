@@ -6,9 +6,9 @@ using PenaltyFunctions, LinearAlgebra, StatsBase, Distributions, Reexport, Plots
 @reexport using PenaltyFunctions
 @reexport using Plots 
 
-import Base: size, +
+import Base: size, length, +
 export 
-# 
+# struct 
     VCModel, 
 # operations 
     nullprojection, fixedeffects, kronaxpy!, clamp_diagonal!, objvalue,
@@ -27,26 +27,9 @@ export
 Variance component model type. Stores the data and model parameters of a variance 
 component model. 
 """
-# struct VCModel{T <: Real} 
-#     # data
-#     Y      :: Vector{T}
-#     X      :: AbstractVecOrMat{T}
-#     V      :: AbstractVector{Matrix{T}}
-#     Ynew   :: AbstractVecOrMat{T}       # projected response 
-#     Vnew   :: AbstractVector{Matrix{T}} # projected V
-#     # model parsameters 
-#     Σ      :: Union{AbstractVector{T}, AbstractVector{Matrix{T}}}
-#     # working arrays 
-#     Ω      :: AbstractMatrix{T}         # covariance matrix 
-#     Ωchol  :: Cholesky
-#     Ωinv        :: AbstractMatrix{T}         # inverse of covariance matrix 
-#     ΩinvY       :: AbstractVector{T}         # Ωinv * Y OR Ωinv * vec(Y) 
-#     tmpvec      :: Vector{T}
-# end
-
 mutable struct VCModel{T <: Real} 
     # data
-    Yobs       :: AbstractMatrix{T}
+    Yobs       :: AbstractVecOrMat{T}
     Xobs       :: AbstractVecOrMat{T}
     Vobs       :: AbstractVector{Matrix{T}}
     Y          :: AbstractVecOrMat{T}       # projected response 
@@ -59,78 +42,86 @@ mutable struct VCModel{T <: Real}
     Ωchol   :: Cholesky
     Ωinv        :: AbstractMatrix{T}         # inverse of covariance matrix 
     ΩinvY       :: AbstractVector{T}         # Ωinv * Y OR Ωinv * vec(Y) 
-    R           :: AbstractMatrix{T}
+    R           :: AbstractVecOrMat{T}
     kron_ones_V :: AbstractVector{Matrix{T}}
-    L           :: AbstractMatrix{T}
-    Linv        :: AbstractMatrix{T}
+    L           :: AbstractVecOrMat{T}
+    Linv        :: AbstractVecOrMat{T}
     Mndxnd      :: AbstractMatrix{T}
-    Mdxd        :: AbstractMatrix{T}
-    Mnxd        :: AbstractMatrix{T}
+    Mdxd        :: AbstractVecOrMat{T}
+    Mnxd        :: AbstractVecOrMat{T}
     #storage     :: LinearAlgebra.Eigen 
 end
 
 
-# """
-#     VCModel(y, X, V, σ2)
+"""
+    VCModel(yobs, Xobs, Vobs, σ2)
 
-# Default constructor of [`VCModel`](@ref) type when `y` is vector. 
-# """
-# function VCModel(
-#     y  :: AbstractVector{T},
-#     X  :: AbstractMatrix{T},
-#     V  :: AbstractVector{Matrix{T}},
-#     σ2 :: AbstractVector{T}
-#     ) where T <: Real
+Default constructor of [`VCModel`](@ref) type when `y` is vector. 
+"""
+function VCModel(
+    yobs  :: AbstractVector{T},
+    Xobs  :: AbstractMatrix{T},
+    Vobs  :: AbstractVector{Matrix{T}},
+    σ2 :: AbstractVector{T}
+    ) where {T <: Real}
 
-#     ynew, Vnew, = nullprojection(y, X, V)
-#     n = length(ynew)
-#     # accumulate covariance matrix 
-#     Ω = zeros(T, n, n)
-#     for j in 1:length(σ2) 
-#         Ω .+= σ2[j] .* Vnew[j]
-#     end 
-#     # allocate arrays 
-#     Ωchol = cholesky!(Symmetric(Ω))
-#     Ωinv = inv(Ωchol) 
-#     ΩinvY = Ωinv * ynew
-#     tmpvec = similar(ynew)
-#     tmpmat = zeros(T, 0, 0)
+    y, V, = nullprojection(yobs, Xobs, Vobs)
+    n = length(y)
+    vecY = y 
+    # accumulate covariance matrix 
+    Ω = zeros(T, n, n)
+    for j in 1:length(σ2) 
+        Ω .+= σ2[j] .* V[j]
+    end 
+    # allocate arrays 
+    Ωchol = cholesky!(Symmetric(Ω))
+    Ωinv = inv(Ωchol) 
+    ΩinvY = Ωinv * y
+    R = reshape(ΩinvY, n, 1)
+    kron_ones_V = similar(V)
+    L = Vector{T}(undef, 1)
+    Linv = Vector{T}(undef, 1)
+    Mndxnd = Matrix{T}(undef, n, 0)
+    Mdxd = Vector{T}(undef, 1)
+    Mnxd = Vector{T}(undef, n) # nx1
 
-#     # 
-#     VCModel{T}(y, X, V, ynew, Vnew, σ2, Ω, Ωchol, Ωinv, ΩinvY, tmpvec, tmpmat)
-# end 
+    # 
+    VCModel{T}(yobs, Xobs, Vobs, y, vecY, V,
+            σ2, Ω, Ωchol, Ωinv, ΩinvY, 
+            R, kron_ones_V, L, Linv, Mndxnd, Mdxd, Mnxd)
+end 
 
-# """
-#     VCModel(y, V, σ2)
+"""
+    VCModel(yobs, Vobs, σ2)
 
-# Construct [`VCModel`](@ref) from `y` and `V` where `y` is vector. `X` is treated empty. 
-# """
-# function VCModel(
-#     y  :: AbstractVector{T},
-#     V  :: AbstractVector{Matrix{T}},
-#     σ2 :: AbstractVector{T}
-#     ) where T <: Real
+Construct [`VCModel`](@ref) from `y` and `V` where `y` is vector. `X` is treated empty. 
+"""
+function VCModel(
+    yobs  :: AbstractVector{T},
+    Vobs  :: AbstractVector{Matrix{T}},
+    σ2 :: AbstractVector{T}
+    ) where {T <: Real}
 
-#     X = zeros(T, length(y), 0)
-#     VCModel(y, X, V, σ2)
-# end 
+    Xobs = zeros(T, length(yobs), 0)
+    VCModel(yobs, Xobs, Vobs, σ2)
+end 
 
 """
     VCModel(Y, X, V, Σ)
 
-Default constructor of [`VCModel`](@ref) type when `Y` is matrix.
+Default constructor of [`VCModel`](@ref) type.
 
 ** components of V need to have frobenius norm 1 ** 
 """
 function VCModel(
     Yobs  :: AbstractMatrix{T},
-    Xobs  :: AbstractMatrix{T},
+    Xobs  :: AbstractVecOrMat{T},
     Vobs  :: AbstractVector{Matrix{T}},
     Σ     :: AbstractVector{Matrix{T}}
     ) where {T <: AbstractFloat}
 
     Y, V, = nullprojection(Yobs, Xobs, Vobs)
-    n, d = size(Y)
+    n, d = size(Y, 1), size(Y, 2)
     vecY = vec(Y)
     nd = n * d
     # accumulate covariance matrix 
@@ -174,9 +165,16 @@ function VCModel(
 end 
 
 """
+    length(vcm)
+
+Length `d` of response. 
+"""
+length(vcm::VCModel) = size(vcm.Y, 2)
+
+"""
     size(vcm)
 
-size `(n, d)` of response matrix of a [`VCModel`](@ref). 
+Size `(n, d)` of response matrix of a [`VCModel`](@ref). 
 """
 size(vcm::VCModel) = size(vcm.Y)
 

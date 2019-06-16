@@ -274,7 +274,7 @@ end
 """
     kronaxpy!(A, X, Y)
 
-Overwrites `Y` with `A ⊗ X + Y`. Same as `Y += kron(A, X)` but more efficient.
+Overwrite `Y` with `A ⊗ X + Y`. Same as `Y += kron(A, X)` but more efficient.
 """
 function kronaxpy!(
     A :: AbstractVecOrMat{T},
@@ -299,6 +299,23 @@ function kronaxpy!(
     Y
 end
 """
+    kronaxpy!(a, X, Y)
+
+Overwrite `Y` with `a*X + Y`. Same as `axpy!(a, X, Y)`.
+"""
+function kronaxpy!(
+    a :: T,
+    X :: AbstractVecOrMat{T},
+    Y :: AbstractVecOrMat{T}
+    ) where {T}
+
+    axpy!(a, X, Y)
+    Y
+end 
+
+"""
+    clamp_diagonal!(A, lo, hi)
+
 Clamp the diagonal entries of matrix `A` to `[lo, hi]`.
 """
 function clamp_diagonal!(
