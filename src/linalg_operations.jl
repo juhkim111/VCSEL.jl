@@ -105,6 +105,51 @@ end
 Estimate fixed effects using REML estimate of variance components.
 Estimate of beta is 
     `beta = pinv(X'*Ωinv*X)(X'*Ωinv*y)`
+    `beta = pinv()`
+where `Ω` being `∑ σ2[i] * V[i]` or `∑ Σ[i] ⊗ V[i]` where `σ2` or `Σ` are REML estimates.
+
+# Input
+- `y`: response vector
+- `X`: covariate matrix 
+- `V`: vector of covariance matrices, `(V[1],V[2],...,V[m],I)`
+    note (1) `V[end]` should be identity matrix or identity matrix divided by √n
+    note (2) each `V[i]` needs to have frobenius norm 1, 
+            if not, `vcselect` internally divides each `V[i]` by its frobenius norm by default   
+- `σ2`: REML estimate of variance components 
+
+# Output 
+- `β`: fixed effects estimate
+"""
+function updateβ!( 
+    vcm :: VCModel
+    ) 
+
+    # quick return if there is no mean parameters
+    isempty(vcm.β) && return vcm.β
+
+    # 
+    Ωchol = cholesky(Symmetric(vcm.Ωobs))
+    # 
+    d = length(vcm)
+    p = size(vcm.Xobs, 2)
+    kron_I_X = kron(Matrix(I, d, d), vcm.Xobs)
+    XtΩinvX = BLAS.gemm('T', 'N', kron_I_X, Ωchol \ kron_I_X)
+    β = BLAS.gemv('T', kron_I_X, Ωchol \ vec(vcm.Yobs))
+    β = pinv(XtΩinvX) * β
+    if d == 1 
+        vcm.β = β
+    else 
+        vcm.β = reshape(β, p, d)
+    end 
+    vcm.β
+end
+
+"""
+    fixedeffects(y, X, V, σ2)
+
+Estimate fixed effects using REML estimate of variance components.
+Estimate of beta is 
+    `beta = pinv(X'*Ωinv*X)(X'*Ωinv*y)`
 where `Ω` being `∑ σ2[i] * V[i]` where `σ2` is the REML estimate.
 
 # Input

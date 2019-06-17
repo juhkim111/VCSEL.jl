@@ -29,17 +29,18 @@ component model.
 """
 mutable struct VCModel{T <: Real} 
     # data
-    Yobs       :: AbstractVecOrMat{T}
-    Xobs       :: AbstractVecOrMat{T}
-    Vobs       :: AbstractVector{Matrix{T}}
-    Y          :: AbstractVecOrMat{T}       # projected response 
-    vecY       :: AbstractVector{T}
-    V          :: AbstractVector{Matrix{T}} # projected V
+    Yobs        :: AbstractVecOrMat{T}
+    Xobs        :: AbstractVecOrMat{T}
+    Vobs        :: AbstractVector{Matrix{T}}
+    Y           :: AbstractVecOrMat{T}       # projected response matrix 
+    vecY        :: AbstractVector{T}         # vectorized projected response matrix 
+    V           :: AbstractVector{Matrix{T}} # projected V
     # model parameters 
-    Σ       :: Union{AbstractVector{T}, AbstractVector{Matrix{T}}}
-    # working arrays 
-    Ω       :: AbstractMatrix{T}         # covariance matrix 
-    Ωchol   :: Cholesky
+    β           :: AbstractVecOrMat{T}
+    Σ           :: Union{AbstractVector{T}, AbstractVector{Matrix{T}}}
+    # covariance matrix and working arrays 
+    Ω           :: AbstractMatrix{T}         # covariance matrix 
+    Ωchol       :: Cholesky
     Ωinv        :: AbstractMatrix{T}         # inverse of covariance matrix 
     ΩinvY       :: AbstractVector{T}         # Ωinv * Y OR Ωinv * vec(Y) 
     R           :: AbstractVecOrMat{T}
@@ -49,7 +50,8 @@ mutable struct VCModel{T <: Real}
     Mndxnd      :: AbstractMatrix{T}
     Mdxd        :: AbstractVecOrMat{T}
     Mnxd        :: AbstractVecOrMat{T}
-    #storage     :: LinearAlgebra.Eigen 
+    # covariance matrix in original dimension 
+    Ωobs        :: AbstractMatrix{T}
 end
 
 
@@ -65,9 +67,13 @@ function VCModel(
     σ2 :: AbstractVector{T}
     ) where {T <: Real}
 
+    # covariance matrix using original scale 
+
     y, V, = nullprojection(yobs, Xobs, Vobs)
     n = length(y)
     vecY = y 
+    # 
+    β = Vector{T}(undef, size(Xobs, 2)) # px1 
     # accumulate covariance matrix 
     Ω = zeros(T, n, n)
     for j in 1:length(σ2) 
@@ -84,11 +90,14 @@ function VCModel(
     Mndxnd = Matrix{T}(undef, n, 0)
     Mdxd = Vector{T}(undef, 1)
     Mnxd = Vector{T}(undef, n) # nx1
+    # allocate matrix in obs diemension
+    Ωobs = Matrix{T}(undef, size(yobs, 1), size(yobs, 1))
 
     # 
     VCModel{T}(yobs, Xobs, Vobs, y, vecY, V,
-            σ2, Ω, Ωchol, Ωinv, ΩinvY, 
-            R, kron_ones_V, L, Linv, Mndxnd, Mdxd, Mnxd)
+            β, σ2, Ω, Ωchol, Ωinv, ΩinvY, 
+            R, kron_ones_V, L, Linv, Mndxnd, Mdxd, Mnxd,
+            Ωobs)
 end 
 
 """
@@ -124,6 +133,9 @@ function VCModel(
     n, d = size(Y, 1), size(Y, 2)
     vecY = vec(Y)
     nd = n * d
+    p = size(Xobs, 2)
+    # 
+    β = Matrix{T}(undef, p, d)
     # accumulate covariance matrix 
     Ω = zeros(T, nd, nd)
     for j in 1:length(Σ)
@@ -140,11 +152,14 @@ function VCModel(
     Mndxnd = Matrix{T}(undef, nd, nd)
     Mdxd = Matrix{T}(undef, d, d)
     Mnxd = Matrix{T}(undef, n, d)
+    # 
+    Ωobs = Matrix{T}(undef, length(Yobs), length(Yobs))
 
     # 
     VCModel{T}(Yobs, Xobs, Vobs, Y, vecY, V,
-            Σ, Ω, Ωchol, Ωinv, ΩinvY, 
-            R, kron_ones_V, L, Linv, Mndxnd, Mdxd, Mnxd)
+            β, Σ, Ω, Ωchol, Ωinv, ΩinvY, 
+            R, kron_ones_V, L, Linv, Mndxnd, Mdxd, Mnxd,
+            Ωobs)
 
 end 
 
@@ -179,6 +194,13 @@ Size `(n, d)` of response matrix of a [`VCModel`](@ref).
 size(vcm::VCModel) = size(vcm.Y)
 
 """
+    nmeanparams(vcm)
+
+Number of mean parameters `p * d` of [`VCModel`](@ref).
+"""
+nmeanparams(vcm::VCModel) = length(vcm.β)
+
+"""
     nvarcomps(vcm)
 
 Number of variance components. 
@@ -196,6 +218,24 @@ function updateΩ!(vcm::VCModel)
         kronaxpy!(vcm.Σ[k], vcm.V[k], vcm.Ω)
     end
     vcm.Ω
+end
+
+"""
+    updateΩobs!(vcm)
+
+Update covariance matrix `Ωobs`. `Ωobs` has the same dimension as `Vobs`. 
+"""
+function updateΩobs!(vcm::VCModel)
+
+    if isempty(vcm.Xobs) 
+        vcm.Ωobs = vcm.Ω
+    else
+        fill!(vcm.Ωobs, 0)
+        for k in 1:nvarcomps(vcm)
+            kronaxpy!(vcm.Σ[k], vcm.Vobs[k], vcm.Ωobs)
+        end
+    end 
+    vcm.Ωobs
 end
 
 """

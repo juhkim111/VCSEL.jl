@@ -583,17 +583,15 @@ function mm_update_Σ!(
 
     # construct final Ω matrix
     updateΩ!(vcm)
+    updateΩobs!(vcm)
+    updateβ!(vcm)
 
     # output 
     if niters == 0 
         niters = maxiters
     end 
 
-    if verbose 
-        return vcm.Σ, obj, niters, vcm.Ω;
-    else 
-        return vcm.Σ, obj, niters, vcm.Ω;
-    end 
+    return vcm.Σ, vcm.β, obj, niters, vcm.Ωobs; 
 
 end 
 
@@ -696,16 +694,14 @@ function mm_update_σ2!(
   
       # construct Ω matrix 
       updateΩ!(vcm)
+      updateΩobs!(vcm)
+      updateβ!(vcm)
   
       # output
       if niters == 0
         niters = maxiters
       end
-  
-      if verbose 
-          return vcm.Σ, obj, niters, vcm.Ω; # objvec;
-      else 
-          return vcm.Σ, obj, niters, vcm.Ω;
-      end
+   
+      return vcm.Σ, obj, niters, vcm.Ωobs; 
 
 end 
