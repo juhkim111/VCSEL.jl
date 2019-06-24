@@ -79,7 +79,7 @@ function vcselect(
     end
 
     # estimate fixed effects 
-    β = fixedeffects(Y, X, Ω)
+    β = getfixedeffects(Y, X, Ω)
 
     # return output 
     if verbose 
@@ -195,7 +195,7 @@ function vcselect(
     # display 
     if verbose
         println("iter = 0")
-        #println("Σ    = ", Σ)
+        println("Σ    = ", Σ)
         println("obj  = ", obj)
         objvec = obj
     end  
@@ -287,12 +287,12 @@ function vcselect(
         
 
         # display current iterate if specified 
-        if verbose 
-            println("iter = ", iter)
-            #println("Σ    = ", Σ)
-            println("obj  = ", obj)
-            objvec = [objvec; obj] 
-        end
+        # if verbose && (iter < 10)
+        #     println("iter = ", iter)
+        #     #println("Σ    = ", Σ)
+        #     println("obj  = ", obj)
+        #     objvec = [objvec; obj] 
+        # end
 
         # check convergence
         if abs(obj - objold) < tol * (abs(obj) + 1)
@@ -316,6 +316,7 @@ function vcselect(
     end
 
     if verbose 
+        println("final obj = ", obj)
         return Σ, obj, niters, Ω, objvec;
     else 
         return Σ, obj, niters, Ω;
@@ -383,7 +384,7 @@ function vcselectpath(
 
     # 
     Σpath, objpath, λpath, niterspath = vcselectpath(ynew, Vnew;
-        penfun=penfun, penwt=penwt, nlambda=nlambda, λpath=λpath, σ2=σ2, maxiter=maxiter,
+        penfun=penfun, penwt=penwt, nlambda=nlambda, λpath=λpath, Σ=Σ, maxiter=maxiter,
         tol=tol, verbose=verbose)
 
     # if user wants fixed effects estimates, estimate β
@@ -391,9 +392,8 @@ function vcselectpath(
         βpath = fill(Matrix{Float64}(undef, p, d), nlambda)
         # zeros(T, size(X, 2), nlambda)
         for iter in 1:length(λpath)
-            βpath[iter] = fixedeffects(Y, X, V, view(Σpath, :, iter))
+            βpath[iter] = getfixedeffects(Y, X, V, view(Σpath, :, iter))
         end 
-
         # output 
         return Σpath, objpath, λpath, niterspath, βpath
     else 
@@ -475,6 +475,13 @@ function vcselectpath(
                     vcselect(Y, V; penfun=penfun, λ=λpath[iter], penwt=penwt, 
                     Σ=Σ, maxiter=maxiter, tol=tol, verbose=verbose, checkfrobnorm=false)
             Σpath[:, iter] = Σ
+
+            # if iter == 1
+            #     println("iter = ", iter)
+            #     println("Σ = ", Σ)
+            #     #println("β = ", vcm.β)
+            # end 
+            
         end
 
     else # if no penalty, there is no lambda grid 
