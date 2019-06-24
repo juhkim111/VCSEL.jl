@@ -8,7 +8,7 @@ using PenaltyFunctions, LinearAlgebra, StatsBase, Distributions, Reexport, Plots
 
 import Base: size, length, +
 export 
-# struct 
+# mutable struct 
     VCModel, 
 # operations 
     nullprojection, fixedeffects, kronaxpy!, clamp_diagonal!, objvalue,
@@ -18,7 +18,7 @@ export
     plotsolpath, checkfrobnorm!, rankvarcomps, matarray2mat, nvarcomps, updateΩ!, 
     update_arrays!,
 # algorithm 
-    vcselect, vcselect!, vcselectpath
+    vcselect, vcselect!, vcselectpath, vcselectpath!
 
 """
     VCModel 
@@ -185,6 +185,13 @@ end
 Length `d` of response. 
 """
 length(vcm::VCModel) = size(vcm.Y, 2)
+
+"""
+    ncovariates(vcm)
+
+Number of fixed effects parameters `p` of a [`VCModel`](@ref). 
+"""
+ncovariates(vcm::VCModel) = size(vcm.Xobs, 2)
 
 """
     size(vcm)
