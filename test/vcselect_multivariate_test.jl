@@ -124,7 +124,7 @@ end
     for i in 1:(length(objvec) - 1)
       @test objvec[i] >= objvec[i+1]
     end 
-  end 
+end 
 
 # using Profile 
 # Profile.clear()
