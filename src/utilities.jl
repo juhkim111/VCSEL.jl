@@ -23,7 +23,7 @@ function nullprojection(
     ) where {T <: Real}
 
     # basis of nullspace of transpose(X), `N(X')`
-    Xt = similar(X')
+    Xt = Matrix{T}(undef, size(X, 2), size(X, 1))
     transpose!(Xt, X)
     B = nullspace(Xt)
 
