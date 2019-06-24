@@ -6,7 +6,7 @@ call `vcselect(y, V; penfun, λ, penwt, σ2, maxiter, tol, verbose)`
 
 # Input
 - `y`: response vector
-- `X`: covariate matrix 
+- `X`: covariate vector or matrix 
 - `V`: vector of covariance matrices, (V[1],V[2],...,V[m],I/√n)
     note that each V[i] needs to have frobenius norm 1, and that V[end] should be 
     identity matrix divided by √n
@@ -33,7 +33,7 @@ call `vcselect(y, V; penfun, λ, penwt, σ2, maxiter, tol, verbose)`
 """
 function vcselect( 
     y             :: AbstractVector{T},
-    X             :: AbstractMatrix{T},
+    X             :: AbstractVecOrMat{T},
     V             :: AbstractVector{Matrix{T}};
     penfun        :: Penalty = NoPenalty(),
     λ             :: T = one(T),
@@ -277,7 +277,7 @@ along varying lambda values.
 
 # Input  
 - `y`: response vector
-- `X`: covariate matrix 
+- `X`: covariate vector or matrix 
 - `V`: vector of covariance matrices, (V[1],V[2],...,V[m],I)
     note that V[end] should be identity matrix
 
@@ -304,7 +304,7 @@ along varying lambda values.
 """
 function vcselectpath(
     y            :: AbstractVector{T},
-    X            :: AbstractMatrix{T},
+    X            :: AbstractVecOrMat{T},
     V            :: AbstractVector{Matrix{T}};
     penfun       :: Penalty = NoPenalty(),
     penwt        :: AbstractVector{T} = [ones(T, length(V)-1); zero(T)],
