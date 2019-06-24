@@ -327,11 +327,18 @@ function vcselectpath(
 
     # if user wants fixed effects estimates, estimate β
     if fixedeffects 
-        βpath = zeros(T, size(X, 2), nlambda)
-        for iter in 1:length(λpath)
-            βpath[:, iter] = betaestimate(y, X, V, view(σ2path, :, iter))
+        p = size(X, 2)
+        if p > 1
+            βpath = zeros(T, p, nlambda)
+            for iter in 1:length(λpath)
+                βpath[:, iter] = betaestimate(y, X, V, view(σ2path, :, iter))
+            end 
+        elseif p == 1
+            βpath = zeros(T, nlambda)
+            for iter in 1:length(λpath)
+                βpath[iter] = betaestimate(y, X, V, view(σ2path, :, iter))
+            end 
         end 
-
         # output 
         return σ2path, objpath, λpath, niterspath, βpath
     else 
