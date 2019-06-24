@@ -5,7 +5,7 @@ Project `y` to null space of `transpose(X)` and transform `V` accordingly.
 
 # Input 
 - `y`: response vector to be transformed. 
-- `X`: covariate matrix, response `y` is projected onto the null space of transpose(X) 
+- `X`: covariate vector or matrix, response `y` is projected onto the null space of transpose(X) 
 - `V`: vector of covariance matrices, (V[1],V[2],...,V[m],I/√n)
     note that each V[i] needs to have frobenius norm 1, and that V[end] should be 
     identity matrix divided by √n   
@@ -18,7 +18,7 @@ Project `y` to null space of `transpose(X)` and transform `V` accordingly.
 """
 function nullprojection(
     y    :: AbstractVector{T},
-    X    :: AbstractMatrix{T},
+    X    :: AbstractVecOrMat{T},
     V    :: AbstractVector{Matrix{T}}
     ) where {T <: Real}
 
@@ -63,7 +63,7 @@ where `Ω` being `∑ σ2[i] * V[i]` where `σ2` is the REML estimate.
 
 # Input
 - `y`: response vector
-- `X`: covariate matrix 
+- `X`: covariate vector or matrix 
 - `V`: vector of covariance matrices, (V[1],V[2],...,V[m],I)
         note that V[end] should be identity matrix
 - `σ2`: REML estimate of variance components 
@@ -73,7 +73,7 @@ where `Ω` being `∑ σ2[i] * V[i]` where `σ2` is the REML estimate.
 """
 function betaestimate( 
     y   :: AbstractVector{T},
-    X   :: AbstractMatrix{T},
+    X   :: AbstractVecOrMat{T},
     V   :: AbstractVector{Matrix{T}},
     σ2  :: AbstractVector{T}
     ) where {T <: Real}
@@ -103,7 +103,7 @@ where `Ω` being `∑ σ2[i] * V[i]` where `σ2` is the REML estimate.
 
 # Input
 - `y`: response vector
-- `X`: covariate matrix 
+- `X`: covariate vector or matrix 
 - `Ω`: overall covariance matrix constructed using REML estimate of variance components or
     cholesky factorization of the overall covariance matrix 
 
@@ -112,7 +112,7 @@ where `Ω` being `∑ σ2[i] * V[i]` where `σ2` is the REML estimate.
 """
 function betaestimate( 
     y   :: AbstractVector{T},
-    X   :: AbstractMatrix{T},
+    X   :: AbstractVecOrMat{T},
     Ω   :: Union{AbstractMatrix{T}, Cholesky}
     ) where {T <: Real}
 
