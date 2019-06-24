@@ -124,9 +124,13 @@ function betaestimate(
     end 
   
     # estimate fixed effects: pinv(X'*Ωinv*X)(X'*Ωinv*y)
-    XtΩinvX = BLAS.gemm('T', 'N', X, Ωchol \ X)
-    β = BLAS.gemv('T', X, Ωchol \ y) # overwriting Ωinv with X'*Ωinv
-    β = pinv(XtΩinvX) * β
+    if typeof(X) <: Vector 
+        β = (X' * (Ωchol \ y)) / (X' * (Ωchol \ X))
+    else 
+        XtΩinvX = BLAS.gemm('T', 'N', X, Ωchol \ X)
+        β = BLAS.gemv('T', X, Ωchol \ y) # overwriting Ωinv with X'*Ωinv
+        β = pinv(XtΩinvX) * β
+    end 
 
     return β
 
