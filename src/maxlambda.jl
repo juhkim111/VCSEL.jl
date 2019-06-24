@@ -3,7 +3,7 @@ export maxlambda
 """
 
     maxlambda(y, V; 
-              penfun=NoPenalty(), penwt=[ones(length(V)-1); 0.0], maxiter=500, tol=1e-8)
+              penfun=NoPenalty(), penwt=[ones(length(V)-1); 0.0], maxiters=500, tol=1e-8)
 
 Find the value of λ where all σ turns 0. At any value greater than λ, all σ's are 0.
 
@@ -15,7 +15,7 @@ Find the value of λ where all σ turns 0. At any value greater than λ, all σ'
 - `penfun`: penalty function, 
       possible options are NoPenalty() (default), L1Penalty(), MCPPenalty()
 - `penwt`: vector of penalty weights, default is (1,1,...1,0)
-- `maxiter`: maximum number of iterations, default is 500
+- `maxiters`: maximum number of iterations, default is 500
 - `tol`: value below which σ is considered 0
 
 # Output
@@ -26,7 +26,7 @@ function maxlambda(
     V       :: AbstractVector{Matrix{T}};
     penfun  :: Penalty = NoPenalty(),
     penwt   :: AbstractVector{T} = [ones(T, length(V)-1); zero(T)],
-    maxiter :: Int = 500,
+    maxiters :: Int = 500,
     tol     :: AbstractFloat = 1e-10
     ) where {T <: Real}
 
@@ -71,8 +71,8 @@ function maxlambda(
     σ2_b = Array{Float64}(undef, length(V))
     σ2_c = Array{Float64}(undef, length(V))
 
-    # loop through while iteration number less than maxiter 
-    while iter <= maxiter
+    # loop through while iteration number less than maxiters 
+    while iter <= maxiters
       c = (a + b) / 2
       σ2_a, = vcselect(y, V; penfun=penfun, λ=a, penwt=penwt)
       σ2_b, = vcselect(y, V; penfun=penfun, λ=b, penwt=penwt)
@@ -94,13 +94,13 @@ function maxlambda(
     end
 
     maxλ = b
-    return maxλ
+    return maxλ, iter
 end
 
 """
 
     maxlambda(Y, V; 
-              penfun=NoPenalty(), penwt=[ones(length(V)-1); 0.0], maxiter=500, tol=1e-8)
+              penfun=NoPenalty(), penwt=[ones(length(V)-1); 0.0], maxiters=500, tol=1e-8)
 
 Find the value of λ where all σ turns 0. At any value greater than λ, all σ's are 0.
 
@@ -112,7 +112,7 @@ Find the value of λ where all σ turns 0. At any value greater than λ, all σ'
 - `penfun`: penalty function, 
       possible options are NoPenalty() (default), L1Penalty(), MCPPenalty()
 - `penwt`: vector of penalty weights, default is (1,1,...1,0)
-- `maxiter`: maximum number of iterations, default is 500
+- `maxiters`: maximum number of iterations, default is 500
 - `tol`: value below which σ is considered 0
 
 # Output
@@ -123,7 +123,7 @@ function maxlambda(
     V       :: AbstractVector{Matrix{T}};
     penfun  :: Penalty = NoPenalty(),
     penwt   :: AbstractVector{T} = [ones(T, length(V)-1); zero(T)],
-    maxiter :: Int = 500,
+    maxiters :: Int = 500,
     tol     :: AbstractFloat = 1e-10,
     tempλ   :: AbstractFloat = 50.0
     ) where {T <: Real}
@@ -176,8 +176,8 @@ function maxlambda(
     Σ_b = Vector{Matrix{Float64}}(undef, nvarcomps)
     Σ_c = Vector{Matrix{Float64}}(undef, nvarcomps)
 
-    # loop through while iteration number less than maxiter 
-    while iter <= maxiter
+    # loop through while iteration number less than maxiters
+    while iter <= maxiters
       c = (a + b) / 2
       Σ_a, = vcselect(Y, V; penfun=penfun, λ=a, penwt=penwt)
       Σ_b, = vcselect(Y, V; penfun=penfun, λ=b, penwt=penwt)
