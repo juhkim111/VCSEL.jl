@@ -1,4 +1,4 @@
-export nullprojection, fixedeffects, kronaxpy!, clamp_diagonal!
+export nullprojection, getfixedeffects, kronaxpy!, clamp_diagonal!
 
 """
     objvalue(vcm; penfun, λ, penwt)
@@ -164,7 +164,7 @@ where `Ω` being `∑ σ2[i] * V[i]` where `σ2` is the REML estimate.
 # Output 
 - `β`: fixed effects estimate
 """
-function fixedeffects( 
+function getfixedeffects( 
     y   :: AbstractVector{T},
     X   :: AbstractMatrix{T},
     V   :: AbstractVector{Matrix{T}},
@@ -181,7 +181,7 @@ function fixedeffects(
         end 
     end 
 
-    β = fixedeffects(y, X, Ω)
+    β = getfixedeffects(y, X, Ω)
 
     return β
 
@@ -209,7 +209,7 @@ where `pinv` indicates Moore-Penrose pseudoinverse and
 # Output 
 - `β`: fixed effects estimate
 """
-function fixedeffects( 
+function getfixedeffects( 
     Y   :: AbstractMatrix{T},
     X   :: AbstractMatrix{T},
     V   :: AbstractVector{Matrix{T}},
@@ -227,7 +227,7 @@ function fixedeffects(
     end  
 
     # fixed effects estimates 
-    β = fixedeffects(Y, X, Ω)
+    β = getfixedeffects(Y, X, Ω)
 
     return β
 
@@ -249,7 +249,7 @@ cholesky factorization of the overall covariance matrix
 # Output 
 - `β`: fixed effects estimate 
 """
-function fixedeffects( 
+function getfixedeffects( 
     y   :: AbstractVector{T},
     X   :: AbstractMatrix{T},
     Ω   :: Union{AbstractMatrix{T}, Cholesky}
@@ -290,7 +290,7 @@ where `pinv` indicates Moore-Penrose pseudoinverse and
 # Output 
 - `β`: fixed effects estimate 
 """
-function fixedeffects( 
+function getfixedeffects( 
     Y   :: AbstractMatrix{T},
     X   :: AbstractMatrix{T},
     Ω   :: Union{AbstractMatrix{T}, Cholesky}
