@@ -72,9 +72,9 @@ function vcselect(
     β = betaestimate(y, X, Ω)
 
     if verbose 
-        return σ2, obj, niters, Ω, objvec;
+        return σ2, β, obj, niters, Ω, objvec;
     else 
-        return σ2, obj, niters, Ω;
+        return σ2, β, obj, niters, Ω;
     end
 end
 
