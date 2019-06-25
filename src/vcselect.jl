@@ -56,12 +56,10 @@ function vcselect(
     # call vcselect 
     if verbose 
         σ2, obj, niters, _, objvec  = vcselect(ynew, Vnew; penfun=penfun, λ=λ, penwt=penwt, 
-                σ2=σ2, maxiter=maxiter, tol=tol, verbose=verbose,
-                checkfrobnorm=false, verbose=verbose)
+                σ2=σ2, maxiter=maxiter, tol=tol, verbose=verbose, checkfrobnorm=false)
     else 
         σ2, obj, niters,  = vcselect(ynew, Vnew; penfun=penfun, λ=λ, penwt=penwt, 
-                σ2=σ2, maxiter=maxiter, tol=tol, verbose=verbose,
-                checkfrobnorm=false, verbose=verbose)
+                σ2=σ2, maxiter=maxiter, tol=tol, verbose=verbose, checkfrobnorm=false)
     end 
     
     # update Ω with estimated variance components 
