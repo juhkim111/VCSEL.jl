@@ -130,6 +130,9 @@ function vcselect(
         checkfrobnorm!(V)
     end 
 
+    # 
+    ϵ = convert(T, 1e-8)
+
     # initialize algorithm
     n = length(y)       # no. observations
     m = length(V) - 1   # no. variance components
@@ -212,7 +215,9 @@ function vcselect(
         end # end of for loop over j
 
         # update last variance component  
-        σ2[m + 1] = σ2[m + 1] * √(dot(v, v) / tr(Ωinv))
+        σ2[end] = σ2[end] * √(dot(v, v) / tr(Ωinv))
+        σ2[end] = clamp(σ2[end], ϵ, T(Inf))
+
         # update diagonal entry of Ω
         for i in 1:n 
             Ω[i, i] += σ2[m + 1]
