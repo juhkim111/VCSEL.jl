@@ -54,10 +54,16 @@ function vcselect(
     ynew, Vnew = nullprojection(y, X, V)
 
     # call vcselect 
-    σ2, obj, niters, = vcselect(ynew, Vnew; penfun=penfun, λ=λ, penwt=penwt, 
-                            σ2=σ2, maxiter=maxiter, tol=tol, verbose=verbose,
-                            checkfrobnorm=false)
-
+    if verbose 
+        σ2, obj, niters, _, objvec  = vcselect(ynew, Vnew; penfun=penfun, λ=λ, penwt=penwt, 
+                σ2=σ2, maxiter=maxiter, tol=tol, verbose=verbose,
+                checkfrobnorm=false, verbose=verbose)
+    else 
+        σ2, obj, niters,  = vcselect(ynew, Vnew; penfun=penfun, λ=λ, penwt=penwt, 
+                σ2=σ2, maxiter=maxiter, tol=tol, verbose=verbose,
+                checkfrobnorm=false, verbose=verbose)
+    end 
+    
     # update Ω with estimated variance components 
     Ω = zeros(T, size(V[1]))
     for i in eachindex(σ2)
