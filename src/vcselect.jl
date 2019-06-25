@@ -71,7 +71,11 @@ function vcselect(
     # estimate fixed effects 
     β = betaestimate(y, X, Ω)
 
-    return σ2, β, obj, niters, Ω;
+    if verbose 
+        return σ2, obj, niters, Ω, objvec;
+    else 
+        return σ2, obj, niters, Ω;
+    end
 end
 
 """
