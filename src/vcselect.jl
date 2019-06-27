@@ -19,7 +19,7 @@ call `vcselect(y, V; penfun, λ, penwt, σ2, maxiter, tol, verbose)`
 - `penwt`: vector of penalty weights, default is (1,1,...1,0)
 - `σ2`: initial values, default is (1,1,...,1)
 - `maxiter`: maximum number of iterations, default is 1000
-- `tol`: tolerance in difference of objective values for MM loop, default is 1e-6
+- `tol`: tolerance in difference of objective values for MM loop, default is 1e-8
 - `verbose`: display switch, default is false 
 - `checkfrobnorm`: if true, makes sures elements of `V` have frobenius norm 1.
     Default is true 
@@ -40,7 +40,7 @@ function vcselect(
     penwt         :: AbstractVector{T} = [ones(T, length(V)-1); zero(T)],
     σ2            :: AbstractVector{T} = ones(T, length(V)),
     maxiter       :: Int = 1000,
-    tol           :: AbstractFloat = 1e-6,
+    tol           :: AbstractFloat = 1e-8,
     verbose       :: Bool = false,
     checkfrobnorm :: Bool = true
     ) where {T <: Real}
@@ -128,7 +128,7 @@ function vcselect(
     Ω             :: AbstractMatrix{T} = zeros(T, size(V[1])), 
     Ωinv          :: AbstractMatrix{T} = zeros(T, size(V[1])),
     maxiter       :: Int = 1000,
-    tol           :: AbstractFloat = 1e-6,
+    tol           :: AbstractFloat = 1e-8,
     verbose       :: Bool = false,
     checkfrobnorm :: Bool = true
     ) where {T <: Real} 
@@ -325,7 +325,7 @@ function vcselectpath(
     λpath        :: AbstractVector{T} = T[],
     σ2           :: AbstractVector{T} = ones(T, length(V)),
     maxiter      :: Int = 1000,
-    tol          :: AbstractFloat = 1e-6,
+    tol          :: AbstractFloat = 1e-8,
     verbose      :: Bool = false,
     fixedeffects :: Bool = false 
     ) where {T <: Real}
@@ -396,7 +396,7 @@ function vcselectpath(
     λpath   :: AbstractVector{T} = T[],
     σ2      :: AbstractVector{T} = ones(T, length(V)),
     maxiter :: Int = 1000,
-    tol     :: AbstractFloat = 1e-6,
+    tol     :: AbstractFloat = 1e-8,
     verbose :: Bool = false
     ) where {T <: Real}
 
