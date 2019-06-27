@@ -42,13 +42,16 @@ function maxlambda(
         mul!(Vy, V[i], y) 
         λpath[i] = (1 / penwt[i]) * (-tr(V[i]) / σ2_0 +
                 dot(y, Vy) / σ2_0^2)
+        
     end
+    
     # find maximum among m different lambdas
-    tempλ = maximum(λpath)
+    tempλ = abs(minimum(λpath))
+    # tempλ = maximum(λpath)
     σ2 = zeros(length(V))
-    if tempλ <= 0
-	      tempλ = 30.0
-    end
+    # if tempλ <= 0
+	  #     tempλ = 30.0
+    # end
 
     # make sure all estimated σ2 are 0 at current λ
     while true
