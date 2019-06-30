@@ -211,6 +211,7 @@ Output plot of solution path at varying λ values. Use backend such as `gr()`.
 - `xlab`: x-axis label, default is minimum of λpath
 - `ylab`: y-axis label, default is maximum of λpath
 - `linewidth`: line width, default is 1.0
+- `nranking`: no. of ranks to display on legend, default is 
 
 # Output 
 - plot of solution path 
@@ -223,11 +224,13 @@ function plotsolpath(
     xmin      :: AbstractFloat = minimum(λpath),
     xmax      :: AbstractFloat = maximum(λpath),
     ylab      :: AbstractString = "\\sigma^2",
-    linewidth :: AbstractFloat = 1.0
+    nranking  :: Int = size(σ2path, 1),
+    linewidth :: AbstractFloat = 1.0, 
+    legend    :: Bool = true
 ) where {T <: Real}
 
     # size of solution path 
-    novarcomp, nlambda = size(σ2path)
+    nvarcomps, nlambda = size(σ2path)
 
     # get ranking of variance components
     ranking, rest = rankvarcomps(σ2path)
@@ -235,18 +238,44 @@ function plotsolpath(
     # transpose solpath s.t. each row is estimates at particular lambda
     tr_σ2path = σ2path'
 
-    # label in the permuted order 
-    legendlabel = "\\sigma^{2}[$(ranking[1])]"
-    for i in ranking[2:end]
-        legendlabel = hcat(legendlabel, "\\sigma^{2}[$i]")
-    end
-    for i in 1:length(rest)
-        legendlabel = hcat(legendlabel, "")
-    end 
+    if legend && nranking > 0
+        legendlabel = "\\sigma^{2}[$(ranking[1])]"
+        if nranking == nvarcomps # display all non-zero variance components 
+            
+            for i in ranking[2:end]
+                legendlabel = hcat(legendlabel, "\\sigma^{2}[$i]")
+            end
+            nranking = length(ranking)
+           
+        elseif nranking > 1 # display the first non-zero variance component to enter the path  
+            for i in ranking[2:nranking]
+                legendlabel = hcat(legendlabel, "\\sigma^{2}[$i]")
+            end
 
-    # plot permuted solution path (decreasing order)
-    plot(λpath, tr_σ2path[:, [ranking; rest]], label=legendlabel, 
+        end 
+
+        for i in 1:(nvarcomps - nranking)
+            legendlabel = hcat(legendlabel, "")
+        end 
+
+        # plot permuted solution path (decreasing order)
+        pt1 = plot(λpath, tr_σ2path[:, [ranking; rest]],  legend=false,
         xaxis=(xlab, (xmin, xmax)), yaxis=(ylab), width=linewidth, legendtitle="ranking")
-    title!(title)     
+        title!(title)
+        pt2 = plot(λpath, tr_σ2path[:, [ranking; rest]], label=legendlabel, grid=false, 
+                    showaxis=false, xlims=(20,3), legendtitle="ranking") 
+        l = @layout [b c{0.13w}]
+        plot(pt1, pt2, layout=l)
+       
+        # plot(λpath, tr_σ2path[:, [ranking; rest]], label=legendlabel, 
+        #     xaxis=(xlab, (xmin, xmax)), yaxis=(ylab), width=linewidth, legendtitle="ranking")
+        # title!(title)     
+
+    # no legend 
+    else 
+        plot(λpath, tr_σ2path[:, [ranking; rest]], legend=false, 
+        xaxis=(xlab, (xmin, xmax)), yaxis=(ylab), width=linewidth)
+        title!(title)     
+    end 
 
 end 
