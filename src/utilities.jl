@@ -229,7 +229,7 @@ function plotsolpath(
     nranking  :: Int = size(σ2path, 1),
     linewidth :: AbstractFloat = 1.0, 
     legend    :: Bool = true,
-    legendout :: Bool = true 
+    legendout :: Bool = false
 ) where {T <: Real}
 
     # size of solution path 
