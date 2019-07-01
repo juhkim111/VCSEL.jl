@@ -282,7 +282,7 @@ function plotsolpath(
 
     # no legend 
     else 
-        plot(λpath, tr_σ2path[:, [ranking; rest]], legend=legend, 
+        plot(λpath, tr_σ2path[:, [ranking; rest]], legend=false, 
         xaxis=(xlab, (xmin, xmax)), yaxis=(ylab), width=linewidth)
         title!(title)     
     end 
