@@ -153,12 +153,15 @@ function vcselect(
     v = Ωinv * y
     w = similar(v) 
     loglConst = (1//2) * n * log(2π) 
-    obj = (1//2) * logdet(Ωchol) + (1//2) * dot(y, v) # objective value 
+    obj = (1//2) * logdet(Ωchol) + (1//2) * dot(y, v) # objective value  
     pen = 0.0
     for j in 1:m
-        pen += penwt[j] * value(penfun, √σ2[j])
+        if iszero(σ2[j])
+            continue 
+        else 
+            pen += penwt[j] * value(penfun, √σ2[j])
+        end 
     end
-    loglConst = (1//2) * n * log(2π) 
     obj += loglConst + λ * pen
 
     # display 
@@ -240,7 +243,11 @@ function vcselect(
         obj = (1//2) * logdet(Ωchol) + (1//2) * dot(y, v)
         pen = 0.0
         for j in 1:m
-            pen += penwt[j] * value(penfun, √σ2[j])
+            if iszero(σ2[j])
+                continue 
+            else 
+                pen += penwt[j] * value(penfun, √σ2[j])
+            end
         end
         obj += loglConst + λ * pen
 
