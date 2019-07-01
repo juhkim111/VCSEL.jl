@@ -210,8 +210,10 @@ Output plot of solution path at varying λ values. Use backend such as `gr()`.
 - `title`: title of the figure, default is "Solution Path"
 - `xlab`: x-axis label, default is minimum of λpath
 - `ylab`: y-axis label, default is maximum of λpath
+- `nranking`: no. of ranks to display on legend, default is total number of variance components
 - `linewidth`: line width, default is 1.0
-- `nranking`: no. of ranks to display on legend, default is 
+- `legend`: indicator to include legend or not, default is true 
+- `legendout`: indicator to move legend outside the plot, default is true 
 
 # Output 
 - plot of solution path 
@@ -226,7 +228,8 @@ function plotsolpath(
     ylab      :: AbstractString = "\\sigma^2",
     nranking  :: Int = size(σ2path, 1),
     linewidth :: AbstractFloat = 1.0, 
-    legend    :: Bool = true
+    legend    :: Bool = true,
+    legendout :: Bool = true 
 ) where {T <: Real}
 
     # size of solution path 
@@ -238,7 +241,7 @@ function plotsolpath(
     # transpose solpath s.t. each row is estimates at particular lambda
     tr_σ2path = σ2path'
 
-    if legend && nranking > 0
+    if legend && nranking > 0 
         legendlabel = "\\sigma^{2}[$(ranking[1])]"
         if nranking == nvarcomps # display all non-zero variance components 
             
@@ -259,21 +262,27 @@ function plotsolpath(
         end 
 
         # plot permuted solution path (decreasing order)
-        pt1 = plot(λpath, tr_σ2path[:, [ranking; rest]],  legend=false,
-        xaxis=(xlab, (xmin, xmax)), yaxis=(ylab), width=linewidth, legendtitle="ranking")
-        title!(title)
-        pt2 = plot(λpath, tr_σ2path[:, [ranking; rest]], label=legendlabel, grid=false, 
-                    showaxis=false, xlims=(20,3), legendtitle="ranking") 
-        l = @layout [b c{0.13w}]
-        plot(pt1, pt2, layout=l)
+
+        if !legendout
+            plot(λpath, tr_σ2path[:, [ranking; rest]], label=legendlabel, 
+            xaxis=(xlab, (xmin, xmax)), yaxis=(ylab), width=linewidth, legendtitle="ranking")
+            title!(title) 
+        else 
+            pt1 = plot(λpath, tr_σ2path[:, [ranking; rest]],  legend=false,
+                xaxis=(xlab, (xmin, xmax)), yaxis=(ylab), width=linewidth, 
+                legendtitle="ranking")
+            title!(title)
+            pt2 = plot(λpath, tr_σ2path[:, [ranking; rest]], label=legendlabel, grid=false, 
+                        showaxis=false, xlims=(20,3), legendtitle="ranking") 
+            l = @layout [b c{0.13w}]
+            plot(pt1, pt2, layout=l)
+        end 
        
-        # plot(λpath, tr_σ2path[:, [ranking; rest]], label=legendlabel, 
-        #     xaxis=(xlab, (xmin, xmax)), yaxis=(ylab), width=linewidth, legendtitle="ranking")
-        # title!(title)     
+           
 
     # no legend 
     else 
-        plot(λpath, tr_σ2path[:, [ranking; rest]], legend=false, 
+        plot(λpath, tr_σ2path[:, [ranking; rest]], legend=legend, 
         xaxis=(xlab, (xmin, xmax)), yaxis=(ylab), width=linewidth)
         title!(title)     
     end 
