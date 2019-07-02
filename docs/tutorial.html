@@ -11776,7 +11776,7 @@ div#notebook {
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <p><h1>Table of Contents<span class="tocSkip"></span></h1></p>
-<div class="toc"><ul class="toc-item"><li><span><a href="#Introduction" data-toc-modified-id="Introduction-1"><span class="toc-item-num">1&nbsp;&nbsp;</span>Introduction</a></span></li><li><span><a href="#Load-genotype-data-from-PLINK-format-file-(.bed)" data-toc-modified-id="Load-genotype-data-from-PLINK-format-file-(.bed)-2"><span class="toc-item-num">2&nbsp;&nbsp;</span>Load genotype data from PLINK format file (.bed)</a></span><ul class="toc-item"><li><span><a href="#SnpArrays.jl-installation" data-toc-modified-id="SnpArrays.jl-installation-2.1"><span class="toc-item-num">2.1&nbsp;&nbsp;</span><code>SnpArrays.jl</code> installation</a></span></li><li><span><a href="#Initialize-SnpArray" data-toc-modified-id="Initialize-SnpArray-2.2"><span class="toc-item-num">2.2&nbsp;&nbsp;</span>Initialize <code>SnpArray</code></a></span></li><li><span><a href="#Summaries" data-toc-modified-id="Summaries-2.3"><span class="toc-item-num">2.3&nbsp;&nbsp;</span>Summaries</a></span></li><li><span><a href="#Convert-genotypes-to-numeric-values" data-toc-modified-id="Convert-genotypes-to-numeric-values-2.4"><span class="toc-item-num">2.4&nbsp;&nbsp;</span>Convert genotypes to numeric values</a></span></li></ul></li><li><span><a href="#Load-genotype-data-from-.RData" data-toc-modified-id="Load-genotype-data-from-.RData-3"><span class="toc-item-num">3&nbsp;&nbsp;</span>Load genotype data from .RData</a></span></li><li><span><a href="#Load-annotation-information-from-in-.RData" data-toc-modified-id="Load-annotation-information-from-in-.RData-4"><span class="toc-item-num">4&nbsp;&nbsp;</span>Load annotation information from in .RData</a></span></li><li><span><a href="#Read-candidate-gene-information-saved-in-.txt-file" data-toc-modified-id="Read-candidate-gene-information-saved-in-.txt-file-5"><span class="toc-item-num">5&nbsp;&nbsp;</span>Read candidate gene information saved in .txt file</a></span></li><li><span><a href="#Read-phenotype-information-saved-in-.txt-file" data-toc-modified-id="Read-phenotype-information-saved-in-.txt-file-6"><span class="toc-item-num">6&nbsp;&nbsp;</span>Read phenotype information saved in .txt file</a></span></li><li><span><a href="#Organize-data-for-performing-variance-component-selection" data-toc-modified-id="Organize-data-for-performing-variance-component-selection-7"><span class="toc-item-num">7&nbsp;&nbsp;</span>Organize data for performing variance component selection</a></span><ul class="toc-item"><li><span><a href="#Create-a-vector-of-matrices-V" data-toc-modified-id="Create-a-vector-of-matrices-V-7.1"><span class="toc-item-num">7.1&nbsp;&nbsp;</span>Create a vector of matrices <code>V</code></a></span></li></ul></li><li><span><a href="#Perform-variance-component-selection" data-toc-modified-id="Perform-variance-component-selection-8"><span class="toc-item-num">8&nbsp;&nbsp;</span>Perform variance component selection</a></span><ul class="toc-item"><li><span><a href="#Estimation-without-penalty" data-toc-modified-id="Estimation-without-penalty-8.1"><span class="toc-item-num">8.1&nbsp;&nbsp;</span>Estimation without penalty</a></span></li><li><span><a href="#Selection-at-specific-tuning-parameter" data-toc-modified-id="Selection-at-specific-tuning-parameter-8.2"><span class="toc-item-num">8.2&nbsp;&nbsp;</span>Selection at specific tuning parameter</a></span></li><li><span><a href="#Solution-path" data-toc-modified-id="Solution-path-8.3"><span class="toc-item-num">8.3&nbsp;&nbsp;</span>Solution path</a></span><ul class="toc-item"><li><span><a href="#Lasso-penalty" data-toc-modified-id="Lasso-penalty-8.3.1"><span class="toc-item-num">8.3.1&nbsp;&nbsp;</span>Lasso penalty</a></span></li><li><span><a href="#Adaptive-lasso-penalty" data-toc-modified-id="Adaptive-lasso-penalty-8.3.2"><span class="toc-item-num">8.3.2&nbsp;&nbsp;</span>Adaptive lasso penalty</a></span></li><li><span><a href="#MCP-penalty" data-toc-modified-id="MCP-penalty-8.3.3"><span class="toc-item-num">8.3.3&nbsp;&nbsp;</span>MCP penalty</a></span></li></ul></li></ul></li></ul></div>
+<div class="toc"><ul class="toc-item"><li><span><a href="#Introduction" data-toc-modified-id="Introduction-1"><span class="toc-item-num">1&nbsp;&nbsp;</span>Introduction</a></span><ul class="toc-item"><li><span><a href="#Change-the-working-directory" data-toc-modified-id="Change-the-working-directory-1.1"><span class="toc-item-num">1.1&nbsp;&nbsp;</span>Change the working directory</a></span></li></ul></li><li><span><a href="#Load-genotype-data-from-PLINK-format-file-(.bed)" data-toc-modified-id="Load-genotype-data-from-PLINK-format-file-(.bed)-2"><span class="toc-item-num">2&nbsp;&nbsp;</span>Load genotype data from PLINK format file (.bed)</a></span><ul class="toc-item"><li><span><a href="#SnpArrays.jl-installation" data-toc-modified-id="SnpArrays.jl-installation-2.1"><span class="toc-item-num">2.1&nbsp;&nbsp;</span><code>SnpArrays.jl</code> installation</a></span></li><li><span><a href="#Initialize-SnpArray" data-toc-modified-id="Initialize-SnpArray-2.2"><span class="toc-item-num">2.2&nbsp;&nbsp;</span>Initialize <code>SnpArray</code></a></span></li><li><span><a href="#Summaries" data-toc-modified-id="Summaries-2.3"><span class="toc-item-num">2.3&nbsp;&nbsp;</span>Summaries</a></span></li><li><span><a href="#Convert-genotypes-to-numeric-values" data-toc-modified-id="Convert-genotypes-to-numeric-values-2.4"><span class="toc-item-num">2.4&nbsp;&nbsp;</span>Convert genotypes to numeric values</a></span></li></ul></li><li><span><a href="#Load-genotype-data-from-.RData" data-toc-modified-id="Load-genotype-data-from-.RData-3"><span class="toc-item-num">3&nbsp;&nbsp;</span>Load genotype data from .RData</a></span></li><li><span><a href="#Load-annotation-information-from-in-.RData" data-toc-modified-id="Load-annotation-information-from-in-.RData-4"><span class="toc-item-num">4&nbsp;&nbsp;</span>Load annotation information from in .RData</a></span></li><li><span><a href="#Read-candidate-gene-information-saved-in-.txt-file" data-toc-modified-id="Read-candidate-gene-information-saved-in-.txt-file-5"><span class="toc-item-num">5&nbsp;&nbsp;</span>Read candidate gene information saved in .txt file</a></span></li><li><span><a href="#Read-phenotype-information-saved-in-.txt-file" data-toc-modified-id="Read-phenotype-information-saved-in-.txt-file-6"><span class="toc-item-num">6&nbsp;&nbsp;</span>Read phenotype information saved in .txt file</a></span></li><li><span><a href="#Organize-data-for-performing-variance-component-selection" data-toc-modified-id="Organize-data-for-performing-variance-component-selection-7"><span class="toc-item-num">7&nbsp;&nbsp;</span>Organize data for performing variance component selection</a></span><ul class="toc-item"><li><span><a href="#Create-a-vector-of-matrices-V" data-toc-modified-id="Create-a-vector-of-matrices-V-7.1"><span class="toc-item-num">7.1&nbsp;&nbsp;</span>Create a vector of matrices <code>V</code></a></span></li></ul></li><li><span><a href="#Perform-variance-component-selection" data-toc-modified-id="Perform-variance-component-selection-8"><span class="toc-item-num">8&nbsp;&nbsp;</span>Perform variance component selection</a></span><ul class="toc-item"><li><span><a href="#Estimation-without-penalty" data-toc-modified-id="Estimation-without-penalty-8.1"><span class="toc-item-num">8.1&nbsp;&nbsp;</span>Estimation without penalty</a></span></li><li><span><a href="#Selection-at-specific-tuning-parameter" data-toc-modified-id="Selection-at-specific-tuning-parameter-8.2"><span class="toc-item-num">8.2&nbsp;&nbsp;</span>Selection at specific tuning parameter</a></span></li><li><span><a href="#Solution-path" data-toc-modified-id="Solution-path-8.3"><span class="toc-item-num">8.3&nbsp;&nbsp;</span>Solution path</a></span><ul class="toc-item"><li><span><a href="#Lasso-penalty" data-toc-modified-id="Lasso-penalty-8.3.1"><span class="toc-item-num">8.3.1&nbsp;&nbsp;</span>Lasso penalty</a></span></li><li><span><a href="#Adaptive-lasso-penalty" data-toc-modified-id="Adaptive-lasso-penalty-8.3.2"><span class="toc-item-num">8.3.2&nbsp;&nbsp;</span>Adaptive lasso penalty</a></span></li><li><span><a href="#MCP-penalty" data-toc-modified-id="MCP-penalty-8.3.3"><span class="toc-item-num">8.3.3&nbsp;&nbsp;</span>MCP penalty</a></span></li></ul></li></ul></li></ul></div>
 </div>
 </div>
 </div>
@@ -11800,7 +11800,7 @@ div#notebook {
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p>First let us change the working directory to the directory that contains above files.</p>
+<h3 id="Change-the-working-directory">Change the working directory<a class="anchor-link" href="#Change-the-working-directory">&#182;</a></h3><p>First let us change the working directory to the directory that contains above files.</p>
 
 </div>
 </div>
@@ -12996,56 +12996,10 @@ Start Julia and use the <code>]</code> key to switch to the package manager REPL
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p>To read R objects from <code>.RData</code> file, we need to add <code>RData</code> package in Julia. 
-Start Julia and use the <code>]</code> key to switch to the package manager REPL</p>
+<p>To read R objects from <code>.RData</code> file, we use package <code>RData</code> as in <a href="#Load-genotype-data-from-.RData">previous section</a>.</p>
 
 </div>
 </div>
-</div>(v1.1) pkg> add RData
-<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
-</div>
-<div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<p>Or simply do from Julia REPL</p>
-
-</div>
-</div>
-</div>
-<div class="cell border-box-sizing code_cell rendered">
-<div class="input">
-<div class="prompt input_prompt">In&nbsp;[22]:</div>
-<div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-julia"><pre><span></span><span class="k">using</span> <span class="n">Pkg</span>
-<span class="n">Pkg</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s">&quot;RData&quot;</span><span class="p">)</span>
-</pre></div>
-
-</div>
-</div>
-</div>
-
-<div class="output_wrapper">
-<div class="output">
-
-
-<div class="output_area">
-
-<div class="prompt"></div>
-
-
-<div class="output_subarea output_stream output_stdout output_text">
-<pre><span class="ansi-green-intense-fg ansi-bold"> Resolving</span> package versions...
-<span class="ansi-green-intense-fg ansi-bold">  Updating</span> `~/.julia/environments/v1.1/Project.toml`
-<span class="ansi-black-intense-fg"> [no changes]</span>
-<span class="ansi-green-intense-fg ansi-bold">  Updating</span> `~/.julia/environments/v1.1/Manifest.toml`
-<span class="ansi-black-intense-fg"> [no changes]</span>
-</pre>
-</div>
-</div>
-
-</div>
-</div>
-
 </div>
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div>
@@ -13164,7 +13118,7 @@ We read the file using</p>
 <div class="prompt input_prompt">In&nbsp;[25]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-julia"><pre><span></span><span class="k">using</span> <span class="n">DelimitedFiles</span> <span class="c"># make sure you add the package if not installed </span>
+<div class=" highlight hl-julia"><pre><span></span><span class="k">using</span> <span class="n">DelimitedFiles</span>
 <span class="n">candidates</span> <span class="o">=</span> <span class="n">readdlm</span><span class="p">(</span><span class="s">&quot;candidate_genes_sorted.txt&quot;</span><span class="p">,</span> <span class="sc">&#39;\t&#39;</span><span class="p">)</span> <span class="c"># use &#39;\t&#39; since tab-delimited</span>
 </pre></div>
 
@@ -13341,7 +13295,65 @@ We read the file using</p>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <p>In this section, we read phenotype information saved in .txt file.
-First load the package necessary for this section.</p>
+First we install the package <code>CSV</code>. To install, you can either</p>
+<p>1) start Julia and use the <code>]</code> key to switch to the package manager REPL</p>
+
+</div>
+</div>
+</div>(v1.1) pkg> add CSV
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>use the backspace key to return to Julia REPL</p>
+<p>OR 2) simply do</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[1]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-julia"><pre><span></span><span class="k">using</span> <span class="n">Pkg</span>
+<span class="n">Pkg</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s">&quot;CSV&quot;</span><span class="p">)</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+<div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre><span class="ansi-green-intense-fg ansi-bold">  Updating</span> registry at `~/.julia/registries/General`
+<span class="ansi-green-intense-fg ansi-bold">  Updating</span> git-repo `https://github.com/JuliaRegistries/General.git`
+<span class="ansi-green-intense-fg ansi-bold"> Resolving</span> package versions...
+<span class="ansi-green-intense-fg ansi-bold">  Updating</span> `~/.julia/environments/v1.1/Project.toml`
+ <span class="ansi-black-intense-fg"> [336ed68f]</span><span class="ansi-green-intense-fg"> + CSV v0.5.6</span>
+<span class="ansi-green-intense-fg ansi-bold">  Updating</span> `~/.julia/environments/v1.1/Manifest.toml`
+<span class="ansi-black-intense-fg"> [no changes]</span>
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Now load the package.</p>
 
 </div>
 </div>
@@ -13404,7 +13416,20 @@ First load the package necessary for this section.</p>
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p>For the purpose of our analysis, we use sex as our covariate and trait2 as our phenotype of interest. We will save sex and trait2 as <code>X</code> and <code>y</code>, respectively.</p>
+<p><a id='trueVC'></a></p>
+<p>For the purpose of our analysis, we use <code>sex</code> as our covariate and <code>trait2</code> as our phenotype of interest. We will save <code>sex</code> and <code>trait2</code> as <code>X</code> and <code>y</code>, respectively. Note that <code>trait2</code> (or <code>y</code>) was simulated using</p>
+<p>$$y \sim \text{Normal}(X\beta, \Omega),$$</p>
+<p>where</p>
+<ul>
+<li>$X$: <code>sex</code></li>
+<li>$\beta=1.0$</li>
+<li>$\Omega = \sum_{i=1}^{150} \sigma_i^{2} V_i + \sigma_0^{2} \frac{1}{\sqrt{324}} I_{324},$ where <ul>
+<li>$I_{324}$ is $324\times 324$ identity matrix</li>
+<li>$\sigma^2 = (\sigma_1^2, \ldots, \sigma_{150}^{2}, \sigma_0^{2})$ is the truth, 
+$$\sigma_i = \begin{cases} 2.236 &amp; \text{ if } i=  1, 38, 75, 112, 150\\  1 &amp; \text{ if } i=0 \\  0  &amp; \text{ else} \end{cases}.$$</li>
+</ul>
+</li>
+</ul>
 
 </div>
 </div>
@@ -13659,16 +13684,6 @@ First load the package necessary for this section.</p>
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p>For this section, we need package <code>LinearAlgebra</code>.</p>
-<p>To add the package, start Julia and use the <code>]</code> key to switch to the package manager REPL</p>
-
-</div>
-</div>
-</div>(v1.1) pkg> add LinearAlgebra
-<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
-</div>
-<div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
 <h3 id="Create-a-vector-of-matrices-V">Create a vector of matrices <code>V</code><a class="anchor-link" href="#Create-a-vector-of-matrices-V">&#182;</a></h3>
 </div>
 </div>
@@ -13681,7 +13696,7 @@ First load the package necessary for this section.</p>
 <p>where $V_i$ is a kernel function for $i$-th gene and $V_i$ has Frobenius norm equal to 1.</p>
 <p>Here we simply use linear kernel function $V_i = G_iG_i^T$. However, any kernel function could be used to model the relationship among the effect sizes of the variants on the phenotypes. For example,</p>
 <ol>
-<li>$V_i = G_iW_iG_i^T$ where $W_i = diag(w_1, \ldots, w_{q_i})$ specifies weights of variants in $i$-th gene: uncorrelated effect sizes and corresponds to SKAT</li>
+<li>$V_i = G_iW_iG_i^T$ where $W_i = \text{diag}(w_1, \ldots, w_{q_i})$ specifies weights of variants in $i$-th gene: uncorrelated effect sizes and corresponds to SKAT</li>
 <li>$V_i = G_iW_i1_{q_i}1_{q_i}^TW_iG_i^T$: correponds to the Burden test </li>
 </ol>
 <p>(Dutta, D., Scott, L., Boehnke, M., &amp; Lee, S. (2019). Multi‐SKAT: General framework to test for rare‐variant association with multiple phenotypes. Genetic epidemiology, 43(1), 4-23.)</p>
@@ -14398,7 +14413,7 @@ First load the package necessary for this section.</p>
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p>Selected variance components (i.e. positive ones) are 1st, 80th, and 150th.</p>
+<p>Selected variance components (i.e. positive ones) are 1st, 80th, and 150th. Recall <a href="#trueVC">indices of true variance components are  1, 38, 75, 112, and 150</a>.</p>
 
 </div>
 </div>
