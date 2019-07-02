@@ -197,6 +197,7 @@ function vcselect(
               # set variance component to zero if weight = Inf 
               if isinf(penwt[j])
                   σ2[j] = zero(T)
+                  continue 
               else
                   penstrength = λ * penwt[j]
                   # L1 penalty 
@@ -229,10 +230,9 @@ function vcselect(
         σ2[end] = σ2[end] * √(dot(v, v) / tr(Ωinv))
         σ2[end] = clamp(σ2[end], ϵ, T(Inf))
 
-        # update diagonal entry of Ω
-        for i in 1:n 
-            Ω[i, i] += σ2[m + 1]
-        end 
+        # update overall covariance matrix 
+        Ω .+= σ2[end] .* V[end]
+
         # update Ωchol, Ωinv, v 
         Ωchol = cholesky!(Symmetric(Ω))
         Ωinv[:] = inv(Ωchol)
