@@ -46,10 +46,9 @@ function maxlambda(
     
     # find maximum among m different lambdas
     tempλ = abs(minimum(λpath))
-    if iszero(tempλ)
+    if isapprox(tempλ, 0; atol=1e-8)
       tempλ = maximum(λpath)
     end 
-    # tempλ = maximum(λpath)
     σ2 = zeros(length(V))
     # if tempλ <= 0
 	  #     tempλ = 30.0
