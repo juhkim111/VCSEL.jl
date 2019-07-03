@@ -1,13 +1,15 @@
 module UnivariateTest
 
+# load packages 
 using Random, LinearAlgebra, VarianceComponentSelect, Test
 
+# set seed 
 Random.seed!(123)
 
 # generate data from an univariate response variance component model 
 n = 100   # no. observations
 m = 10    # no. variance components
-p = 3     # no. covariates
+p = 1     # no. covariates
 X = randn(n, p)
 β = ones(p)
 
@@ -35,7 +37,15 @@ y = X * β + Ωchol.L * randn(n)
 nlambda = 20 
 
 @info "check if objective values are monotonically decreasing" 
-σ2, _, _, _, objvec = vcselect(y, V; λ=2.0, verbose=true)
+σ2, _, _, _, _, objvec = vcselect(y, X, V; λ=2.0, verbose=true)
+@testset begin 
+  for i in 1:(length(objvec) - 1)
+    @test objvec[i] >= objvec[i+1]
+  end 
+end 
+
+@info "check if objective values are monotonically decreasing" 
+σ2, _, _, _, objvec = vcselect(yreml, V; λ=2.0, verbose=true)
 @testset begin 
   for i in 1:(length(objvec) - 1)
     @test objvec[i] >= objvec[i+1]
@@ -43,10 +53,10 @@ nlambda = 20
 end 
 
 ## variance component selection at specific lambda 
-σ2_tmp, = vcselect(y, V)
+σ2_tmp, = vcselect(yreml, V)
 
 @info "solution path with no penalty (REML)"
-σ2path, = vcselectpath(y, V)
+σ2path, = vcselectpath(yreml, V)
 @testset begin
   @test σ2_tmp == σ2path
 end 
@@ -73,28 +83,28 @@ penwt[1:m] = 1 ./ sqrt.(temp[1:m])
 @testset begin 
       
     @info "solution path with lasso penalty (REML)"
-    σ2path, = vcselectpath(y, V; penfun=L1Penalty(), nlambda=nlambda)
+    σ2path, = vcselectpath(yreml, V; penfun=L1Penalty(), nlambda=nlambda)
     @test all(σ2path .>= 0)
 
     @info "solution path with adaptive lasso penalty (REML)"
-    σ2path, = vcselectpath(y, V; penfun=L1Penalty(), penwt=penwt, nlambda=nlambda)
+    σ2path, = vcselectpath(yreml, V; penfun=L1Penalty(), penwt=penwt, nlambda=nlambda)
     @test all(σ2path .>= 0)
 
     @info "solution path with MCP penalty (REML)"
-    σ2path, = vcselectpath(y, V; penfun=MCPPenalty(), penwt=penwt, nlambda=nlambda) 
+    σ2path, = vcselectpath(yreml, V; penfun=MCPPenalty(), penwt=penwt, nlambda=nlambda) 
     @test all(σ2path .>= 0)
 
     @info "solution path with lasso penalty"
-    σ2path, objpath, λpath = vcselectpath(y, X, V; penfun=L1Penalty(), nlambda=nlambda) 
+    σ2path, objpath, λpath, = vcselectpath(y, X, V; penfun=L1Penalty(), nlambda=nlambda) 
     @test all(σ2path .>= 0)
 
     @info "solution path with adaptive lasso penalty"
-    σ2path, objpath, λpath = vcselectpath(y, X, V; 
+    σ2path, objpath, λpath, = vcselectpath(y, X, V; 
         penfun=L1Penalty(), penwt=penwt, nlambda=nlambda) 
     @test all(σ2path .>= 0)
 
     @info "solution path with MCP penalty"
-    σ2path, objpath, λpath = vcselectpath(y, X, V; 
+    σ2path, objpath, λpath, = vcselectpath(y, X, V; 
         penfun=MCPPenalty(), penwt=penwt, nlambda=nlambda) 
     @test all(σ2path .>= 0)
 
