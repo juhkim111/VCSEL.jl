@@ -1,6 +1,9 @@
 module UtilitiesTest
 
+# load packages
 using Random, LinearAlgebra, Test, VarianceComponentSelect
+
+# set seed 
 Random.seed!(123)
 
 # generate data from an univariate response variance component model 
