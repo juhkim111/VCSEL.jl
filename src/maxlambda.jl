@@ -50,9 +50,6 @@ function maxlambda(
       tempλ = maximum(λpath)
     end 
     σ2 = zeros(length(V))
-    # if tempλ <= 0
-	  #     tempλ = 30.0
-    # end
 
     # make sure all estimated σ2 are 0 at current λ
     while true
