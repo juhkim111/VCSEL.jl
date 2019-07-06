@@ -10,6 +10,7 @@ export vcselect, vcselectpath, maxlambda, nullprojection,
         betaestimate, checkfrobnorm!, rankvarcomps, plotsolpath
 
 include("vcselect.jl")
+include("vcselect_interact.jl")
 include("maxlambda.jl")
 include("utilities.jl")
 
