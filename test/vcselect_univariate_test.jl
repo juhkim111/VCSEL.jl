@@ -9,7 +9,7 @@ Random.seed!(123)
 # generate data from an univariate response variance component model 
 n = 100   # no. observations
 m = 10    # no. variance components
-p = 1     # no. covariates
+p = 3     # no. covariates
 X = randn(n, p)
 β = ones(p)
 
@@ -19,7 +19,7 @@ for i = 1:m
   V[i] = Vi * Vi'
   V[i] = V[i] ./ norm(V[i])
 end
-V[m + 1] = Matrix(I, n, n) ./ √n
+V[end] = Matrix(I, n, n) ./ √n
 
 # truth 
 σ2 = zeros(m + 1)
