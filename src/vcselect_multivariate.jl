@@ -316,6 +316,7 @@ function vcselect(
     end
 
     if verbose 
+        println("iter =", niters)
         println("final obj = ", obj)
         return Σ, obj, niters, Ω, objvec;
     else 
@@ -376,7 +377,7 @@ function vcselectpath(
     ) where {T <: Real}
 
     # project y and V onto nullspace of X
-    ynew, Vnew = nullprojection(Y, X, V)
+    ynew, Vnew, = nullprojection(Y, X, V)
 
     # dimension 
     p = size(X, 2)
@@ -474,14 +475,7 @@ function vcselectpath(
             Σ, objpath[iter], niterspath[iter], = 
                     vcselect(Y, V; penfun=penfun, λ=λpath[iter], penwt=penwt, 
                     Σ=Σ, maxiter=maxiter, tol=tol, verbose=verbose, checkfrobnorm=false)
-            Σpath[:, iter] = Σ
-
-            # if iter == 1
-            #     println("iter = ", iter)
-            #     println("Σ = ", Σ)
-            #     #println("β = ", vcm.β)
-            # end 
-            
+            Σpath[:, iter] = Σ            
         end
 
     else # if no penalty, there is no lambda grid 
