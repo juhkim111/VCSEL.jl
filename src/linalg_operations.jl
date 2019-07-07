@@ -7,15 +7,16 @@ Calculate objective value, i.e. negative log-likelihood of [`VCModel`](@ref) ins
 penalty terms. 
 
 # Input 
-- `vcm`
+- `vcm`: VCModel
 
 # Keyword Argument 
-- `penfun`
-- `λ`
-- `penwt`
+- `penfun`: penalty function (e.g. NoPenalty(), L1Penalty(), MCPPenalty()), 
+        default is NoPenalty()
+- `λ`: tuning parameter, default is 1
+- `penwt`: penalty weight, default is (1,...1,0)
 
 # Output 
-- `obj`
+- `obj`: objective value 
 
 """
 function objvalue(
@@ -61,15 +62,20 @@ Project `y` to null space of `transpose(X)` and transform `V` accordingly.
 """
 function nullprojection(
     y    :: AbstractVecOrMat{T},
-    X    :: AbstractMatrix{T},
+    X    :: AbstractVecOrMat{T},
     V    :: AbstractVector{Matrix{T}}
     ) where {T <: Real}
 
     if isempty(X)
         return y, V, X
     else
+        # # basis of nullspace of transpose(X), `N(X')`
+        # Xt = similar(X')
+        # transpose!(Xt, X)
+        # B = nullspace(Xt)
+
         # basis of nullspace of transpose(X), `N(X')`
-        Xt = similar(X')
+        Xt = Matrix{T}(undef, size(X, 2), size(X, 1))
         transpose!(Xt, X)
         B = nullspace(Xt)
 
@@ -80,12 +86,12 @@ function nullprojection(
         s = size(B, 2) 
 
         # no. of variance components subject to selection 
-        m = length(V) 
+        nvarcomps = length(V) 
 
         # transformed covariance matrices 
-        Vnew = Vector{Matrix{Float64}}(undef, m)
+        Vnew = Vector{Matrix{Float64}}(undef, nvarcomps)
         tmp = zeros(size(X, 1), s)
-        for i in 1:(m - 1)
+        for i in 1:(nvarcomps - 1)
             mul!(tmp, V[i], B)
             Vnew[i] = BLAS.gemm('T', 'N', B, tmp)
             # divide by its frobenius norm  
@@ -100,7 +106,7 @@ function nullprojection(
 end 
 
 """
-    fixedeffects(y, X, V, σ2)
+    updateβ!(vcm)
 
 Estimate fixed effects using REML estimate of variance components.
 Estimate of beta is 
@@ -109,16 +115,10 @@ Estimate of beta is
 where `Ω` being `∑ σ2[i] * V[i]` or `∑ Σ[i] ⊗ V[i]` where `σ2` or `Σ` are REML estimates.
 
 # Input
-- `y`: response vector
-- `X`: covariate matrix 
-- `V`: vector of covariance matrices, `(V[1],V[2],...,V[m],I)`
-    note (1) `V[end]` should be identity matrix or identity matrix divided by √n
-    note (2) each `V[i]` needs to have frobenius norm 1, 
-            if not, `vcselect` internally divides each `V[i]` by its frobenius norm by default   
-- `σ2`: REML estimate of variance components 
+- `vcm`: VCModel
 
 # Output 
-- `β`: fixed effects estimate
+- `vcm.β`: updated fixed parameter estimates 
 """
 function updateβ!( 
     vcm :: VCModel
