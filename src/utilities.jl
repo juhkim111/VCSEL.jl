@@ -25,7 +25,7 @@ end
     represent estimated variance components at specific λ 
     as in output from `vcselect`, `vcselectpath`
 
-# Keyword 
+# Keyword Argument 
 - `tol`: a variance component less than `tol` is considered zero, default is 1e-6 
 
 # Output 
@@ -64,32 +64,34 @@ end
     rankvarcomps(Σpath; tol=1e-6)
 
 # Input
-- `Σpath`: solution path (in numeric matrix), each column should 
-    represent estimated variance components at specific λ 
-    as in output from `vcselect`, `vcselectpath`
+- `Σpath`: solution path (matrix of matrix), each column should 
+    contain estimated variance components at specific λ 
+    as in output from `vcselectpath!`
 
-# Keyword 
-- `tol`: a variance component less than `tol` is considered zero, default is 1e-6 
+# Keyword Argument 
+- `tol`: a variance component whose `p`-norm is less than `tol` is considered zero, default is 1e-6 
+- `p`: `p` for determining which norm to use, default is 2. See [`norm(A, p::Real=2)`](@ref)
 
 # Output 
 - `ranking`: rank of each variance component based on the order in which it enters 
     solution path
-- `rest`: rest of the variance components that are estimated to be zero at all λ > 0
+- `rest`: rest of variance components that are estimated to be zero at all λ > 0
 """
 function rankvarcomps(
-    Σpath :: AbstractMatrix{T};
-    tol    :: Float64=1e-6
+    Σpath  :: AbstractMatrix{Matrix{T}};
+    tol    :: Float64=1e-6,
+    p      :: Real = 2
     ) where {T <: Real}
 
     # size of solution path 
-    novarcomp, nlambda = size(σ2path)
+    nvarcomps, nlambda = size(Σpath)
 
     # initialize array for ranking 
     ranking = Int[]
 
     # go through solution path and find the order in which variance component enters
     for col in nlambda:-1:2
-        tmp = findall(x -> x > tol, view(σ2path, 1:(novarcomp-1), col))
+        tmp = findall(x -> norm(x, p) > tol, view(Σpath, 1:(nvarcomps-1), col))
         for j in tmp 
             if !(j in ranking)
                 push!(ranking, j)
@@ -97,8 +99,8 @@ function rankvarcomps(
         end
     end 
     # rest of the variance components that are estimated to be zero at all λ > 0
-    rest = setdiff(1:(novarcomp-1), ranking)
-    rest = [rest; novarcomp]
+    rest = setdiff(1:(nvarcomps-1), ranking)
+    rest = [rest; nvarcomps]
 
     return ranking, rest 
 end 
@@ -133,7 +135,7 @@ function plotsolpath(
     xmax      :: AbstractFloat = maximum(λpath),
     ylab      :: AbstractString = "\\sigma^2",
     linewidth :: AbstractFloat = 1.0
-) where {T <: Real}
+    ) where {T <: Real}
 
     # size of solution path 
     novarcomp, nlambda = size(σ2path)
