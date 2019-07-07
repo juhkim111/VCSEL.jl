@@ -316,8 +316,6 @@ function vcselect(
     end
 
     if verbose 
-        println("iter =", niters)
-        println("final obj = ", obj)
         return Σ, obj, niters, Ω, objvec;
     else 
         return Σ, obj, niters, Ω;
