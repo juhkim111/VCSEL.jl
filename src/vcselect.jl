@@ -433,7 +433,28 @@ end
 """
     vcselectpath!(vcm; penfun, penwt, nλ, λpath, maxiters, tol, verbose, fixedeffects)
 
+Generate solution path of variance components along varying lambda values.
 
+# Input
+- `vcm`: VCModel
+
+# Keyword 
+- `penfun`: penalty function, default is NoPenalty()
+- `penwt`: weights for penalty term, default is (1,1,...1,0)
+- `nlambda`: number of tuning parameter values, default is 100
+- `λpath`: user-supplied grid of tuning parameter values
+        If unspeficied, internally generate a grid
+- `σ2`: initial estimates, default is (1,1,...,1)
+- `maxiter`: maximum number of iteration for MM loop, default is 1000
+- `tol`: tolerance in difference of objective values for MM loop, default is 1e-8
+- `verbose`: display switch, default is false 
+
+# Output 
+- `σ2path`: matrix of estimated variance components at each tuning parameter `λ`,
+        each column gives vector of estimated variance components `σ2` at certain `λ`
+- `objpath`: vector of objective values at each tuning parameter `λ`
+- `λpath`: vector of tuning parameter values used 
+- `niterspath`: vector of no. of iterations to convergence 
 
 """
 function vcselectpath!(
@@ -449,8 +470,10 @@ function vcselectpath!(
     ) 
 
     # handle errors 
+    @assert penfun ∈ [NoPenalty(), L1Penalty(), MCPPenalty()] "penfun must be either NoPenalty(), L1Penalty(), or MCPPenalty()!\n"
     @assert size(penwt, 2) <= 1 "penwt mut be one-dimensional array!\n"
     @assert size(λpath, 2) <= 1 "λpath must be one-dimensional array!\n"
+    @assert maxiters > 0 "maxiters should be a positive integer!\n"
 
     # dimension of X 
     p = ncovariates(vcm)
@@ -474,30 +497,37 @@ function vcselectpath!(
         objpath = zeros(T, nλ)
         niterspath = zeros(Int, nλ)
         if length(vcm) == 1
-            Σpath = zeros(T, nvarcomps(vcm), nλ)
-            βpath = zeros(T, p, nλ)
+            # initialize arrays
+            Σ̂path = zeros(T, nvarcomps(vcm), nλ)
+            β̂path = zeros(T, p, nλ)
+            # solution path 
+            for iter in 1:nλ
+                _, _, objpath[iter], niterspath[iter], = 
+                        vcselect!(vcm; penfun=penfun, λ=λpath[iter], penwt=penwt, 
+                        maxiters=maxiters, tol=tol, verbose=verbose, checktype=false)
+                Σ̂path[:, iter] = vcm.Σ 
+                β̂path[:, iter] = vcm.β
+            end
         elseif length(vcm) > 1
-            Σpath = fill(Matrix{Float64}(undef, d, d), nvarcomps(vcm), nλ)
-            βpath = fill(Matrix{Float64}(undef, p, d), nλ)
+            # initialize arrayss
+            Σ̂path = fill(Matrix{Float64}(undef, d, d), nvarcomps(vcm), nλ)
+            β̂path = fill(Matrix{Float64}(undef, p, d), nλ)
+            # solution path 
+            for iter in 1:nλ
+                _, _, objpath[iter], niterspath[iter], = 
+                        vcselect!(vcm; penfun=penfun, λ=λpath[iter], penwt=penwt, 
+                        maxiters=maxiters, tol=tol, verbose=verbose, checktype=false)
+                Σ̂path[:, iter] = vcm.Σ 
+                β̂path[iter] = vcm.β
+            end
         end 
 
-        # solution path 
-        for iter in 1:nλ
-            _, _, objpath[iter], niterspath[iter], = 
-                    vcselect!(vcm; penfun=penfun, λ=λpath[iter], penwt=penwt, 
-                    maxiters=maxiters, tol=tol, verbose=verbose, checktype=false)
-            Σpath[:, iter] = vcm.Σ 
-            βpath[iter] = vcm.β
-
-        end
-
     else # if no penalty, there is no lambda grid 
-        Σpath, βpath, objpath, niterspath, = vcselect!(vcm; penfun=penfun, penwt=penwt, 
+        Σ̂path, β̂path, objpath, niterspath, = vcselect!(vcm; penfun=penfun, penwt=penwt, 
             maxiters=maxiters, tol=tol, verbose=verbose, checktype=false)
     end 
-    println(βpath)
-
-    return Σpath, βpath, λpath, objpath, niterspath
+   
+    return Σ̂path, β̂path, λpath, objpath, niterspath
 
 end 
 
@@ -506,18 +536,23 @@ end
     vcselect!(vcm; penfun, λ, penwt, maxiters, tol, verbose)
 
 # Input 
-- `vcm` :: VCModel
+- `vcm`: VCModel
 
 # Keyword Argument 
-- `penfun` :: Penalty: default is NoPenalty()
-- `λ`      
-- `penwt`     :: AbstractVector{T} = [ones(T, length(V)-1); zero(T)],
-- `maxiters`  :: Int = 1000,
-- `tol`       :: AbstractFloat = 1e-8,
-- `verbose`   :: Bool = false #,
+- `penfun`: penalty function, default is NoPenalty()
+- `λ`: tuning parameter, default is 1      
+- `penwt`: penalty weights, default is [1,...1,0]
+- `maxiters`: maximum number of iterations, default is 1000
+- `tol`: tolerance for convergence, default is 1e-8
+- `verbose`: display switch, default is false  
+- `checktype`: check argument type switch, default is true
 
 # Output 
-- 
+- `Σ̂`: estimated variance components 
+- `β̂`: estimated fixed effects parameters vector 
+- `obj`: objective value at convergence 
+- `niters`: number of iterations to convergence 
+- `Ω̂`: covariance matrix at estimated variance components 
 """
 function vcselect!(
     vcm       :: VCModel;
@@ -532,23 +567,24 @@ function vcselect!(
 
     # handle errors 
     if checktype 
+        @assert penfun ∈ [NoPenalty(), L1Penalty(), MCPPenalty()] "penfun must be either NoPenalty(), L1Penalty(), or MCPPenalty()!\n"
         @assert size(penwt, 2) <= 1 "penwt mut be one-dimensional array!\n"
+        @assert maxiters > 0 "maxiters should be a positive integer!\n"
     end 
 
     # univariate update 
     if length(vcm) == 1
-
-        Σ, β, obj, niters, Ω = mm_update_σ2!(vcm; penfun=penfun, λ=λ, 
+        Σ̂, β̂, obj, niters, Ω̂, = mm_update_σ2!(vcm; penfun=penfun, λ=λ, 
             penwt=penwt, maxiters=maxiters, tol=tol, verbose=verbose)
       
     # multivariate update 
     elseif length(vcm) > 1
-        Σ, β, obj, niters, Ω = mm_update_Σ!(vcm; penfun=penfun, λ=λ, 
+        Σ̂, β̂, obj, niters, Ω̂ = mm_update_Σ!(vcm; penfun=penfun, λ=λ, 
             penwt=penwt, maxiters=maxiters, tol=tol, verbose=verbose)
     end 
 
     # output 
-    return Σ, β, obj, niters, Ω #, objvec
+    return Σ̂, β̂, obj, niters, Ω̂
 end 
 
 """
@@ -583,7 +619,7 @@ function mm_update_Σ!(
     # # display 
     if verbose 
         println("iter = 0")
-        println("Σ    = ", vcm.Σ)
+        #println("Σ    = ", vcm.Σ)
         println("obj  = ", obj)
     end  
 
@@ -642,11 +678,11 @@ function mm_update_Σ!(
         obj = objvalue(vcm; penfun=penfun, λ=λ, penwt=penwt)
         
         # display 
-        # if verbose && (iter < 10)
-        #     println("iter = ", iter)
-        #     #println("Σ    = ", vcm.Σ)
-        #     println("obj  = ", obj)
-        # end
+        if verbose 
+            println("iter = ", iter)
+            #println("Σ    = ", vcm.Σ)
+            println("obj  = ", obj)
+        end
 
         # check convergence 
         if abs(obj - objold) < tol * (abs(obj) + 1)
@@ -665,12 +701,8 @@ function mm_update_Σ!(
     if niters == 0 
         niters = maxiters
     end 
-
-    if verbose
-        println("final obj = ", obj)
-    end 
+ 
     return vcm.Σ, vcm.β, obj, niters, vcm.Ωobs; 
-
 end 
 
 """
