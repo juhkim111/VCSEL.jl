@@ -11,13 +11,22 @@ export
 # mutable struct 
     VCModel, 
 # operations 
-    nullprojection, fixedeffects, kronaxpy!, clamp_diagonal!, objvalue,
+    clamp_diagonal!,
+    fixedeffects,
+    kronaxpy!,
+    nullprojection,  
+    objvalue,  
 # maximum lambda 
     maxlambda, 
 # utilities function 
-    plotsolpath, checkfrobnorm!, rankvarcomps, matarray2mat, nvarcomps, updateΩ!, 
-    update_arrays!,
+    checkfrobnorm!,
+    matarray2mat,
+    nvarcomps,
+    plotsolpath,  
+    rankvarcomps,   
+    updateΩ!, update_arrays!,
 # algorithm 
+    mm_update_σ2!, mm_update_Σ!,
     vcselect, vcselect!, vcselectpath, vcselectpath!
 
 """
@@ -62,7 +71,7 @@ Default constructor of [`VCModel`](@ref) type when `y` is vector.
 """
 function VCModel(
     yobs  :: AbstractVector{T},
-    Xobs  :: AbstractMatrix{T},
+    Xobs  :: AbstractVecOrMat{T},
     Vobs  :: AbstractVector{Matrix{T}},
     σ2 :: AbstractVector{T}
     ) where {T <: Real}
