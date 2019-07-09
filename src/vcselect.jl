@@ -770,7 +770,7 @@ function mm_update_σ2!(
                     end 
               # update variance component under no penalty 
               elseif isa(penfun, NoPenalty)
-                Σ[j] *= √(const2 / const1)
+                vcm.Σ[j] *= √(const2 / const1)
               end
   
           end # end of for loop over j
