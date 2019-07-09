@@ -31,6 +31,9 @@ export
 
 """
     VCModel 
+    VCModel(Y, X, V, Σ)
+    VCModel(Y, X, V)
+    VCModel(Y, V, Σ)
     VCModel(Y, V)
 
 Variance component model type. Stores the data and model parameters of a variance 
@@ -65,7 +68,7 @@ end
 
 
 """
-    VCModel(yobs, Xobs, Vobs, σ2)
+    VCModel(yobs, Xobs, Vobs, [σ2])
 
 Default constructor of [`VCModel`](@ref) type when `y` is vector. 
 """
@@ -73,7 +76,7 @@ function VCModel(
     yobs  :: AbstractVector{T},
     Xobs  :: AbstractVecOrMat{T},
     Vobs  :: AbstractVector{Matrix{T}},
-    σ2 :: AbstractVector{T}
+    σ2    :: AbstractVector{T} = ones(length(Vobs))
     ) where {T <: Real}
 
     # covariance matrix using original scale 
@@ -110,14 +113,14 @@ function VCModel(
 end 
 
 """
-    VCModel(yobs, Vobs, σ2)
+    VCModel(yobs, Vobs, [σ2])
 
 Construct [`VCModel`](@ref) from `y` and `V` where `y` is vector. `X` is treated empty. 
 """
 function VCModel(
     yobs  :: AbstractVector{T},
     Vobs  :: AbstractVector{Matrix{T}},
-    σ2 :: AbstractVector{T}
+    σ2    :: AbstractVector{T} = ones(length(Vobs))
     ) where {T <: Real}
 
     Xobs = zeros(T, length(yobs), 0)
@@ -125,7 +128,7 @@ function VCModel(
 end 
 
 """
-    VCModel(Y, X, V, Σ)
+    VCModel(Y, X, V, [Σ])
 
 Default constructor of [`VCModel`](@ref) type.
 
@@ -135,7 +138,7 @@ function VCModel(
     Yobs  :: AbstractMatrix{T},
     Xobs  :: AbstractVecOrMat{T},
     Vobs  :: AbstractVector{Matrix{T}},
-    Σ     :: AbstractVector{Matrix{T}}
+    Σ     :: AbstractVector{Matrix{T}} = fill(ones(T, size(Y, 2), size(Y, 2)), length(V)),
     ) where {T <: AbstractFloat}
 
     Y, V, = nullprojection(Yobs, Xobs, Vobs)
@@ -173,14 +176,14 @@ function VCModel(
 end 
 
 """
-    VCModel(Y, V, Σ)
+    VCModel(Y, V, [Σ])
 
 Construct [`VCModel`](@ref) from `Y` and `V` where `Y` is matrix. `X` is treated empty. 
 """
 function VCModel(
     Yobs  :: AbstractMatrix{T},
     Vobs  :: AbstractVector{Matrix{T}},
-    Σ     :: AbstractVector{Matrix{T}}
+    Σ     :: AbstractVector{Matrix{T}} = fill(ones(T, size(Y, 2), size(Y, 2)), length(V)),
     ) where {T <: Real}
 
     Xobs = zeros(T, size(Yobs, 1), 0) 
