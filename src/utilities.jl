@@ -196,7 +196,7 @@ end
 function resetVCModel!(
     vcm :: VCModel;
     σ2 :: AbstractVector{T} = ones(nvarcomps(vcm))
-) where {T <: Real}
+    ) where {T <: Real}
     vcm.σ2 = σ2
     updateΩ!
     # allocate arrays 
@@ -213,8 +213,8 @@ end
 """
 function resetVCModel!(
     vcm :: VCModel;
-    Σ :: AbstractVector{Matrix{T}} = fill(ones(T, length(vcm), length(vcm), nvarcomps(vcm))
-) where {T <: Real}
+    Σ :: AbstractVector{Matrix{T}} = fill(ones(T, length(vcm), length(vcm), nvarcomps(vcm)))
+    ) where {T <: Real}
     vcm.Σ = Σ
     # 
     updateΩ!
@@ -222,7 +222,5 @@ function resetVCModel!(
     updateΩobs!(vcm)
     update_arrays!(vcm)
     vcm.R = reshape(ΩinvY, n, 1)
-
-end 
 
 end 
