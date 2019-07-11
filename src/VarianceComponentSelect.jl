@@ -289,10 +289,44 @@ function update_arrays!(vcm::VCModel)
     nothing 
 end 
 
+"""
+    resetVCModel!(vcm, Σ)
 
+Reset [`VCModel`](@ref) with initial estimates `Σ`.
+"""
+function resetVCModel!(
+    vcm :: VCModel,
+    Σ :: Union{AbstractVector{T}, AbstractVector{Matrix{T}}} 
+    ) where {T <: Real}
 
+    vcm.Σ = Σ
+    updateΩ!(vcm)
+    updateΩobs!(vcm)
+    update_arrays!(vcm)
+    vcm.R = reshape(vcm.ΩinvY, size(vcm))
+end 
 
+"""
+    resetVCModel!(vcm, Σ)
 
+Reset [`VCModel`](@ref) with initial estimates `Σ`. If `Σ` is unspecified, it is set to 
+a vector of ones or all-one matrices based on its dimension.
+"""
+function resetVCModel!(
+    vcm :: VCModel
+    ) 
+
+    if length(vcm) == 1
+        vcm.Σ = ones(eltype(vcm.Σ), nvarcomps(vcm))
+    else 
+        vcm.Σ = fill(ones(eltype(vcm.Σ[1]), length(vcm), length(vcm)), nvarcomps(vcm))
+    end 
+    updateΩ!(vcm)
+    # allocate arrays 
+    updateΩobs!(vcm)
+    update_arrays!(vcm)
+    vcm.R = reshape(vcm.ΩinvY, size(vcm))
+end 
 
 include("vcselect.jl")
 include("vcselect_multivariate.jl")
