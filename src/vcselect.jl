@@ -70,7 +70,7 @@ function vcselect(
     end 
 
     # estimate fixed effects 
-    β = fixedeffects(y, X, Ω)
+    β = getfixedeffects(y, X, Ω)
 
     return σ2, β, obj, niters, Ω;
 end
@@ -777,7 +777,8 @@ function mm_update_σ2!(
 
           # update last variance component and Ω
           vcm.Σ[end] *= √(dot(vcm.ΩinvY, vcm.ΩinvY) / tr(vcm.Ωinv))
-          
+          vcm.Σ[end] = clamp(vcm.Σ[end], tol, Inf)
+
           # update working arrays 
           updateΩ!(vcm)
           update_arrays!(vcm)
