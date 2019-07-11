@@ -22,7 +22,7 @@ export
     checkfrobnorm!,
     matarray2mat,
     nvarcomps,
-    plotsolpath,  
+    plotsolpath, resetVCModel!, 
     rankvarcomps,   
     updateΩ!, update_arrays!,
 # algorithm 
