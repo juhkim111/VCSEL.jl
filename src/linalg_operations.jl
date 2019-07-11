@@ -145,7 +145,7 @@ function updateβ!(
 end
 
 """
-    fixedeffects(y, X, V, σ2)
+    getfixedeffects(y, X, V, σ2)
 
 Estimate fixed effects using REML estimate of variance components.
 Estimate of beta is 
