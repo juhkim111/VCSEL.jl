@@ -79,8 +79,10 @@ function VCModel(
     σ2    :: AbstractVector{T} = ones(length(Vobs))
     ) where {T <: Real}
 
-    # covariance matrix using original scale 
+    # handle error 
+    @assert length(Vobs) == length(σ2) "vector of covariance matrices and vector of variance components should have the same length!\n"
 
+    # covariance matrix using original scale 
     y, V, = nullprojection(yobs, Xobs, Vobs)
     n = length(y)
     vecY = y 
@@ -112,6 +114,7 @@ function VCModel(
             Ωobs)
 end 
 
+
 """
     VCModel(yobs, Vobs, [σ2])
 
@@ -123,12 +126,18 @@ function VCModel(
     σ2    :: AbstractVector{T} = ones(length(Vobs))
     ) where {T <: Real}
 
+    # handle error 
+    @assert length(Vobs) == length(σ2) "vector of covariance matrices and vector of variance components should have the same length!\n"
+
+    # create empty matrix for Xobs 
     Xobs = zeros(T, length(yobs), 0)
+
+    # call VCModel constructor 
     VCModel(yobs, Xobs, Vobs, σ2)
 end 
 
 """
-    VCModel(Y, X, V, [Σ])
+    VCModel(Yobs, Xobs, Vobs, [Σ])
 
 Default constructor of [`VCModel`](@ref) type.
 
@@ -140,6 +149,10 @@ function VCModel(
     Vobs  :: AbstractVector{Matrix{T}},
     Σ     :: AbstractVector{Matrix{T}} = fill(ones(T, size(Y, 2), size(Y, 2)), length(V)),
     ) where {T <: AbstractFloat}
+
+    # handle error 
+    @assert length(Vobs) == length(Σ) "vector of covariance matrices and vector of variance components should have the same length!\n"
+
 
     Y, V, = nullprojection(Yobs, Xobs, Vobs)
     n, d = size(Y, 1), size(Y, 2)
@@ -176,7 +189,7 @@ function VCModel(
 end 
 
 """
-    VCModel(Y, V, [Σ])
+    VCModel(Yobs, Vobs, [Σ])
 
 Construct [`VCModel`](@ref) from `Y` and `V` where `Y` is matrix. `X` is treated empty. 
 """
@@ -186,7 +199,13 @@ function VCModel(
     Σ     :: AbstractVector{Matrix{T}} = fill(ones(T, size(Y, 2), size(Y, 2)), length(V)),
     ) where {T <: Real}
 
+    # handle error 
+    @assert length(Vobs) == length(Σ) "vector of covariance matrices and vector of variance components should have the same length!\n"
+
+    # create empty matrix for Xobs 
     Xobs = zeros(T, size(Yobs, 1), 0) 
+
+    # call VCModel constructor 
     VCModel(Yobs, Xobs, Vobs, Σ)
 
 end 
