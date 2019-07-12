@@ -8,7 +8,7 @@ using PenaltyFunctions, LinearAlgebra, StatsBase, Distributions, Reexport, Plots
 
 import Base: size, length, +
 export 
-# mutable struct 
+# struct 
     VCModel, 
 # operations 
     clamp_diagonal!,
@@ -39,7 +39,7 @@ export
 Variance component model type. Stores the data and model parameters of a variance 
 component model. 
 """
-mutable struct VCModel{T <: Real} 
+struct VCModel{T <: Real} 
     # data
     Yobs        :: AbstractVecOrMat{T}
     Xobs        :: AbstractVecOrMat{T}
@@ -153,7 +153,7 @@ function VCModel(
     # handle error 
     @assert length(Vobs) == length(Σ) "vector of covariance matrices and vector of variance components should have the same length!\n"
 
-
+    # projection 
     Y, V, = nullprojection(Yobs, Xobs, Vobs)
     n, d = size(Y, 1), size(Y, 2)
     vecY = vec(Y)
@@ -172,6 +172,11 @@ function VCModel(
     ΩinvY = Ωinv * vecY  
     R = reshape(ΩinvY, n, d)
     kron_ones_V = similar(V)
+    kron_I_one = kron(Matrix(I, d, d), ones(n)) # dn x d
+    ones_d = ones(d, d)
+    for i in 1:length(V)
+        kron_ones_V[i] = kron(ones_d, V[i])
+    end 
     L = Matrix{T}(undef, d, d)
     Linv = Matrix{T}(undef, d, d)
     Mndxnd = Matrix{T}(undef, nd, nd)
