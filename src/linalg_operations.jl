@@ -26,7 +26,8 @@ function objvalue(
     penwt  :: AbstractVector{T} = [ones(T, nvarcomps(vcm)-1); zero(T)]
     ) where {T <: Real}
    
-    obj = (1 // 2) * logdet(vcm.Ωchol) + (1 // 2) * dot(vcm.vecY, vcm.ΩinvY)
+    obj = logdet(vcm.ΩcholL) + (1 // 2) * dot(vcm.vecY, vcm.ΩinvY)
+    #obj = (1 // 2) * logdet(vcm.Ωchol) + (1 // 2) * dot(vcm.vecY, vcm.ΩinvY)
     obj += (1 // 2) * prod(size(vcm)) * log(2π)
 
     # add penalty term 
@@ -137,9 +138,9 @@ function updateβ!(
     β = BLAS.gemv('T', kron_I_X, Ωchol \ vec(vcm.Yobs))
     β = pinv(XtΩinvX) * β
     if d == 1 
-        vcm.β = β
+        vcm.β .= β
     else 
-        vcm.β = reshape(β, p, d)
+        vcm.β .= reshape(β, p, d)
     end 
     vcm.β
 end
