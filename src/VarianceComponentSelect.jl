@@ -52,7 +52,7 @@ struct VCModel{T <: Real}
     Σ           :: Union{AbstractVector{T}, AbstractVector{Matrix{T}}}
     # covariance matrix and working arrays 
     Ω           :: AbstractMatrix{T}         # covariance matrix 
-    Ωchol       :: Cholesky
+    ΩcholL      :: LowerTriangular{T}        # cholesky factor 
     Ωinv        :: AbstractMatrix{T}         # inverse of covariance matrix 
     ΩinvY       :: AbstractVector{T}         # Ωinv * Y OR Ωinv * vec(Y) 
     R           :: AbstractVecOrMat{T}
@@ -109,7 +109,7 @@ function VCModel(
 
     # 
     VCModel{T}(yobs, Xobs, Vobs, y, vecY, V,
-            β, σ2, Ω, Ωchol, Ωinv, ΩinvY, 
+            β, σ2, Ω, Ωchol.L, Ωinv, ΩinvY, 
             R, kron_ones_V, L, Linv, Mndxnd, Mdxd, Mnxd,
             Ωobs)
 end 
@@ -187,7 +187,7 @@ function VCModel(
 
     # 
     VCModel{T}(Yobs, Xobs, Vobs, Y, vecY, V,
-            β, Σ, Ω, Ωchol, Ωinv, ΩinvY, 
+            β, Σ, Ω, Ωchol.L, Ωinv, ΩinvY, 
             R, kron_ones_V, L, Linv, Mndxnd, Mdxd, Mnxd,
             Ωobs)
 
@@ -271,7 +271,7 @@ Update covariance matrix `Ωobs`. `Ωobs` has the same dimension as `Vobs`.
 function updateΩobs!(vcm::VCModel)
 
     if isempty(vcm.Xobs) 
-        vcm.Ωobs = vcm.Ω
+        vcm.Ωobs .= vcm.Ω
     else
         fill!(vcm.Ωobs, 0)
         for k in 1:nvarcomps(vcm)
@@ -287,10 +287,13 @@ end
 Update working arrays `Ωchol`, `Ωinv`, `ΩinvY`, `R`.
 """
 function update_arrays!(vcm::VCModel)
-    vcm.Ωchol = cholesky!(Symmetric(vcm.Ω))
-    vcm.Ωinv[:] = inv(vcm.Ωchol)
+    # vcm.Ωchol = cholesky!(Symmetric(vcm.Ω))
+    # vcm.Ωinv[:] = inv(vcm.Ωchol)
+    Ωchol = cholesky!(Symmetric(vcm.Ω))
+    vcm.ΩcholL .= Ωchol.L
+    vcm.Ωinv[:] = inv(Ωchol)
     mul!(vcm.ΩinvY, vcm.Ωinv, vcm.vecY)
-    vcm.R = reshape(vcm.ΩinvY, size(vcm))
+    vcm.R .= reshape(vcm.ΩinvY, size(vcm))
     nothing 
 end 
 
@@ -304,11 +307,11 @@ function resetVCModel!(
     Σ :: Union{AbstractVector{T}, AbstractVector{Matrix{T}}} 
     ) where {T <: Real}
 
-    vcm.Σ = Σ
+    vcm.Σ .= Σ
     updateΩ!(vcm)
     updateΩobs!(vcm)
     update_arrays!(vcm)
-    vcm.R = reshape(vcm.ΩinvY, size(vcm))
+    vcm.R .= reshape(vcm.ΩinvY, size(vcm))
 end 
 
 """
@@ -320,17 +323,19 @@ a vector of ones or all-one matrices based on its dimension.
 function resetVCModel!(
     vcm :: VCModel
     ) 
-
-    if length(vcm) == 1
-        vcm.Σ = ones(eltype(vcm.Σ), nvarcomps(vcm))
+    d = length(vcm)
+    if d == 1
+        fill!(vcm.Σ, 1)
+        #vcm.Σ = ones(eltype(vcm.Σ), nvarcomps(vcm))
     else 
-        vcm.Σ = fill(ones(eltype(vcm.Σ[1]), length(vcm), length(vcm)), nvarcomps(vcm))
+        fill!(vcm.Σ, ones(eltype(vcm.Σ[1]), d, d))
+        #vcm.Σ = fill(ones(eltype(vcm.Σ[1]), length(vcm), length(vcm)), nvarcomps(vcm))
     end 
     updateΩ!(vcm)
     # allocate arrays 
     updateΩobs!(vcm)
     update_arrays!(vcm)
-    vcm.R = reshape(vcm.ΩinvY, size(vcm))
+    vcm.R .= reshape(vcm.ΩinvY, size(vcm))
 end 
 
 include("vcselect.jl")
