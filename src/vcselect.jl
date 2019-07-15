@@ -570,21 +570,37 @@ function vcselect!(
         @assert penfun ∈ [NoPenalty(), L1Penalty(), MCPPenalty()] "penfun must be either NoPenalty(), L1Penalty(), or MCPPenalty()!\n"
         @assert size(penwt, 2) <= 1 "penwt mut be one-dimensional array!\n"
         @assert maxiters > 0 "maxiters should be a positive integer!\n"
+        # start point has to be strictly positive
+        @assert all(norm.(vcm.Σ) .> 0) "starting Σ should be strictly positive or non-zero matrices"
     end 
 
     # univariate update 
     if length(vcm) == 1
-        Σ̂, β̂, obj, niters, Ω̂, = mm_update_σ2!(vcm; penfun=penfun, λ=λ, 
-            penwt=penwt, maxiters=maxiters, tol=tol, verbose=verbose)
+        if verbose 
+            Σ̂, β̂, obj, niters, Ω̂, objvec = mm_update_σ2!(vcm; penfun=penfun, λ=λ, 
+                penwt=penwt, maxiters=maxiters, tol=tol, verbose=true)
+            return Σ̂, β̂, obj, niters, Ω̂, objvec
+        else 
+            Σ̂, β̂, obj, niters, Ω̂ = mm_update_σ2!(vcm; penfun=penfun, λ=λ, 
+                penwt=penwt, maxiters=maxiters, tol=tol)
+            return Σ̂, β̂, obj, niters, Ω̂
+        end 
       
     # multivariate update 
     elseif length(vcm) > 1
-        Σ̂, β̂, obj, niters, Ω̂ = mm_update_Σ!(vcm; penfun=penfun, λ=λ, 
+        if verbose 
+            Σ̂, β̂, obj, niters, Ω̂, objvec = mm_update_Σ!(vcm; penfun=penfun, λ=λ, 
             penwt=penwt, maxiters=maxiters, tol=tol, verbose=verbose)
+            # output 
+            return Σ̂, β̂, obj, niters, Ω̂, objvec
+        else 
+            Σ̂, β̂, obj, niters, Ω̂ = mm_update_Σ!(vcm; penfun=penfun, λ=λ, 
+            penwt=penwt, maxiters=maxiters, tol=tol, verbose=verbose)
+            # output 
+            return Σ̂, β̂, obj, niters, Ω̂
+        end 
     end 
 
-    # output 
-    return Σ̂, β̂, obj, niters, Ω̂
 end 
 
 """
@@ -608,10 +624,10 @@ function mm_update_Σ!(
 
     # working arrays 
     kron_I_one = kron(Matrix(I, d, d), ones(n)) # dn x d
-    ones_d = ones(d, d)
-    for i in 1:m
-        vcm.kron_ones_V[i] = kron(ones_d, vcm.V[i])
-    end 
+    # ones_d = ones(d, d)
+    # for i in 1:m
+    #     #vcm.kron_ones_V[i] = kron(ones_d, vcm.V[i])
+    # end 
 
     # initial objective value 
     obj = objvalue(vcm; penfun=penfun, λ=λ, penwt=penwt)
@@ -621,6 +637,7 @@ function mm_update_Σ!(
         println("iter = 0")
         #println("Σ    = ", vcm.Σ)
         println("obj  = ", obj)
+        objvec = obj 
     end  
 
     ## MM loop 
@@ -628,17 +645,20 @@ function mm_update_Σ!(
     for iter in 1:maxiters
         for i in 1:m 
             # if previous iterate is zero, move on to the next component
-            if vcm.Σ[i] == zeros(d, d)
+            if iszero(norm(vcm.Σ[i])) 
                 continue 
             # if penalty weight is zero, move onto the next component 
             elseif iszero(penwt[i]) && i < m
-                vcm.Σ[i] = zeros(d, d)
+                fill!(vcm.Σ[i], 0)
+                #vcm.Σ[i] = zeros(d, d)
                 continue 
             end 
 
             # `(kron_I_one)' * [kron(ones(d, d), V[i]) .* Ωinv] * (kron_I_one)`
-            vcm.Mndxnd = vcm.kron_ones_V[i] .* vcm.Ωinv 
-            vcm.Mdxd = BLAS.gemm('T', 'N', kron_I_one, vcm.Mndxnd * kron_I_one) # d x d
+            copyto!(vcm.Mndxnd, vcm.kron_ones_V[i] .* vcm.Ωinv)
+            copyto!(vcm.Mdxd, BLAS.gemm('T', 'N', kron_I_one, vcm.Mndxnd * kron_I_one))
+            #vcm.Mndxnd = vcm.kron_ones_V[i] .* vcm.Ωinv 
+            #vcm.Mdxd = BLAS.gemm('T', 'N', kron_I_one, vcm.Mndxnd * kron_I_one) # d x d
 
             # add penalty unless it's the last variance component 
             if isa(penfun, L1Penalty) && i < m 
@@ -648,13 +668,17 @@ function mm_update_Σ!(
                 end             
             end 
 
-            vcm.L = cholesky!(Symmetric(vcm.Mdxd)).L
+            #vcm.L = cholesky!(Symmetric(vcm.Mdxd)).L
+            copyto!(vcm.L, cholesky!(Symmetric(vcm.Mdxd)).L)
             vcm.Linv[:] = inv(vcm.L)
 
             # 
-            vcm.Mdxd = vcm.Σ[i] * vcm.L
-            vcm.Mnxd = vcm.R * vcm.Mdxd # n x d
-            vcm.Mdxd = BLAS.gemm('T', 'N', vcm.Mnxd, vcm.V[i] * vcm.Mnxd)
+            copyto!(vcm.Mdxd, vcm.Σ[i] * vcm.L)
+            copyto!(vcm.Mdxd, vcm.R * vcm.Mdxd)
+            copyto!(vcm.Mdxd, BLAS.gemm('T', 'N', vcm.Mnxd, vcm.V[i] * vcm.Mnxd))
+            # vcm.Mdxd = vcm.Σ[i] * vcm.L
+            # vcm.Mnxd = vcm.R * vcm.Mdxd # n x d
+            # vcm.Mdxd = BLAS.gemm('T', 'N', vcm.Mnxd, vcm.V[i] * vcm.Mnxd)
 
             # 
             storage = eigen!(Symmetric(vcm.Mdxd))
@@ -662,8 +686,10 @@ function mm_update_Σ!(
             @inbounds for k in 1:d
                 storage.values[k] = storage.values[k] > 0 ? √storage.values[k] : 0
             end 
-            vcm.Σ[i] = BLAS.gemm('N', 'T', storage.vectors * Diagonal(storage.values), storage.vectors)
-            vcm.Σ[i] = BLAS.gemm('T', 'N', vcm.Linv, vcm.Σ[i] * vcm.Linv)
+            copyto!(vcm.Σ[i], BLAS.gemm('N', 'T', storage.vectors * Diagonal(storage.values), storage.vectors))
+            copyto!(vcm.Σ[i], BLAS.gemm('T', 'N', vcm.Linv, vcm.Σ[i] * vcm.Linv))
+            # vcm.Σ[i] = BLAS.gemm('N', 'T', storage.vectors * Diagonal(storage.values), storage.vectors)
+            # vcm.Σ[i] = BLAS.gemm('T', 'N', vcm.Linv, vcm.Σ[i] * vcm.Linv)
 
         end 
 
@@ -682,6 +708,7 @@ function mm_update_Σ!(
             println("iter = ", iter)
             #println("Σ    = ", vcm.Σ)
             println("obj  = ", obj)
+            objvec = [objvec; obj]
         end
 
         # check convergence 
@@ -702,7 +729,11 @@ function mm_update_Σ!(
         niters = maxiters
     end 
  
-    return vcm.Σ, vcm.β, obj, niters, vcm.Ωobs; 
+    if verbose  
+        return vcm.Σ, vcm.β, obj, niters, vcm.Ωobs, objvec; 
+    else 
+        return vcm.Σ, vcm.β, obj, niters, vcm.Ωobs; 
+    end 
 end 
 
 """
@@ -732,7 +763,10 @@ function mm_update_σ2!(
         println("iter = 0")
         println("σ2   = ", vcm.Σ)
         println("obj  = ", obj)
+        objvec = obj 
     end    
+
+    σ2tmp = zeros(m)
   
     # MM loop 
     niters = 0
@@ -741,10 +775,13 @@ function mm_update_σ2!(
           for j in 1:(m - 1)
               # move onto the next variance component if previous iterate is 0
               if iszero(vcm.Σ[j]) 
+                  σ2tmp[j] = 0 
                   continue 
               # set to 0 and move onto the next variance component if penalty weight is 0
               elseif iszero(penwt[j]) 
-                  vcm.Σ[j] = 0
+                  #vcm.Σ[j] = 0
+                  σ2tmp[j] = 0 
+                  #fill!(vcm.Σ[j], 0)
                   continue 
               end 
   
@@ -758,26 +795,40 @@ function mm_update_σ2!(
                     penstrength = λ * penwt[j]
                     # L1 penalty 
                     if isa(penfun, L1Penalty)  
-                        vcm.Σ[j] *= √(const2 / (const1 + penstrength / sqrt(vcm.Σ[j])))
+                        σ2tmp[j] = vcm.Σ[j] * √(const2 / (const1 + penstrength / sqrt(vcm.Σ[j])))
+                        #vcm.Σ[j] *= √(const2 / (const1 + penstrength / sqrt(vcm.Σ[j])))
                     # MCP penalty 
                     elseif isa(penfun, MCPPenalty) 
                         if vcm.Σ[j] <= (penfun.γ * λ)^2
-                            vcm.Σ[j] *= 
-                            √(const2 / (const1 + (λ / sqrt(vcm.Σ[j])) - (1 / penfun.γ)))
+                            σ2tmp[j] = vcm.Σ[j] *
+                                √(const2 / (const1 + (λ / sqrt(vcm.Σ[j])) - (1 / penfun.γ)))
+                        
+                            #vcm.Σ[j] *= 
+                            #√(const2 / (const1 + (λ / sqrt(vcm.Σ[j])) - (1 / penfun.γ)))
                         else 
-                            vcm.Σ[j] *= √(const2 / const1)  
+                            
+                            σ2tmp[j] = vcm.Σ[j] * √(const2 / const1)  
+                            #vcm.Σ[j] *= √(const2 / const1)  
                         end 
                     end 
               # update variance component under no penalty 
               elseif isa(penfun, NoPenalty)
-                vcm.Σ[j] *= √(const2 / const1)
+                σ2tmp[j] = vcm.Σ[j] * √(const2 / const1)  
+                #vcm.Σ[j] *= √(const2 / const1)
               end
   
           end # end of for loop over j
 
           # update last variance component and Ω
-          vcm.Σ[end] *= √(dot(vcm.ΩinvY, vcm.ΩinvY) / tr(vcm.Ωinv))
-          vcm.Σ[end] = clamp(vcm.Σ[end], tol, Inf)
+          σ2tmp[end] = vcm.Σ[end] *  √(dot(vcm.ΩinvY, vcm.ΩinvY) / tr(vcm.Ωinv))
+          σ2tmp[end] = clamp(σ2tmp[end], tol, Inf)
+        #   vcm.Σ[end] *= √(dot(vcm.ΩinvY, vcm.ΩinvY) / tr(vcm.Ωinv))
+        #   clamp!(vcm.Σ[end], tol, Inf)
+          
+        #   vcm.Σ[end] *= √(dot(vcm.ΩinvY, vcm.ΩinvY) / tr(vcm.Ωinv))
+        #   vcm.Σ[end] = clamp(vcm.Σ[end], tol, Inf)
+
+          vcm.Σ .= σ2tmp
 
           # update working arrays 
           updateΩ!(vcm)
@@ -792,7 +843,7 @@ function mm_update_σ2!(
               println("iter = ", iter)
               println("σ2   = ", vcm.Σ)
               println("obj  = ", obj)
-              #objvec = [objvec; obj] 
+              objvec = [objvec; obj] 
           end
   
           # check convergence
@@ -813,6 +864,11 @@ function mm_update_σ2!(
         niters = maxiters
       end
    
-      return vcm.Σ, vcm.β, obj, niters, vcm.Ωobs; 
+      # 
+      if verbose 
+        return vcm.Σ, vcm.β, obj, niters, vcm.Ωobs, objvec; 
+      else
+        return vcm.Σ, vcm.β, obj, niters, vcm.Ωobs; 
+      end 
 
 end 
