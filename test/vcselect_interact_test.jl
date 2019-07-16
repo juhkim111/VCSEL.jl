@@ -20,10 +20,10 @@ tmp = zeros(Int, n)
 V2  = Array{Matrix{Float64}}(undef, m + 1)
 for i = 1:m
   Vi = randn(n, 50)
-  V1[i] = Vi * Vi'
-  V1[i] = V1[i] ./ norm(V1[i])
   sample!([0, 1], tmp)
-  V2[i] = Diagonal(tmp)
+  V1[i] = Vi * Vi'
+  V2[i] = Diagonal(tmp) * V1[i] * Diagonal(tmp)
+  V1[i] = V1[i] ./ norm(V1[i])
   V2[i] = V2[i] ./ norm(V2[i])
 end
 V1[end] = Matrix(I, n, n) ./ √n
@@ -37,21 +37,34 @@ V2[end] = Matrix(I, n, n) ./ √n
 
 # form Ω
 Ω = zeros(n, n)
-for i = 1:(m + 1)
+for i = 1:m
    Ω .+= σ2_1[i] * V1[i]
    Ω .+= σ2_2[i] * V2[i]
 end
+Ω .+= σ2_1[end] * V1[end]
+
 Ωchol = cholesky(Symmetric(Ω))
 yreml = Ωchol.L * randn(n)
 y = X * β + Ωchol.L * randn(n)
 nlambda = 20 
 
 @info "check if objective values are monotonically decreasing"
-σ̂2_1, σ̂2_2, _, _, _, objvec = vcselect(yreml, V1, V2; penfun=L1Penalty(), λ=2.0, verbose=true)
+σ̂2_1, σ̂2_2, obj, niters, Ω, objvec = vcselect(yreml, V1, V2; penfun=L1Penalty(), 
+        λ=1.2, verbose=true)
 @testset begin 
   for i in 1:(length(objvec) - 1)
     @test objvec[i] >= objvec[i+1]
   end 
 end 
+
+σ̂2_1, σ̂2_2, obj, niters, Ω, objvec = vcselect(yreml, V1, V2; penfun=L1Penalty(), 
+        λ=2.0, verbose=true)
+@testset begin 
+  for i in 1:(length(objvec) - 1)
+    @test objvec[i] >= objvec[i+1]
+  end 
+end 
+
+
 
 end 
