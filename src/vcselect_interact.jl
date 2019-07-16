@@ -46,20 +46,23 @@ function vcselect(
     penfun        :: Penalty = NoPenalty(),
     λ             :: T = one(T),
     θ             :: T = one(T),
+    p             :: Real = 2,  
     penwt         :: AbstractVector{T} = [ones(T, length(V1)-1); zero(T)],
     σ2_1          :: AbstractVector{T} = ones(T, length(V1)),
     σ2_2          :: AbstractVector{T} = ones(T, length(V1)),
     Ω             :: AbstractMatrix{T} = zeros(T, size(V1[1])), 
     Ωinv          :: AbstractMatrix{T} = zeros(T, size(V1[1])),
     maxiter       :: Int = 1000,
-    tol           :: AbstractFloat = 1e-8,
+    tol           :: AbstractFloat = 1e-6,
     verbose       :: Bool = false,
     checkfrobnorm :: Bool = true
     ) where {T <: Real} 
 
     # handle errors 
-    @assert length(V1) == length(V2) "V1 and V2 must have the same length"
-    @assert penfun ∈ [L1Penalty(), NoPenalty()]  "available penalty functions are NoPenalty() and L1Penalty()"
+    @assert length(V1) == length(V2) "V1 and V2 must have the same length!\n"
+    @assert length(V1) == length(σ2_1) "V1 and σ2_1 must have the same length!\n"
+    @assert length(V2) == length(σ2_2) "V2 and σ2_2 must have the same length!\n"
+    @assert penfun ∈ [L1Penalty(), NoPenalty()]  "available penalty functions are NoPenalty() and L1Penalty()!\n"
 
     # 
     ϵ = convert(T, 1e-8)
@@ -95,7 +98,7 @@ function vcselect(
         println("iter = 0")
         println("σ2_1, σ2_2 = $(σ2_1), $(σ2_2)")
         println("obj  = ", obj)
-        objvec = eltype(obj)[]
+        objvec = obj
     end     
 
     # MM loop 
@@ -109,12 +112,11 @@ function vcselect(
             if iszero(σ2_1[j]) && iszero(σ2_2[j])
                 continue 
             # set to 0 and move onto the next variance component if penalty weight is 0
-            elseif iszero(σ2_1[j]) || iszero(σ2_2[j]) || iszero(penwt[j])
+            elseif iszero(penwt[j])
                 σ2_1[j] = zero(T)
                 σ2_2[j] = zero(T)
                 continue 
             end 
-
             # update σ2_1
             const11 = dot(Ωinv, V1[j]) # const1 = tr(Ωinv * V1[j])
             mul!(w, V1[j], v)
@@ -142,6 +144,7 @@ function vcselect(
                     end
                 end 
 
+                
             # update under no penalty 
             else
                 σ2_1[j] = σ2_1[j] * √(const12 / const11)
@@ -149,7 +152,7 @@ function vcselect(
             end 
 
             # truncation step 
-            if iszero(σ2_1[j]) || iszero(σ2_2[j])
+            if norm([σ2_1[j], σ2_2[j]], p) < θ
                 σ2_1[j] = zero(T)
                 σ2_2[j] = zero(T)
                 continue
@@ -206,7 +209,7 @@ function vcselect(
     # construct final Ω matrix 
     fill!(Ω, 0)
     for i in 1:(m + 1)
-        if iszero(σ2_1[i]) || iszero(σ2_2[i])
+        if iszero(σ2_1[i]) && iszero(σ2_2[i])
             continue 
         else 
             axpy!(σ2_1[i], V1[i], Ω) # Ω .+= σ2[i] * V[i]
