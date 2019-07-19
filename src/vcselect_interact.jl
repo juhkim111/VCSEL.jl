@@ -613,20 +613,21 @@ function vcselect(
         V[end] = Matrix(I, n, n)
     end 
 
-    # construct overall covariance matrix 
-    Ω = fill!(Ω, 0)     # covariance matrix 
-    for i in 1:m
-        if iszero(σ2[i]) && iszero(σ2int[i])
-            continue 
-        else 
-            axpy!(σ2[i], V[i], Ω) 
-            axpy!(σ2int[i], Vint[i], Ω) 
-        end 
-    end
-    axpy!(σ2[end], V[end], Ω)
+    # # construct overall covariance matrix 
+    # Ω = fill!(Ω, 0)     # covariance matrix 
+    # for i in 1:m
+    #     if iszero(σ2[i]) && iszero(σ2int[i])
+    #         continue 
+    #     else 
+    #         axpy!(σ2[i], V[i], Ω) 
+    #         axpy!(σ2int[i], Vint[i], Ω) 
+    #     end 
+    # end
+    # axpy!(σ2[end], V[end], Ω)
 
     # estimate fixed effects 
-    β = betaestimate(y, X, Ω)
+    #β = betaestimate(y, X, Ω)
+    β = betaestimate(y, X, V, Vint, σ2, σ2int)
 
     # output 
     if verbose 
@@ -652,6 +653,7 @@ function vcselectpath(
     λpath       :: AbstractVector{T} = T[], 
     σ2          :: AbstractVector{T} = ones(T, length(G)+1),
     σ2int       :: AbstractVector{T} = ones(T, length(G)),
+    B           :: AbstractMatrix{T} = zeros(T, length(y), 0),
     maxiter     :: Int = 1000,
     tol         :: AbstractFloat = 1e-6,
     standardize :: Bool = true
@@ -665,20 +667,20 @@ function vcselectpath(
         if isempty(λpath)
 
         else 
-            nlambda = length(λpath)
+            nλ = length(λpath)
         end 
 
         # initialize arrays 
-        σ2path = Matrix{T}(undef, m+1, nlambda) 
-        σ2intpath = Matrix{T}(undef, m, nlambda)  
-        objpath = Vector{Float64}(undef, nlambda) 
-        niterspath = Vector{Int}(undef, nlambda) 
+        σ2path = Matrix{T}(undef, m+1, nλ) 
+        σ2intpath = Matrix{T}(undef, m, nλ)  
+        objpath = Vector{Float64}(undef, nλ) 
+        niterspath = Vector{Int}(undef, nλ) 
 
         # create solution path 
-        for iter in 1:nlambda 
+        for iter in 1:nλ 
             σ2, σ2int, objpath[iter], niterspath[iter], = 
                 vcselect(y, G, trt; penfun=penfun, λ=λpath[iter], θ=θ, p=p, penwt=penwt, 
-                σ2=σ2, σ2int=σ2int, maxiter=maxiter, tol=tol, standardize=standardize)
+                σ2=σ2, σ2int=σ2int, B=B, maxiter=maxiter, tol=tol, standardize=standardize)
             σ2path[:, iter] = σ2
             σ2intpath[:, iter] = σ2int
         end 
@@ -712,10 +714,51 @@ function vcselectpath(
     σ2int       :: AbstractVector{T} = ones(T, length(G)),
     maxiter     :: Int = 1000,
     tol         :: AbstractFloat = 1e-6,
-    standardize :: Bool = true, 
-    verbose     :: Bool = false
+    standardize :: Bool = true
     ) where {T, S <: Real}
 
+    # assign constants 
+    m, n = length(G), length(y)
+
+    # project y onto nullspace of X 
+    ynew, _, B = nullprojection(y, X, G; covariance=false)
+
+    #
+    σ2path, σ2intpath, objpath, λpath, niterspath = vcselectpath(ynew, G, trt; 
+            penfun=penfun, θ=θ, p=p, penwt=penwt, nλ=nλ, λpath=λpath, σ2=σ2, σ2int=σ2int,
+            B=B, maxiter=maxiter, tol=tol, standardize=standardize)
+
+    # create V and Vint 
+    V = Vector{Matrix{Float64}}(undef, m + 1)
+    Vint = Vector{Matrix{Float64}}(undef, m)
+    if size(trt, 2) == 1
+        trtmat = Diagonal(trt)                                    
+    else 
+        trtmat = trt 
+    end 
+    for i in 1:m
+        V[i] = G[i] * G[i]'
+        Vint[i] = trtmat * V[i] * trtmat'
+        if standardize 
+            V[i] ./= norm(V[i])
+            Vint[i] ./= norm(Vint[i])
+        end 
+    end 
+    if standardize
+        V[end] = Matrix(I, n, n) ./ √n
+    else 
+        V[end] = Matrix(I, n, n)
+    end 
+
+    # obtain estimates for fixed effects parameter 
+    βpath = zeros(T, size(X, 2), length(λpath))
+    for iter in 1:length(λpath)
+        βpath[:, iter] = betaestimate(y, X, V, Vint, view(σ2path, :, iter), 
+                view(σ2intpath, :, iter))
+    end 
 
 
+
+    # output 
+    return σ2path, σ2intpath, βpath, objpath, λpath, niterspath
 end 
