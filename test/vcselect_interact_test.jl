@@ -67,17 +67,17 @@ end
 
 σ̂2, σ̂2int, β̂, obj, niters, Ω, objvec = vcselect(y2, X, G, trtmat; verbose=true, λ=2.0, 
       penfun=L1Penalty())
+println("β̂=", β̂)
 @testset begin 
   for i in 1:(length(objvec) - 1)
     @test objvec[i] >= objvec[i+1]
   end 
 end 
 
-@info "test path function: no penalty"
+@info "test path function"
 σ2path_nopen, σ2intpath_nopen, objpath_nopen, λpath_nopen, niterspath_nopen = 
       vcselectpath(y, G, trt)
 
-@info "test path function: L1Penalty"
 λpath = range(0, 4.0, length=5)
 σ2path, σ2intpath, objpath, λpath, niterspath = vcselectpath(y, G, trt; penfun=L1Penalty(), 
       λpath=λpath)
@@ -88,8 +88,19 @@ end
   @test objpath_nopen == objpath[1]
   @test niterspath_nopen == niterspath[1]
   @test isempty(λpath_nopen)
-
 end 
+
+λpath = range(0, 4.0, length=5)
+σ2path, σ2intpath, βpath, objpath, λpath, niterspath = vcselectpath(y2, X, G, trt; 
+      penfun=L1Penalty(), λpath=λpath)
+
+println("σ2path=", σ2path)
+println("σ2intpath=", σ2intpath)
+println("βpath=", βpath)
+println("objpath=", objpath)
+println("λpath=", λpath)
+println("niterspath=", niterspath)
+
 
 ##########
 # σ̂2_1, σ̂2_2, obj, niters, Ω, objvec = vcselect(y_nocov, V1, V2; penfun=L1Penalty(), 
