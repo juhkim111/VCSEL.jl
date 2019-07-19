@@ -165,6 +165,36 @@ function betaestimate(
     return β
 
 end 
+
+"""
+
+"""
+function betaestimate( 
+    y   :: AbstractVector{T},
+    X   :: AbstractVecOrMat{T},
+    V   :: AbstractVector{Matrix{T}},
+    Vint :: AbstractVector{Matrix{T}},
+    σ2  :: AbstractVector{T},
+    σ2int  :: AbstractVector{T}
+    ) where {T <: Real}
+
+    # update Ω with estimated variance components 
+    Ω = zeros(T, size(V[1]))
+    for i in eachindex(σ2int)
+        if iszero(σ2[i]) && iszero(σ2int[i])
+            continue 
+        else 
+            axpy!(σ2[i], V[i], Ω) 
+            axpy!(σ2int[i], Vint[i], Ω) 
+        end 
+    end 
+    axpy!(σ2[end], V[end], Ω)
+
+    β = betaestimate(y, X, Ω)
+
+    return β
+
+end 
 """
     betaestimate(y, X, Ω)
 
