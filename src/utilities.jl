@@ -19,7 +19,8 @@ Project `y` to null space of `transpose(X)` and transform `V` accordingly.
 function nullprojection(
     y    :: AbstractVector{T},
     X    :: AbstractVecOrMat{T},
-    V    :: AbstractVector{Matrix{T}}
+    V    :: AbstractVector{Matrix{T}};
+    covariance :: Bool = true 
     ) where {T <: Real}
 
     # basis of nullspace of transpose(X), `N(X')`
@@ -35,21 +36,92 @@ function nullprojection(
 
     # no. of variance components subject to selection 
     m = length(V) - 1
-
-    # transformed covariance matrices 
+    
+    # initialize array 
     Vnew = Vector{Matrix{Float64}}(undef, m + 1)
-    #Vnew = similar(V)
-    Vnew[end] = Matrix{eltype(B)}(I, s, s) ./ √s
-    tmp = zeros(size(X, 1), s)
-    for i in 1:m
-        mul!(tmp, V[i], B)
-        Vnew[i] = BLAS.gemm('T', 'N', B, tmp)
-        # divide by its frobenius norm  
-        Vnew[i] ./= norm(Vnew[i])
+    # 
+    if covariance 
+        Vnew[end] = Matrix{eltype(B)}(I, s, s) ./ √s
+        tmp = zeros(size(X, 1), s)
+        for i in 1:m
+            mul!(tmp, V[i], B)
+            Vnew[i] = BLAS.gemm('T', 'N', B, tmp)
+            # divide by its frobenius norm  
+            Vnew[i] ./= norm(Vnew[i])
+        end 
+    else 
+        for i in eachindex(Vnew)
+            Vnew[i] = BLAS.gemm('T', 'N', B, V[i])
+        end 
     end 
 
     # output 
     return ynew, Vnew, B 
+
+end 
+
+"""
+    nullprojection(y, X, V1, V2)
+
+Project `y` to null space of `transpose(X)` and transform `V1` and `V2` accordingly.
+
+# Input 
+- `y`: response vector to be transformed. 
+- `X`: covariate vector or matrix, response `y` is projected onto the null space of transpose(X) 
+- `V1`: vector of covariance matrices, (V1[1],V1[2],...,V1[m],I/√n)
+    note that each V[i] needs to have frobenius norm 1, and that V[end] should be 
+    identity matrix divided by √n   
+- `V2`: vector of covariance matrices, (V2[1],V2[2],...,V2[m],I/√n)
+    note that each V[i] needs to have frobenius norm 1, and that V[end] should be 
+    identity matrix divided by √n 
+
+# Ouptut 
+- `ynew`: projected response vector
+- `Vnew1`: projected vector of covariance matrices, 
+    frobenius norm of `V[i]` equals to 1 for all `i`
+- `Vnew2`: projected vector of covariance matrices, 
+    frobenius norm of `V[i]` equals to 1 for all `i`
+- `B`: matrix whose columns are basis vectors of the null space of transpose(X) 
+"""
+function nullprojection(
+    y  :: AbstractVector{T},
+    X  :: AbstractVecOrMat{T},
+    V1 :: AbstractVector{Matrix{T}},
+    V2 :: AbstractVector{Matrix{T}}
+    ) where {T <: Real}
+
+    # basis of nullspace of transpose(X), `N(X')`
+    Xt = Matrix{T}(undef, size(X, 2), size(X, 1))
+    transpose!(Xt, X)
+    B = nullspace(Xt)
+
+    # projected response vector 
+    ynew = B' * y 
+
+    # dimension of null space 
+    s = size(B, 2) 
+
+    # no. of variance components subject to selection 
+    nvarcomps = length(V1) 
+
+    # transformed covariance matrices 
+    Vnew1 = Vector{Matrix{Float64}}(undef, nvarcomps)
+    Vnew2 = Vector{Matrix{Float64}}(undef, nvarcomps)
+    Vnew1[end] = Matrix{eltype(B)}(I, s, s) ./ √s
+    Vnew2[end] = Matrix{eltype(B)}(I, s, s) ./ √s
+    tmp = zeros(size(X, 1), s)
+    for i in 1:(nvarcomps - 1)
+        mul!(tmp, V1[i], B)
+        Vnew1[i] = BLAS.gemm('T', 'N', B, tmp)
+        mul!(tmp, V2[i], B)
+        Vnew2[i] = BLAS.gemm('T', 'N', B, tmp)
+        # divide by its frobenius norm  
+        Vnew1[i] ./= norm(Vnew1[i])
+        Vnew2[i] ./= norm(Vnew2[i])
+    end 
+
+    # output 
+    return ynew, Vnew1, Vnew2, B 
 
 end 
 
