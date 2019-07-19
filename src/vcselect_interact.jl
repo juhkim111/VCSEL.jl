@@ -637,3 +637,85 @@ function vcselect(
 
 end 
 
+"""
+
+"""
+function vcselectpath(
+    y           :: AbstractVector{T},
+    G           :: Vector{Matrix{T}},
+    trt         :: AbstractVecOrMat{S};
+    penfun      :: Penalty = NoPenalty(),
+    θ           :: T = one(T),
+    p           :: Real = 2,  
+    penwt       :: AbstractVector{T} = [ones(T, length(G)); zero(T)],
+    nλ          :: Int = 100, 
+    λpath       :: AbstractVector{T} = T[], 
+    σ2          :: AbstractVector{T} = ones(T, length(G)+1),
+    σ2int       :: AbstractVector{T} = ones(T, length(G)),
+    maxiter     :: Int = 1000,
+    tol         :: AbstractFloat = 1e-6,
+    standardize :: Bool = true
+    ) where {T, S <: Real}
+
+    if penfun != NoPenalty()
+        # assign 
+        m = length(G) 
+
+        # create a lambda grid if not specified
+        if isempty(λpath)
+
+        else 
+            nlambda = length(λpath)
+        end 
+
+        # initialize arrays 
+        σ2path = Matrix{T}(undef, m+1, nlambda) 
+        σ2intpath = Matrix{T}(undef, m, nlambda)  
+        objpath = Vector{Float64}(undef, nlambda) 
+        niterspath = Vector{Int}(undef, nlambda) 
+
+        # create solution path 
+        for iter in 1:nlambda 
+            σ2, σ2int, objpath[iter], niterspath[iter], = 
+                vcselect(y, G, trt; penfun=penfun, λ=λpath[iter], θ=θ, p=p, penwt=penwt, 
+                σ2=σ2, σ2int=σ2int, maxiter=maxiter, tol=tol, standardize=standardize)
+            σ2path[:, iter] = σ2
+            σ2intpath[:, iter] = σ2int
+        end 
+
+    else # if no penalty, no lambda grid 
+        σ2path, σ2intpath, objpath, niterspath, = vcselect(y, G, trt; penfun=penfun, θ=θ, p=p,
+            σ2=σ2, σ2int=σ2int, maxiter=maxiter, tol=tol, standardize=standardize)
+
+    end 
+
+    # output 
+    return σ2path, σ2intpath, objpath, λpath, niterspath
+
+end 
+
+"""
+
+"""
+function vcselectpath(
+    y           :: AbstractVector{T},
+    X           :: AbstractVecOrMat{T},
+    G           :: Vector{Matrix{T}},
+    trt         :: AbstractVecOrMat{S};
+    penfun      :: Penalty = NoPenalty(),
+    θ           :: T = one(T),
+    p           :: Real = 2,  
+    penwt       :: AbstractVector{T} = [ones(T, length(G)); zero(T)],
+    nλ          :: Int = 100, 
+    λpath       :: AbstractVector{T} = T[], 
+    σ2          :: AbstractVector{T} = ones(T, length(G)+1),
+    σ2int       :: AbstractVector{T} = ones(T, length(G)),
+    maxiter     :: Int = 1000,
+    tol         :: AbstractFloat = 1e-6,
+    standardize :: Bool = true, 
+    verbose     :: Bool = false
+    ) where {T, S <: Real}
+
+
+
+end 
