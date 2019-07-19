@@ -73,7 +73,23 @@ end
   end 
 end 
 
+@info "test path function: no penalty"
+σ2path_nopen, σ2intpath_nopen, objpath_nopen, λpath_nopen, niterspath_nopen = 
+      vcselectpath(y, G, trt)
 
+@info "test path function: L1Penalty"
+λpath = range(0, 4.0, length=5)
+σ2path, σ2intpath, objpath, λpath, niterspath = vcselectpath(y, G, trt; penfun=L1Penalty(), 
+      λpath=λpath)
+
+@testset begin 
+  @test σ2path_nopen == σ2path[:, 1]
+  @test σ2intpath_nopen == σ2intpath[:, 1]
+  @test objpath_nopen == objpath[1]
+  @test niterspath_nopen == niterspath[1]
+  @test isempty(λpath_nopen)
+
+end 
 
 ##########
 # σ̂2_1, σ̂2_2, obj, niters, Ω, objvec = vcselect(y_nocov, V1, V2; penfun=L1Penalty(), 
