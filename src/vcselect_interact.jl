@@ -578,7 +578,7 @@ function vcselect(
     n = length(y)
 
     # project onto nullspace 
-    ynew, Gnew, B = nullprojection(y, X, G; covariance=false) 
+    ynew, _, B = nullprojection(y, X, G; covariance=false) 
     if size(trt, 2) == 1
         trtmat = Diagonal(trt)                                    
     else 
