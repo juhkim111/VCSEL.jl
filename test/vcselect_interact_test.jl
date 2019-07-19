@@ -15,55 +15,97 @@ p = 3     # no. covariates
 X = randn(n, p)
 β = ones(p)
 
-V1  = Array{Matrix{Float64}}(undef, m + 1)
-tmp = zeros(Int, n)
-V2  = Array{Matrix{Float64}}(undef, m + 1)
+G  = Array{Matrix{Float64}}(undef, m)
+V  = Array{Matrix{Float64}}(undef, m + 1)
+Vint  = Array{Matrix{Float64}}(undef, m)
+trt = zeros(Int, n)
+sample!([0, 1], trt)
+trtmat = Diagonal(trt)
 for i = 1:m
-  Vi = randn(n, 50)
-  sample!([0, 1], tmp)
-  V1[i] = Vi * Vi'
-  V2[i] = Diagonal(tmp) * V1[i] * Diagonal(tmp)
-  V1[i] = V1[i] ./ norm(V1[i])
-  V2[i] = V2[i] ./ norm(V2[i])
+  G[i] = randn(n, 50)
+  V[i] = G[i] * G[i]'
+  Vint[i] = trtmat * V[i] * trtmat 
+  V[i] ./= norm(V[i])
+  Vint[i] ./= norm(Vint[i])
 end
-V1[end] = Matrix(I, n, n) ./ √n
-V2[end] = Matrix(I, n, n) ./ √n
+V[end] = Matrix(I, n, n) ./ √n
 
 # truth 
-σ2_1, σ2_2 = zeros(m + 1), zeros(m + 1)
-σ2_1[1] = σ2_1[4] = σ2_1[9] = 5.0
-σ2_2[1] = σ2_2[4] = σ2_2[9] = 5.0
-σ2_1[end] = σ2_2[end] = 1.0
+σ2, σ2int = zeros(m + 1), zeros(m)
+σ2[1] = σ2[4] = σ2[9] = 5.0
+σ2int[1] = σ2int[4] = σ2int[9] = 5.0
+σ2[end] = 1.0
 
 # form Ω
 Ω = zeros(n, n)
 for i = 1:m
-   Ω .+= σ2_1[i] * V1[i]
-   Ω .+= σ2_2[i] * V2[i]
+   Ω .+= σ2[i] * V[i]
+   Ω .+= σ2int[i] * Vint[i]
 end
-Ω .+= σ2_1[end] * V1[end]
+Ω .+= σ2[end] * V[end]
 
 Ωchol = cholesky(Symmetric(Ω))
-yreml = Ωchol.L * randn(n)
-y = X * β + Ωchol.L * randn(n)
+y = Ωchol.L * randn(n)
+y2 = X * β + Ωchol.L * randn(n)
 nlambda = 20 
 
 @info "check if objective values are monotonically decreasing"
-σ̂2_1, σ̂2_2, obj, niters, Ω, objvec = vcselect(yreml, V1, V2; penfun=L1Penalty(), 
-        λ=1.2, verbose=true)
+σ̂2, σ̂2int, obj, niters, Ω, objvec = vcselect(y, G, trt; verbose=true)
 @testset begin 
   for i in 1:(length(objvec) - 1)
     @test objvec[i] >= objvec[i+1]
   end 
 end 
 
-σ̂2_1, σ̂2_2, obj, niters, Ω, objvec = vcselect(yreml, V1, V2; penfun=L1Penalty(), 
-        λ=2.0, verbose=true)
+σ̂2, σ̂2int, obj, niters, Ω, objvec = vcselect(y, G, trt; verbose=true, λ=2.0, 
+      penfun=L1Penalty())
 @testset begin 
   for i in 1:(length(objvec) - 1)
     @test objvec[i] >= objvec[i+1]
   end 
 end 
+
+σ̂2, σ̂2int, β̂, obj, niters, Ω, objvec = vcselect(y2, X, G, trtmat; verbose=true, λ=2.0, 
+      penfun=L1Penalty())
+@testset begin 
+  for i in 1:(length(objvec) - 1)
+    @test objvec[i] >= objvec[i+1]
+  end 
+end 
+
+
+
+##########
+# σ̂2_1, σ̂2_2, obj, niters, Ω, objvec = vcselect(y_nocov, V1, V2; penfun=L1Penalty(), 
+#         λ=1.2, verbose=true)
+# @testset begin 
+#   for i in 1:(length(objvec) - 1)
+#     @test objvec[i] >= objvec[i+1]
+#   end 
+# end 
+
+# σ̂2_1, σ̂2_2, obj, niters, Ω, objvec = vcselect(y_nocov, V1, V2; penfun=L1Penalty(), 
+#         λ=2.0, verbose=true)
+# @testset begin 
+#   for i in 1:(length(objvec) - 1)
+#     @test objvec[i] >= objvec[i+1]
+#   end 
+# end 
+
+# σ̂2_1, σ̂2_2, β, obj, niters, Ω, objvec = vcselect(y, X, V1, V2; verbose=true)
+# @testset begin 
+#   for i in 1:(length(objvec) - 1)
+#     @test objvec[i] >= objvec[i+1]
+#   end 
+# end 
+
+# σ̂2_1, σ̂2_2, β, obj, niters, Ω, objvec = vcselect(y, X, V1, V2; penfun=L1Penalty(), 
+#         λ=1.2, verbose=true)
+# @testset begin 
+#   for i in 1:(length(objvec) - 1)
+#     @test objvec[i] >= objvec[i+1]
+#   end 
+# end 
 
 
 
