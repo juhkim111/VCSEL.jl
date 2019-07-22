@@ -129,14 +129,9 @@ function vcselect(
     Ωinv          :: AbstractMatrix{T} = zeros(T, size(V[1])),
     maxiter       :: Int = 1000,
     tol           :: AbstractFloat = 1e-8,
-    verbose       :: Bool = false,
-    checkfrobnorm :: Bool = true
+    verbose       :: Bool = false
     ) where {T <: Real} 
 
-    # check frob norm equals to 1 
-    if checkfrobnorm 
-        checkfrobnorm!(V)
-    end 
 
     # 
     ϵ = convert(T, 1e-8)
@@ -406,8 +401,6 @@ function vcselectpath(
     tol     :: AbstractFloat = 1e-8,
     verbose :: Bool = false
     ) where {T <: Real}
-
-    checkfrobnorm!(V)
 
     ## generate solution path based on penalty 
     if penfun != NoPenalty() 
