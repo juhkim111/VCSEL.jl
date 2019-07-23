@@ -57,6 +57,13 @@ nlambda = 20
   end 
 end 
 
+σ̂2, σ̂2int, obj, niters, Ω, objvec = vcselect(y2, X, G, trt; verbose=true)
+@testset begin 
+  for i in 1:(length(objvec) - 1)
+    @test objvec[i] >= objvec[i+1]
+  end 
+end 
+
 σ̂2, σ̂2int, obj, niters, Ω, objvec = vcselect(y, G, trt; verbose=true, λ=2.0, 
       penfun=L1Penalty())
 @testset begin 
@@ -67,7 +74,6 @@ end
 
 σ̂2, σ̂2int, β̂, obj, niters, Ω, objvec = vcselect(y2, X, G, trtmat; verbose=true, λ=2.0, 
       penfun=L1Penalty())
-println("β̂=", β̂)
 @testset begin 
   for i in 1:(length(objvec) - 1)
     @test objvec[i] >= objvec[i+1]
@@ -93,13 +99,6 @@ end
 λpath = range(0, 4.0, length=5)
 σ2path, σ2intpath, βpath, objpath, λpath, niterspath = vcselectpath(y2, X, G, trt; 
       penfun=L1Penalty(), λpath=λpath)
-
-println("σ2path=", σ2path)
-println("σ2intpath=", σ2intpath)
-println("βpath=", βpath)
-println("objpath=", objpath)
-println("λpath=", λpath)
-println("niterspath=", niterspath)
 
 
 ##########
