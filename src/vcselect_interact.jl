@@ -430,12 +430,8 @@ function vcselect(
             # move onto the next variance component if previous iterate is 0
             if iszero(σ2[j]) && iszero(σ2int[j])
                 continue 
-            # set to 0 and move onto the next variance component if penalty weight is 0
-            elseif iszero(penwt[j])
-                σ2[j] = zero(T)
-                σ2int[j] = zero(T)
-                continue 
             end 
+          
             # update σ2_1
             const1 = dot(Ωinv, V[j]) # const1 = tr(Ωinv * V1[j])
             mul!(w, V[j], v)
@@ -447,7 +443,7 @@ function vcselect(
             const2int = dot(w, v)         # const2 = y' * Ωinv * V2[j] * Ωinv * y
 
             # update variance component under specified penalty 
-            if !isa(penfun, NoPenalty) 
+            if !isa(penfun, NoPenalty) && !iszero(λ) && !iszero(penwt[j])
                 if isinf(penwt[j])
                     σ2[j] = zero(T)
                     σ2int[j] = zero(T)
@@ -470,7 +466,7 @@ function vcselect(
                 σ2int[j] = σ2int[j] * √(const2int / const1int)
             end 
 
-            # truncation step 
+            # truncation step (WHERE TO PUT THIS STEP?)
             if norm([σ2[j], σ2int[j]], p) < θ
                 σ2[j] = zero(T)
                 σ2int[j] = zero(T)
