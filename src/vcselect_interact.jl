@@ -40,42 +40,44 @@ Minimization is achieved via majorization-minimization (MM) algorithm.
 - `objvec`: vector of objective values at each iteration 
 """
 function vcselect( 
-    y             :: AbstractVector{T},
-    V1            :: Vector{Matrix{T}},
-    V2            :: Vector{Matrix{T}};
-    penfun        :: Penalty = NoPenalty(),
-    λ             :: T = one(T),
-    θ             :: T = one(T),
-    p             :: Real = 2,  
-    penwt         :: AbstractVector{T} = [ones(T, length(V1)-1); zero(T)],
-    σ2_1          :: AbstractVector{T} = ones(T, length(V1)),
-    σ2_2          :: AbstractVector{T} = ones(T, length(V1)),
-    Ω             :: AbstractMatrix{T} = zeros(T, size(V1[1])), 
-    Ωinv          :: AbstractMatrix{T} = zeros(T, size(V1[1])),
-    maxiter       :: Int = 1000,
-    tol           :: AbstractFloat = 1e-6,
-    verbose       :: Bool = false
+    y           :: AbstractVector{T},
+    V           :: Vector{Matrix{T}},
+    Vint        :: Vector{Matrix{T}};
+    penfun      :: Penalty = NoPenalty(),
+    λ           :: T = one(T),
+    θ           :: T = one(T),
+    p           :: Real = 2,  
+    penwt       :: AbstractVector{T} = [ones(T, length(Vint)); zero(T)],
+    σ2          :: AbstractVector{T} = ones(T, length(V)),
+    σ2int       :: AbstractVector{T} = ones(T, length(Vint)),
+    Ω           :: AbstractMatrix{T} = zeros(T, size(V[1])), 
+    Ωinv        :: AbstractMatrix{T} = zeros(T, size(V[1])),
+    maxiter     :: Int = 1000,
+    tol         :: AbstractFloat = 1e-5,
+    verbose     :: Bool = false
     ) where {T <: Real} 
 
-    # handle errors 
-    @assert length(V1) == length(V2) "V1 and V2 must have the same length!\n"
-    @assert length(V1) == length(σ2_1) "V1 and σ2_1 must have the same length!\n"
-    @assert length(V2) == length(σ2_2) "V2 and σ2_2 must have the same length!\n"
-    @assert penfun ∈ [L1Penalty(), NoPenalty()]  "available penalty functions are NoPenalty() and L1Penalty()!\n"
+    # # handle errors 
+    # @assert length(V) == length(σ2) "V and σ2 must have the same length!\n"
+    # @assert length(Vint) == length(σ2int) "Vint and σ2int must have the same length!\n"
+    # @assert penfun ∈ [L1Penalty(), NoPenalty()]  "available penalty functions are NoPenalty() and L1Penalty()!\n"
 
-    # 
+    # assign 
+    n = length(y)       # no. observations
+    m = length(Vint)    # no. groups
     ϵ = convert(T, 1e-8)
 
-    # initialize algorithm
-    n = length(y)       # no. observations
-    m = length(V1) - 1   # no. variance components
+    # construct overall covariance matrix 
     Ω = fill!(Ω, 0)     # covariance matrix 
-    for j in 1:(m + 1)
-        Ω .+= σ2_1[j] .* V1[j] 
-        Ω .+= σ2_2[j] .* V2[j] 
+    for j in 1:m
+        axpy!(σ2[j], V[j], Ω) 
+        axpy!(σ2int[j], Vint[j], Ω) 
     end
+    Ω .+= σ2[end] .* V[end]
+
+    # inverse of Ω
     Ωchol = cholesky!(Symmetric(Ω))
-    Ωinv = inv(Ωchol) 
+    Ωinv .= inv(Ωchol) 
     v = Ωinv * y
     w = similar(v) 
 
@@ -84,10 +86,10 @@ function vcselect(
     obj = (1//2) * logdet(Ωchol) + (1//2) * dot(y, v)  
     pen = 0.0
     for j in 1:m
-        if iszero(σ2_1[j]) && iszero(σ2_2[j])
+        if iszero(σ2[j]) && iszero(σ2int[j])
             continue 
         else 
-            pen += penwt[j] * value(penfun, √(σ2_1[j] + σ2_2[j]))
+            pen += penwt[j] * value(penfun, √(σ2[j] + σ2int[j]))
         end 
     end
     obj += loglConst + λ * pen
@@ -95,7 +97,7 @@ function vcselect(
     # display 
     if verbose
         println("iter = 0")
-        println("σ2_1, σ2_2 = $(σ2_1), $(σ2_2)")
+        println("σ2, σ2int = $(σ2), $(σ2int)")
         println("obj  = ", obj)
         objvec = obj
     end     
@@ -108,68 +110,63 @@ function vcselect(
         for j in 1:m
 
             # move onto the next variance component if previous iterate is 0
-            if iszero(σ2_1[j]) && iszero(σ2_2[j])
-                continue 
-            # set to 0 and move onto the next variance component if penalty weight is 0
-            elseif iszero(penwt[j])
-                σ2_1[j] = zero(T)
-                σ2_2[j] = zero(T)
+            if iszero(σ2[j]) && iszero(σ2int[j])
                 continue 
             end 
-            # update σ2_1
-            const11 = dot(Ωinv, V1[j]) # const1 = tr(Ωinv * V1[j])
-            mul!(w, V1[j], v)
-            const12 = dot(w, v)         # const2 = y' * Ωinv * V1[j] * Ωinv * y
+
+            # update σ2
+            const1 = dot(Ωinv, V[j]) # const1 = tr(Ωinv * V[j])
+            mul!(w, V[j], v)
+            const2 = dot(w, v)       # const2 = y' * Ωinv * V[j] * Ωinv * y
         
-            # update σ2_2
-            const21 = dot(Ωinv, V2[j]) # const1 = tr(Ωinv * V2[j])
-            mul!(w, V2[j], v)
-            const22 = dot(w, v)         # const2 = y' * Ωinv * V2[j] * Ωinv * y
+            # update σ2int
+            const1int = dot(Ωinv, Vint[j]) # const1 = tr(Ωinv * Vint[j])
+            mul!(w, Vint[j], v)
+            const2int = dot(w, v)          # const2 = y' * Ωinv * Vint[j] * Ωinv * y
 
             # update variance component under specified penalty 
-            if !isa(penfun, NoPenalty) 
+            if !isa(penfun, NoPenalty) && !iszero(λ) && !iszero(penwt[j])
                 if isinf(penwt[j])
-                    σ2_1[j] = zero(T)
-                    σ2_2[j] = zero(T)
+                    σ2[j] = zero(T)
+                    σ2int[j] = zero(T)
                     continue 
                 else
-                    pen = λ * penwt[j] / sqrt(σ2_1[j] + σ2_1[j])
+                    pen = λ * penwt[j] / sqrt(σ2[j] + σ2int[j])
                     # L1 penalty 
                     if isa(penfun, L1Penalty)  
-                        σ2_1[j] = σ2_1[j] * 
-                            √(const12 / (const11 + pen))
-                        σ2_2[j] = σ2_2[j] * 
-                            √(const22 / (const21 + pen))
+                        σ2[j] = σ2[j] * 
+                            √(const2 / (const1 + pen))
+                        σ2int[j] = σ2int[j] * 
+                            √(const2int / (const1int + pen))
                     end
                 end 
 
                 
             # update under no penalty 
             else
-                σ2_1[j] = σ2_1[j] * √(const12 / const11)
-                σ2_2[j] = σ2_2[j] * √(const22 / const21)
+                σ2[j] = σ2[j] * √(const2 / const1)
+                σ2int[j] = σ2int[j] * √(const2int / const1int)
             end 
 
-            # truncation step 
-            if norm([σ2_1[j], σ2_2[j]], p) < θ
-                σ2_1[j] = zero(T)
-                σ2_2[j] = zero(T)
+            # truncation step (WHERE TO PUT THIS STEP?)
+            if norm([σ2[j], σ2int[j]], p) < θ
+                σ2[j] = zero(T)
+                σ2int[j] = zero(T)
                 continue
             end 
 
             # update overall covariance matrix 
-            axpy!(σ2_1[j], V1[j], Ω) 
-            axpy!(σ2_2[j], V2[j], Ω) 
+            axpy!(σ2[j], V[j], Ω) 
+            axpy!(σ2int[j], Vint[j], Ω) 
 
         end # end of for loop over j  
 
         # update last variance component 
-        σ2_1[end] = σ2_1[end] * √(dot(v, v) / tr(Ωinv))
-        σ2_1[end] = clamp(σ2_1[end], ϵ, T(Inf))
-        σ2_2[end] = σ2_1[end]
+        σ2[end] = σ2[end] * √(dot(v, v) / tr(Ωinv))
+        σ2[end] = clamp(σ2[end], ϵ, T(Inf))
 
         # update overall covariance matrix 
-        axpy!(σ2_1[end], V1[end], Ω) 
+        axpy!(σ2[end], V[end], Ω) 
 
         # update Ωchol, Ωinv, v 
         Ωchol = cholesky!(Symmetric(Ω))
@@ -181,10 +178,10 @@ function vcselect(
         obj = (1//2) * logdet(Ωchol) + (1//2) * dot(y, v)
         pen = 0.0
         for j in 1:m
-            if iszero(σ2_1[j]) && iszero(σ2_2[j])
+            if iszero(σ2[j]) && iszero(σ2int[j])
                 continue 
             else 
-                pen += penwt[j] * value(penfun, √(σ2_1[j] + σ2_2[j]))
+                pen += penwt[j] * value(penfun, √(σ2[j] + σ2int[j]))
             end
         end
         obj += loglConst + λ * pen
@@ -192,7 +189,7 @@ function vcselect(
         # display 
         if verbose
             println("iter = ", iter)
-            println("σ2_1, σ2_2 = $(σ2_1), $(σ2_2)")
+            println("σ2, σ2int = $(σ2), $(σ2int)")
             println("obj  = ", obj)
             objvec = [objvec; obj]
         end    
@@ -207,26 +204,28 @@ function vcselect(
 
     # construct final Ω matrix 
     fill!(Ω, 0)
-    for i in 1:(m + 1)
-        if iszero(σ2_1[i]) && iszero(σ2_2[i])
+    for i in 1:m
+        if iszero(σ2[i]) && iszero(σ2int[i])
             continue 
         else 
-            axpy!(σ2_1[i], V1[i], Ω) # Ω .+= σ2[i] * V[i]
-            axpy!(σ2_2[i], V2[i], Ω) # Ω .+= σ2[i] * V[i]
+            axpy!(σ2[i], V[i], Ω) # Ω .+= σ2[i] * V[i]
+            axpy!(σ2int[i], Vint[i], Ω) # Ω .+= σ2int[i] * Vint[i]
         end 
     end 
+    axpy!(σ2[end], V[end], Ω)
 
     # output
     if niters == 0
     niters = maxiter
     end
 
-    if verbose 
-        return σ2_1, σ2_2, obj, niters, Ω, objvec;
-    else 
-        return σ2_1, σ2_2, obj, niters, Ω;
-    end
+   
 
+    if verbose 
+        return σ2, σ2int, obj, niters, Ω, objvec;
+    else 
+        return σ2, σ2int, obj, niters, Ω;
+    end
 
 end 
 
@@ -247,7 +246,7 @@ function vcselect(
     σ2_1          :: AbstractVector{T} = ones(T, length(V1)),
     σ2_2          :: AbstractVector{T} = ones(T, length(V1)),
     maxiter       :: Int = 1000,
-    tol           :: AbstractFloat = 1e-6,
+    tol           :: AbstractFloat = 1e-5,
     verbose       :: Bool = false
     ) where {T <: Real} 
 
@@ -341,7 +340,7 @@ function vcselect(
     Ω        :: AbstractMatrix{T} = zeros(T, length(y), length(y)), 
     Ωinv     :: AbstractMatrix{T} = zeros(T, length(y), length(y)),
     maxiter  :: Int = 1000,
-    tol      :: AbstractFloat = 1e-6,
+    tol      :: AbstractFloat = 1e-5,
     standardize :: Bool = true, 
     verbose  :: Bool = false
     ) where {T, S <: Real} 
@@ -385,164 +384,174 @@ function vcselect(
         V[end] = Matrix(I, n, n)
     end 
 
-    # construct overall covariance matrix 
-    Ω = fill!(Ω, 0)     # covariance matrix 
-    for j in 1:m
-        axpy!(σ2[j], V[j], Ω) 
-        axpy!(σ2int[j], Vint[j], Ω) 
-    end
-    Ω .+= σ2[end] .* V[end]
-
-    # inverse of Ω
-    Ωchol = cholesky!(Symmetric(Ω))
-    Ωinv .= inv(Ωchol) 
-    v = Ωinv * y
-    w = similar(v) 
-
-    # objective value 
-    loglConst = (1//2) * n * log(2π) 
-    obj = (1//2) * logdet(Ωchol) + (1//2) * dot(y, v)  
-    pen = 0.0
-    for j in 1:m
-        if iszero(σ2[j]) && iszero(σ2int[j])
-            continue 
-        else 
-            pen += penwt[j] * value(penfun, √(σ2[j] + σ2int[j]))
-        end 
-    end
-    obj += loglConst + λ * pen
-
-    # display 
-    if verbose
-        println("iter = 0")
-        println("σ2, σ2int = $(σ2), $(σ2int)")
-        println("obj  = ", obj)
-        objvec = obj
-    end     
-
-    # MM loop 
-    niters = 0 
-    for iter in 1:maxiter 
-        # update variance components
-        fill!(Ω, 0)
-        for j in 1:m
-
-            # move onto the next variance component if previous iterate is 0
-            if iszero(σ2[j]) && iszero(σ2int[j])
-                continue 
-            end 
-          
-            # update σ2_1
-            const1 = dot(Ωinv, V[j]) # const1 = tr(Ωinv * V1[j])
-            mul!(w, V[j], v)
-            const2 = dot(w, v)         # const2 = y' * Ωinv * V1[j] * Ωinv * y
-        
-            # update σ2_2
-            const1int = dot(Ωinv, Vint[j]) # const1 = tr(Ωinv * V2[j])
-            mul!(w, Vint[j], v)
-            const2int = dot(w, v)         # const2 = y' * Ωinv * V2[j] * Ωinv * y
-
-            # update variance component under specified penalty 
-            if !isa(penfun, NoPenalty) && !iszero(λ) && !iszero(penwt[j])
-                if isinf(penwt[j])
-                    σ2[j] = zero(T)
-                    σ2int[j] = zero(T)
-                    continue 
-                else
-                    pen = λ * penwt[j] / sqrt(σ2[j] + σ2int[j])
-                    # L1 penalty 
-                    if isa(penfun, L1Penalty)  
-                        σ2[j] = σ2[j] * 
-                            √(const2 / (const1 + pen))
-                        σ2int[j] = σ2int[j] * 
-                            √(const2int / (const1int + pen))
-                    end
-                end 
-
-                
-            # update under no penalty 
-            else
-                σ2[j] = σ2[j] * √(const2 / const1)
-                σ2int[j] = σ2int[j] * √(const2int / const1int)
-            end 
-
-            # truncation step (WHERE TO PUT THIS STEP?)
-            if norm([σ2[j], σ2int[j]], p) < θ
-                σ2[j] = zero(T)
-                σ2int[j] = zero(T)
-                continue
-            end 
-
-            # update overall covariance matrix 
-            axpy!(σ2[j], V[j], Ω) 
-            axpy!(σ2int[j], Vint[j], Ω) 
-
-        end # end of for loop over j  
-
-        # update last variance component 
-        σ2[end] = σ2[end] * √(dot(v, v) / tr(Ωinv))
-        σ2[end] = clamp(σ2[end], ϵ, T(Inf))
-        σ2int[end] = σ2int[end]
-
-        # update overall covariance matrix 
-        axpy!(σ2[end], V[end], Ω) 
-
-        # update Ωchol, Ωinv, v 
-        Ωchol = cholesky!(Symmetric(Ω))
-        Ωinv[:] = inv(Ωchol)
-        mul!(v, Ωinv, y)
-
-        # update objective value 
-        objold = obj
-        obj = (1//2) * logdet(Ωchol) + (1//2) * dot(y, v)
-        pen = 0.0
-        for j in 1:m
-            if iszero(σ2[j]) && iszero(σ2int[j])
-                continue 
-            else 
-                pen += penwt[j] * value(penfun, √(σ2[j] + σ2int[j]))
-            end
-        end
-        obj += loglConst + λ * pen
-    
-        # display 
-        if verbose
-            println("iter = ", iter)
-            println("σ2, σ2int = $(σ2), $(σ2int)")
-            println("obj  = ", obj)
-            objvec = [objvec; obj]
-        end    
-
-        # check convergence
-        if abs(obj - objold) < tol * (abs(objold) + 1)
-            niters = iter
-            break
-        end
-
-    end # end of MM loop 
-
-    # construct final Ω matrix 
-    fill!(Ω, 0)
-    for i in 1:m
-        if iszero(σ2[i]) && iszero(σ2int[i])
-            continue 
-        else 
-            axpy!(σ2[i], V[i], Ω) # Ω .+= σ2[i] * V[i]
-            axpy!(σ2int[i], Vint[i], Ω) # Ω .+= σ2int[i] * Vint[i]
-        end 
-    end 
-    axpy!(σ2[end], V[end], Ω)
-
-    # output
-    if niters == 0
-    niters = maxiter
-    end
-
     if verbose 
+        σ2, σ2int, obj, niters, Ω, objvec = vcselect(y, V, Vint; penfun=penfun, λ=λ, θ=θ, 
+                p=p, penwt=penwt, σ2=σ2, σ2int=σ2int, Ω=Ω, Ωinv=Ωinv, maxiter=maxiter, tol=tol, verbose=true)
         return σ2, σ2int, obj, niters, Ω, objvec;
     else 
+        σ2, σ2int, obj, niters, Ω = vcselect(y, V, Vint; penfun=penfun, λ=λ, θ=θ, p=p,
+                penwt=penwt, σ2=σ2, σ2int=σ2int, Ω=Ω, Ωinv=Ωinv, maxiter=maxiter, tol=tol)
         return σ2, σ2int, obj, niters, Ω;
     end
+
+
+    # # construct overall covariance matrix 
+    # Ω = fill!(Ω, 0)     # covariance matrix 
+    # for j in 1:m
+    #     axpy!(σ2[j], V[j], Ω) 
+    #     axpy!(σ2int[j], Vint[j], Ω) 
+    # end
+    # Ω .+= σ2[end] .* V[end]
+
+    # # inverse of Ω
+    # Ωchol = cholesky!(Symmetric(Ω))
+    # Ωinv .= inv(Ωchol) 
+    # v = Ωinv * y
+    # w = similar(v) 
+
+    # # objective value 
+    # loglConst = (1//2) * n * log(2π) 
+    # obj = (1//2) * logdet(Ωchol) + (1//2) * dot(y, v)  
+    # pen = 0.0
+    # for j in 1:m
+    #     if iszero(σ2[j]) && iszero(σ2int[j])
+    #         continue 
+    #     else 
+    #         pen += penwt[j] * value(penfun, √(σ2[j] + σ2int[j]))
+    #     end 
+    # end
+    # obj += loglConst + λ * pen
+
+    # # display 
+    # if verbose
+    #     println("iter = 0")
+    #     println("σ2, σ2int = $(σ2), $(σ2int)")
+    #     println("obj  = ", obj)
+    #     objvec = obj
+    # end     
+
+    # # MM loop 
+    # niters = 0 
+    # for iter in 1:maxiter 
+    #     # update variance components
+    #     fill!(Ω, 0)
+    #     for j in 1:m
+
+    #         # move onto the next variance component if previous iterate is 0
+    #         if iszero(σ2[j]) && iszero(σ2int[j])
+    #             continue 
+    #         end 
+          
+    #         # update σ2_1
+    #         const1 = dot(Ωinv, V[j]) # const1 = tr(Ωinv * V1[j])
+    #         mul!(w, V[j], v)
+    #         const2 = dot(w, v)         # const2 = y' * Ωinv * V1[j] * Ωinv * y
+        
+    #         # update σ2_2
+    #         const1int = dot(Ωinv, Vint[j]) # const1 = tr(Ωinv * V2[j])
+    #         mul!(w, Vint[j], v)
+    #         const2int = dot(w, v)         # const2 = y' * Ωinv * V2[j] * Ωinv * y
+
+    #         # update variance component under specified penalty 
+    #         if !isa(penfun, NoPenalty) && !iszero(λ) && !iszero(penwt[j])
+    #             if isinf(penwt[j])
+    #                 σ2[j] = zero(T)
+    #                 σ2int[j] = zero(T)
+    #                 continue 
+    #             else
+    #                 pen = λ * penwt[j] / sqrt(σ2[j] + σ2int[j])
+    #                 # L1 penalty 
+    #                 if isa(penfun, L1Penalty)  
+    #                     σ2[j] = σ2[j] * 
+    #                         √(const2 / (const1 + pen))
+    #                     σ2int[j] = σ2int[j] * 
+    #                         √(const2int / (const1int + pen))
+    #                 end
+    #             end 
+
+                
+    #         # update under no penalty 
+    #         else
+    #             σ2[j] = σ2[j] * √(const2 / const1)
+    #             σ2int[j] = σ2int[j] * √(const2int / const1int)
+    #         end 
+
+    #         # truncation step (WHERE TO PUT THIS STEP?)
+    #         if norm([σ2[j], σ2int[j]], p) < θ
+    #             σ2[j] = zero(T)
+    #             σ2int[j] = zero(T)
+    #             continue
+    #         end 
+
+    #         # update overall covariance matrix 
+    #         axpy!(σ2[j], V[j], Ω) 
+    #         axpy!(σ2int[j], Vint[j], Ω) 
+
+    #     end # end of for loop over j  
+
+    #     # update last variance component 
+    #     σ2[end] = σ2[end] * √(dot(v, v) / tr(Ωinv))
+    #     σ2[end] = clamp(σ2[end], ϵ, T(Inf))
+
+    #     # update overall covariance matrix 
+    #     axpy!(σ2[end], V[end], Ω) 
+
+    #     # update Ωchol, Ωinv, v 
+    #     Ωchol = cholesky!(Symmetric(Ω))
+    #     Ωinv[:] = inv(Ωchol)
+    #     mul!(v, Ωinv, y)
+
+    #     # update objective value 
+    #     objold = obj
+    #     obj = (1//2) * logdet(Ωchol) + (1//2) * dot(y, v)
+    #     pen = 0.0
+    #     for j in 1:m
+    #         if iszero(σ2[j]) && iszero(σ2int[j])
+    #             continue 
+    #         else 
+    #             pen += penwt[j] * value(penfun, √(σ2[j] + σ2int[j]))
+    #         end
+    #     end
+    #     obj += loglConst + λ * pen
+    
+    #     # display 
+    #     if verbose
+    #         println("iter = ", iter)
+    #         println("σ2, σ2int = $(σ2), $(σ2int)")
+    #         println("obj  = ", obj)
+    #         objvec = [objvec; obj]
+    #     end    
+
+    #     # check convergence
+    #     if abs(obj - objold) < tol * (abs(objold) + 1)
+    #         niters = iter
+    #         break
+    #     end
+
+    # end # end of MM loop 
+
+    # # construct final Ω matrix 
+    # fill!(Ω, 0)
+    # for i in 1:m
+    #     if iszero(σ2[i]) && iszero(σ2int[i])
+    #         continue 
+    #     else 
+    #         axpy!(σ2[i], V[i], Ω) # Ω .+= σ2[i] * V[i]
+    #         axpy!(σ2int[i], Vint[i], Ω) # Ω .+= σ2int[i] * Vint[i]
+    #     end 
+    # end 
+    # axpy!(σ2[end], V[end], Ω)
+
+    # # output
+    # if niters == 0
+    # niters = maxiter
+    # end
+
+    # if verbose 
+    #     return σ2, σ2int, obj, niters, Ω, objvec;
+    # else 
+    #     return σ2, σ2int, obj, niters, Ω;
+    # end
 
 
 end 
@@ -564,7 +573,7 @@ function vcselect(
     σ2int       :: AbstractVector{T} = ones(T, length(G)),
     Ω           :: AbstractMatrix{T} = zeros(T, length(y), length(y)), 
     maxiter     :: Int = 1000,
-    tol         :: AbstractFloat = 1e-6,
+    tol         :: AbstractFloat = 1e-5,
     standardize :: Bool = true, 
     verbose     :: Bool = false
     ) where {T, S <: Real}
@@ -626,7 +635,7 @@ function vcselect(
     β = betaestimate(y, X, V, Vint, σ2, σ2int)
 
     # output 
-    if verbose 
+    if verbose
         σ2, σ2int, β, obj, niters, Ω, objvec
     else 
         σ2, σ2int, β, obj, niters, Ω
@@ -651,7 +660,7 @@ function vcselectpath(
     σ2int       :: AbstractVector{T} = ones(T, length(G)),
     B           :: AbstractMatrix{T} = zeros(T, length(y), 0),
     maxiter     :: Int = 1000,
-    tol         :: AbstractFloat = 1e-6,
+    tol         :: AbstractFloat = 1e-5,
     standardize :: Bool = true
     ) where {T, S <: Real}
 
@@ -661,7 +670,9 @@ function vcselectpath(
 
         # create a lambda grid if not specified
         if isempty(λpath)
-
+            maxλ, V, Vint = maxlambda(y, G, trt; penfun=penfun, penwt=penwt, 
+                    maxiter=maxiter, tol=tol, standardize=standardize, B=B)
+            λpath = range(0, stop=maxλ, length=nλ)
         else 
             nλ = length(λpath)
         end 
@@ -709,7 +720,7 @@ function vcselectpath(
     σ2          :: AbstractVector{T} = ones(T, length(G)+1),
     σ2int       :: AbstractVector{T} = ones(T, length(G)),
     maxiter     :: Int = 1000,
-    tol         :: AbstractFloat = 1e-6,
+    tol         :: AbstractFloat = 1e-5,
     standardize :: Bool = true
     ) where {T, S <: Real}
 
