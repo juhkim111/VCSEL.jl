@@ -44,9 +44,7 @@ function vcselect(
     V           :: Vector{Matrix{T}},
     Vint        :: Vector{Matrix{T}};
     penfun      :: Penalty = NoPenalty(),
-    λ           :: T = one(T),
-    θ           :: T = one(T),
-    p           :: Real = 2,  
+    λ           :: T = one(T), 
     penwt       :: AbstractVector{T} = [ones(T, length(Vint)); zero(T)],
     σ2          :: AbstractVector{T} = ones(T, length(V)),
     σ2int       :: AbstractVector{T} = ones(T, length(Vint)),
@@ -233,8 +231,6 @@ function vcselect(
     V2            :: Vector{Matrix{T}};
     penfun        :: Penalty = NoPenalty(),
     λ             :: T = one(T),
-    θ             :: T = one(T),
-    p             :: Real = 2,  
     penwt         :: AbstractVector{T} = [ones(T, length(V1)-1); zero(T)],
     σ2_1          :: AbstractVector{T} = ones(T, length(V1)),
     σ2_2          :: AbstractVector{T} = ones(T, length(V1)),
@@ -249,11 +245,11 @@ function vcselect(
 
     # call vcselect 
     if verbose 
-        σ2_1, σ2_2, obj, niters, Ω, objvec = vcselect(ynew, V1new, V2new; penfun=penfun, λ=λ, θ=θ, p=p, penwt=penwt, 
-            σ2_1=σ2_1, σ2_2=σ2_2, maxiter=maxiter, tol=tol, verbose=verbose)
+        σ2_1, σ2_2, obj, niters, Ω, objvec = vcselect(ynew, V1new, V2new; penfun=penfun, 
+            λ=λ, penwt=penwt, σ2_1=σ2_1, σ2_2=σ2_2, maxiter=maxiter, tol=tol, verbose=verbose)
     else 
-        σ2_1, σ2_2, obj, niters, Ω = vcselect(ynew, V1new, V2new; penfun=penfun, λ=λ, θ=θ, p=p, penwt=penwt, 
-            σ2_1=σ2_1, σ2_2=σ2_2, maxiter=maxiter, tol=tol, verbose=verbose)
+        σ2_1, σ2_2, obj, niters, Ω = vcselect(ynew, V1new, V2new; penfun=penfun, λ=λ, 
+            penwt=penwt, σ2_1=σ2_1, σ2_2=σ2_2, maxiter=maxiter, tol=tol, verbose=verbose)
     end 
 
     # update Ω with estimated variance components
@@ -324,8 +320,6 @@ function vcselect(
     trt      :: AbstractVecOrMat{S};
     penfun   :: Penalty = NoPenalty(),
     λ        :: T = one(T),
-    θ        :: T = one(T),
-    p        :: Real = 2,  
     penwt    :: AbstractVector{T} = [ones(T, length(G)); zero(T)],
     σ2       :: AbstractVector{T} = ones(T, length(G)+1),
     σ2int    :: AbstractVector{T} = ones(T, length(G)),
@@ -378,11 +372,11 @@ function vcselect(
     end 
 
     if verbose 
-        σ2, σ2int, obj, niters, Ω, objvec = vcselect(y, V, Vint; penfun=penfun, λ=λ, θ=θ, 
-                p=p, penwt=penwt, σ2=σ2, σ2int=σ2int, Ω=Ω, Ωinv=Ωinv, maxiter=maxiter, tol=tol, verbose=true)
+        σ2, σ2int, obj, niters, Ω, objvec = vcselect(y, V, Vint; penfun=penfun, λ=λ, 
+                penwt=penwt, σ2=σ2, σ2int=σ2int, Ω=Ω, Ωinv=Ωinv, maxiter=maxiter, tol=tol, verbose=true)
         return σ2, σ2int, obj, niters, Ω, objvec;
     else 
-        σ2, σ2int, obj, niters, Ω = vcselect(y, V, Vint; penfun=penfun, λ=λ, θ=θ, p=p,
+        σ2, σ2int, obj, niters, Ω = vcselect(y, V, Vint; penfun=penfun, λ=λ, 
                 penwt=penwt, σ2=σ2, σ2int=σ2int, Ω=Ω, Ωinv=Ωinv, maxiter=maxiter, tol=tol)
         return σ2, σ2int, obj, niters, Ω;
     end
@@ -398,9 +392,7 @@ function vcselect(
     G           :: Vector{Matrix{T}},
     trt         :: AbstractVecOrMat{S};
     penfun      :: Penalty = NoPenalty(),
-    λ           :: T = one(T),
-    θ           :: T = one(T),
-    p           :: Real = 2,  
+    λ           :: T = one(T), 
     penwt       :: AbstractVector{T} = [ones(T, length(G)); zero(T)],
     σ2          :: AbstractVector{T} = ones(T, length(G)+1),
     σ2int       :: AbstractVector{T} = ones(T, length(G)),
@@ -426,11 +418,11 @@ function vcselect(
     # call vcselect 
     if verbose 
         σ2, σ2int, obj, niters, _, objvec = vcselect(ynew, G, trtmat; penfun=penfun, λ=λ, 
-            θ=θ, p=p, penwt=penwt, σ2=σ2, σ2int=σ2int, maxiter=maxiter, tol=tol, B=B,
+            penwt=penwt, σ2=σ2, σ2int=σ2int, maxiter=maxiter, tol=tol, B=B,
             standardize=standardize, verbose=true)
     else 
-        σ2, σ2int, obj, niters, = vcselect(ynew, G, trtmat; penfun=penfun, λ=λ, θ=θ,
-            p=p, penwt=penwt, σ2=σ2, σ2int=σ2int, maxiter=maxiter, tol=tol, B=B,
+        σ2, σ2int, obj, niters, = vcselect(ynew, G, trtmat; penfun=penfun, λ=λ, 
+            penwt=penwt, σ2=σ2, σ2int=σ2int, maxiter=maxiter, tol=tol, B=B,
             standardize=standardize)
     end 
     
@@ -484,8 +476,6 @@ function vcselectpath(
     G           :: Vector{Matrix{T}},
     trt         :: AbstractVecOrMat{S};
     penfun      :: Penalty = NoPenalty(),
-    θ           :: T = one(T),
-    p           :: Real = 2,  
     penwt       :: AbstractVector{T} = [ones(T, length(G)); zero(T)],
     nλ          :: Int = 100, 
     λpath       :: AbstractVector{T} = T[], 
@@ -519,14 +509,14 @@ function vcselectpath(
         # create solution path 
         for iter in 1:nλ 
             σ2, σ2int, objpath[iter], niterspath[iter], = 
-                vcselect(y, G, trt; penfun=penfun, λ=λpath[iter], θ=θ, p=p, penwt=penwt, 
+                vcselect(y, G, trt; penfun=penfun, λ=λpath[iter], penwt=penwt, 
                 σ2=σ2, σ2int=σ2int, B=B, maxiter=maxiter, tol=tol, standardize=standardize)
             σ2path[:, iter] = σ2
             σ2intpath[:, iter] = σ2int
         end 
 
     else # if no penalty, no lambda grid 
-        σ2path, σ2intpath, objpath, niterspath, = vcselect(y, G, trt; penfun=penfun, θ=θ, p=p,
+        σ2path, σ2intpath, objpath, niterspath, = vcselect(y, G, trt; penfun=penfun, 
             σ2=σ2, σ2int=σ2int, maxiter=maxiter, tol=tol, standardize=standardize)
 
     end 
@@ -545,8 +535,6 @@ function vcselectpath(
     G           :: Vector{Matrix{T}},
     trt         :: AbstractVecOrMat{S};
     penfun      :: Penalty = NoPenalty(),
-    θ           :: T = one(T),
-    p           :: Real = 2,  
     penwt       :: AbstractVector{T} = [ones(T, length(G)); zero(T)],
     nλ          :: Int = 100, 
     λpath       :: AbstractVector{T} = T[], 
@@ -565,7 +553,7 @@ function vcselectpath(
 
     #
     σ2path, σ2intpath, objpath, λpath, niterspath = vcselectpath(ynew, G, trt; 
-            penfun=penfun, θ=θ, p=p, penwt=penwt, nλ=nλ, λpath=λpath, σ2=σ2, σ2int=σ2int,
+            penfun=penfun, penwt=penwt, nλ=nλ, λpath=λpath, σ2=σ2, σ2int=σ2int,
             B=B, maxiter=maxiter, tol=tol, standardize=standardize)
 
     # create V and Vint 
