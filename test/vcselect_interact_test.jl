@@ -1,9 +1,9 @@
 module InteractTest
 
 # load packages 
-using Random, LinearAlgebra, Test, StatsBase # , VarianceComponentSelect
-include("../src/VarianceComponentSelect.jl")
-using .VarianceComponentSelect
+using Random, LinearAlgebra, Test, StatsBase, VarianceComponentSelect
+# include("../src/VarianceComponentSelect.jl")
+# using .VarianceComponentSelect
 
 # set seed 
 Random.seed!(123)
@@ -133,6 +133,5 @@ end
 
 σ2path, σ2intpath, βpath, objpath, λpath, niterspath = vcselectpath(y2, X, G, trt; 
       penfun=L1Penalty(), nλ=10)
-
 
 end 
