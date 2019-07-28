@@ -258,6 +258,8 @@ end
 """
     rankvarcomps(σ2path; tol=1e-6, resvarcomp=true)
 
+Obtain rank of variance components from a solution path
+
 # Input
 - `σ2path`: solution path (in numeric matrix), each column should 
     represent estimated variance components at specific λ 
@@ -312,10 +314,10 @@ function rankvarcomps(
 end 
 
 """
-    rankvarcomps(σ2path; tol=1e-6, resvarcomp=true)
+    rankvarcomps(σ2path, σ2path2; tol=1e-6, resvarcomp=true, resvarcomp2=true)
 
-Obtain rank of variance components from both solution paths, e.g. `σ2path` and `σ2intpath`.   
-Use this when variance components are paired. 
+Obtain rank of variance components from a paired solution paths, e.g. `σ2path` and `σ2intpath`.   
+Ranks are calculated using norm of paired variance components. 
 
 # Input
 - `σ2path`: solution path (in numeric matrix), each column should 
@@ -331,7 +333,6 @@ Use this when variance components are paired.
     default is true. If true, the last variance component is not included in ranks
 - `resvarcomp2`: logical flag indicating there is residual variance component in `σ2path2`,
    default is true. If true, the last variance component is not included in ranks
-
 
 # Output 
 - `ranks`: rank of each variance component based on the order in which it enters 
