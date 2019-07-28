@@ -254,8 +254,9 @@ function checkfrobnorm!(
         end
     end 
 end 
+ 
 """
-    rankvarcomps(σ2path; tol=1e-6)
+    rankvarcomps(σ2path; tol=1e-6, resvarcomp=true)
 
 # Input
 - `σ2path`: solution path (in numeric matrix), each column should 
@@ -264,6 +265,8 @@ end
 
 # Keyword 
 - `tol`: a variance component less than `tol` is considered zero, default is 1e-6 
+- `resvarcomp`: logical flag indicating there is residual variance component, default is true
+    if true, the last variance component is not included in calculating ranks
 
 # Output 
 - `ranking`: rank of each variance component based on the order in which it enters 
@@ -271,19 +274,26 @@ end
 - `rest`: rest of the variance components that are estimated to be zero at all λ > 0
 """
 function rankvarcomps(
-    σ2path :: AbstractMatrix{T};
-    tol    :: Float64=1e-6
+    σ2path     :: AbstractMatrix{T};
+    tol        :: Float64 = 1e-6,
+    resvarcomp :: Bool = true  
     ) where {T <: Real}
 
     # size of solution path 
-    novarcomp, nlambda = size(σ2path)
+    nvarcomps, nlambda = size(σ2path)
+
+    if resvarcomp 
+        m = nvarcomps - 1 
+    else 
+        m = nvarcomps 
+    end 
 
     # initialize array for ranking 
     ranking = Int[]
 
     # go through solution path and find the order in which variance component enters
     for col in nlambda:-1:2
-        tmp = findall(x -> x > tol, view(σ2path, 1:(novarcomp-1), col))
+        tmp = findall(x -> x > tol, view(σ2path, 1:m, col))
         for j in tmp 
             if !(j in ranking)
                 push!(ranking, j)
@@ -291,11 +301,14 @@ function rankvarcomps(
         end
     end 
     # rest of the variance components that are estimated to be zero at all λ > 0
-    rest = setdiff(1:(novarcomp-1), ranking)
-    rest = [rest; novarcomp]
+    rest = setdiff(1:m, ranking)
+    if resvarcomp 
+        rest = [rest; nvarcomps]
+    end 
 
     return ranking, rest 
 end 
+
 """
     plotsolpath(σ2path, λpath; title="Solution Path", xlab="λ", ylab="σ2", 
             xmin=minimum(λpath), xmax=minimum(λpath), tol=1e-6)
