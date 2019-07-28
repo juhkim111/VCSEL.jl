@@ -11,13 +11,10 @@ Minimization is achieved via majorization-minimization (MM) algorithm.
 
 # Input
 - `y`: response vector
-- `V1`: vector of covariance matrices, (V1[1],V1[2],...,V1[m],I/√n)
-    note 1) each V1[i] needs to have frobenius norm 1, i=1,...,m
-         2) `V1` and `V2` must have the same length
-         3) `V1[end]` should be identity matrix divided by √n, where n is sample size 
-- `V2`: vector of covariance matrices, (V2[1],V2[2],...,V2[m],I/√n)
-    note that each V2[i] needs to have frobenius norm 1, and 
-    that V[end] should be identity matrix divided by √n
+- `V`: vector of covariance matrices for main effect, (V[1],V[2],...,V[m],I)
+- `Vint`: vector of covariance matrices, (Vint[1],Vint[2],...,Vint[m])
+    note that each `V` has length m+1 while `Vint` has length m; 
+    V[end] should be identity matrix or identity matrix divided by √n if standardized 
 
 # Keyword
 - `penfun`: penalty function, e.g., NoPenalty() (default), L1Penalty(), MCPPenalty(γ = 2.0)
@@ -222,74 +219,24 @@ end
 
 
 """
-
-"""
-function vcselect( 
-    y             :: AbstractVector{T},
-    X             :: AbstractVecOrMat{T},
-    V1            :: Vector{Matrix{T}},
-    V2            :: Vector{Matrix{T}};
-    penfun        :: Penalty = NoPenalty(),
-    λ             :: T = one(T),
-    penwt         :: AbstractVector{T} = [ones(T, length(V1)-1); zero(T)],
-    σ2_1          :: AbstractVector{T} = ones(T, length(V1)),
-    σ2_2          :: AbstractVector{T} = ones(T, length(V1)),
-    maxiter       :: Int = 1000,
-    tol           :: AbstractFloat = 1e-5,
-    verbose       :: Bool = false
-    ) where {T <: Real} 
-
-    # project onto nullspace 
-    nvarcomps = length(V1)
-    ynew, V1new, V2new = nullprojection(y, X, V1, V2)
-
-    # call vcselect 
-    if verbose 
-        σ2_1, σ2_2, obj, niters, Ω, objvec = vcselect(ynew, V1new, V2new; penfun=penfun, 
-            λ=λ, penwt=penwt, σ2_1=σ2_1, σ2_2=σ2_2, maxiter=maxiter, tol=tol, verbose=verbose)
-    else 
-        σ2_1, σ2_2, obj, niters, Ω = vcselect(ynew, V1new, V2new; penfun=penfun, λ=λ, 
-            penwt=penwt, σ2_1=σ2_1, σ2_2=σ2_2, maxiter=maxiter, tol=tol, verbose=verbose)
-    end 
-
-    # update Ω with estimated variance components
-    Ω = zeros(T, size(V1[1]))
-    for i in 1:nvarcomps
-        if iszero(σ2_1[i]) && iszero(σ2_2[i])
-            continue 
-        else 
-            axpy!(σ2_1[i], V1[i], Ω) # Ω .+= σ2[i] * V[i]
-            axpy!(σ2_2[i], V2[i], Ω) # Ω .+= σ2[i] * V[i]
-        end 
-    end 
-
-    # estimate fixed effects 
-    β = betaestimate(y, X, Ω)
-
-    # output 
-    if verbose 
-        return σ2_1, σ2_2, β, obj, niters, Ω, objvec;
-    else 
-        return σ2_1, σ2_2, β, obj, niters, Ω;
-    end 
-
-end 
-
-"""
     vcselect(y, G, trt; penfun, λ, penwt, σ2, maxiter, tol, verbose)
 
 Select variance components at specified lambda by minimizing penalized negative 
 log-likelihood of variance component model. 
 The objective function to minimize is
   `0.5n*log(2π) + 0.5logdet(Ω) + 0.5y'*inv(Ω)*y + λ * sum(penwt.*penfun(σ))`
-where `Ω = (σ2[1]*V[1] + σ2int[1]*Vint[1])... + σ2[end]*V[end]` and `V[end] = I`
-Minimization is achieved via majorization-minimization (MM) algorithm. 
-`V1[i]` and `V2[i]` are either included or excluded together.
+where 
+`Ω = (σ2[1]*V[1] + σ2int[1]*Vint[1]) + ... (σ2[m]*V[m] + σ2int[m]*Vint[m]) + σ2[end]*V[end]`, 
+`m` is no. of groups, and `V[i]` and `Vint[i]` are i-th covariance matrices for main 
+effect and interaction effect, respectively. Minimization is achieved via majorization
+minimization (MM) algorithm. `V[i]` and `Vint[i]` are either included or excluded together.
 
 # Input
 - `y`: nx1 trait/response vector
-- `G`: mx1 vector of genotype matrices (matrix of minor allele counts) for each SNP-set, (G[1],G[2],...,G[m])
-- `T`: nx1 vector of treatment status for each individual 
+- `G`: mx1 vector of genotype matrices (matrix of minor allele counts) for each SNP-set, 
+    (G[1],G[2],...,G[m]) where all G[i] have n rows 
+- `trt`: nx1 vector or nxn diagonal matrix whose entries indicate treatment status 
+    of each individual 
 
 # Keyword
 - `penfun`: penalty function, e.g., NoPenalty() (default), L1Penalty()
@@ -469,6 +416,38 @@ function vcselect(
 end 
 
 """
+    vcselectpath()
+
+# Input 
+- `y`: response vector
+- `X`: design matrix (if exists)
+- `G`: vector of genotype matrices, i.e. `(G[1], ..., G[m])`, where `m` is no. of genes
+- `trt`: vector or diagonal matrix of treatment status.
+
+# Keyword arguments
+-`penfun`: penalty function (e.g. `NoPenalty()`, `L1Penalty()`), default is `NoPenalty()`
+- `penwt`: penalty weight, default is (1,1,...1,0). `penwt` is a vector of length m+1
+- `nλ`: the number of lambda values, default is 100
+- `λpath`: a user supplied lambda sequence. 
+    Typically the program computes its own lambda sequence based on `nλ`; 
+    supplying `λpath` overrides this
+- `σ2`: initial estimates for main effects, default is (1,...,1)
+    i-th element (i=1,...,m) of the vector indicates main effect for i-th gene 
+    while the last element (i=m+1 or `σ2[end]`) is residual variance
+- `σ2int`: initial estimates for interaction effects, default is (1,...,1) 
+    i-th element of the vector indicates interaction effect for i-th gene 
+- `maxiter`: maximum number of iterations, default is 1000
+- `tol`: convergence tolerance, default is `1e-6`
+- `standardize`: logical flag for covariance matrix standardization, default is `true`.
+    If true, `V` and `Vint` are standardized by its Frobenius norm
+
+# Output 
+- `σ̂2path`: matrix of estimated variance components for genetic main effects 
+- `σ̂2intpath`: matrix of estimated variance components for interaction effects 
+- `β̂path`: matrix of fixed effects parameter estimates 
+* `objpath`: vector of objective value at `σ̂2` and `σ̂2int`
+* `λpath`: the actual sequence of `λ` values used
+* `niterspath`: vector of the number of iterations to convergence.
 
 """
 function vcselectpath(
@@ -581,7 +560,7 @@ function vcselectpath(
     # obtain estimates for fixed effects parameter 
     βpath = zeros(T, size(X, 2), length(λpath))
     for iter in 1:length(λpath)
-        βpath[:, iter] = betaestimate(y, X, V, Vint, view(σ2path, :, iter), 
+        βpath[:, iter] .= betaestimate(y, X, V, Vint, view(σ2path, :, iter), 
                 view(σ2intpath, :, iter))
     end 
 
