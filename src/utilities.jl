@@ -269,7 +269,7 @@ end
     if true, the last variance component is not included in calculating ranks
 
 # Output 
-- `ranking`: rank of each variance component based on the order in which it enters 
+- `ranks`: rank of each variance component based on the order in which it enters 
     solution path
 - `rest`: rest of the variance components that are estimated to be zero at all λ > 0
 """
@@ -288,25 +288,106 @@ function rankvarcomps(
         m = nvarcomps 
     end 
 
-    # initialize array for ranking 
-    ranking = Int[]
+    # initialize array for ranks 
+    ranks = Int[]
 
-    # go through solution path and find the order in which variance component enters
+    # fill in the array 
     for col in nlambda:-1:2
-        tmp = findall(x -> x > tol, view(σ2path, 1:m, col))
-        for j in tmp 
-            if !(j in ranking)
-                push!(ranking, j)
+        idx = findall(x -> x > tol, view(σ2path, 1:m, col))
+        sortedidx = sortperm(σ2path[idx], rev=true)
+        for j in idx[sortedidx]
+            if !(j in ranks)
+                push!(ranks, j)
             end
         end
     end 
+
     # rest of the variance components that are estimated to be zero at all λ > 0
-    rest = setdiff(1:m, ranking)
+    rest = setdiff(1:m, ranks)
     if resvarcomp 
         rest = [rest; nvarcomps]
     end 
 
-    return ranking, rest 
+    return ranks, rest 
+end 
+
+"""
+    rankvarcomps(σ2path; tol=1e-6, resvarcomp=true)
+
+Obtain rank of variance components from both solution paths, e.g. `σ2path` and `σ2intpath`.   
+Use this when variance components are paired. 
+
+# Input
+- `σ2path`: solution path (in numeric matrix), each column should 
+    represent estimated variance components at specific λ 
+    as in output from `vcselect`, `vcselectpath`
+- `σ2path2`: solution path (in numeric matrix), each column should 
+    represent estimated variance components at specific λ 
+    as in output from `vcselect`, `vcselectpath`
+
+# Keyword 
+- `tol`: a variance component less than `tol` is considered zero, default is 1e-6 
+- `resvarcomp`: logical flag indicating there is residual variance component in `σ2path`, 
+    default is true. If true, the last variance component is not included in ranks
+- `resvarcomp2`: logical flag indicating there is residual variance component in `σ2path2`,
+   default is true. If true, the last variance component is not included in ranks
+
+
+# Output 
+- `ranks`: rank of each variance component based on the order in which it enters 
+    solution path
+- `rest`: rest of the variance components that are estimated to be zero at all λ > 0
+"""
+function rankvarcomps(
+    σ2path      :: AbstractMatrix{T},
+    σ2path2     :: AbstractMatrix{T};
+    tol         :: Float64 = 1e-6,
+    resvarcomp  :: Bool = true,
+    resvarcomp2 :: Bool = true
+    ) where {T <: Real}
+
+    @assert size(σ2path, 2) == size(σ2path2, 2) "both solution path should have the same number of tuning parameters!\n"
+
+    # size of solution path 
+    nvarcomps, nlambda = size(σ2path)
+    nvarcomps2, nlambda2 = size(σ2path2)
+
+    if resvarcomp 
+        m = nvarcomps - 1 
+    else 
+        m = nvarcomps 
+    end 
+
+    if resvarcomp2 
+        m2 = nvarcomps - 1 
+    else 
+        m2 = nvarcomps
+    end 
+
+    @assert m == m2 "solution paths need to have the same number of variance components!\n"
+
+    # initialize array for ranks
+    ranks = Int[]
+
+    # go through solution path and find the order in which variance component enters
+    for col in nlambda:-1:2
+        bothpath = [view(σ2path, 1:m, col) view(σ2path2, 1:m2, col)]
+        normmat = mapslices(norm, bothpath; dims=2)
+        idx = findall(x -> x > tol, normmat)
+        sortedidx = sortperm(normmat[idx], rev=true)
+        for j in idx[sortedidx]
+            if !(j in ranks)
+                push!(ranks, j)
+            end
+        end
+    end 
+    # rest of the variance components that are estimated to be zero at all λ > 0
+    rest = setdiff(1:m, ranks)
+    if resvarcomp 
+        rest = [rest; nvarcomps]
+    end 
+
+    return ranks, rest 
 end 
 
 """
@@ -325,7 +406,7 @@ Output plot of solution path at varying λ values. Use backend such as `gr()`.
 - `title`: title of the figure, default is "Solution Path"
 - `xlab`: x-axis label, default is minimum of λpath
 - `ylab`: y-axis label, default is maximum of λpath
-- `nranking`: no. of ranks to display on legend, default is total number of variance components
+- `nranks`: no. of ranks to display on legend, default is total number of variance components
 - `linewidth`: line width, default is 1.0
 - `legend`: indicator to include legend or not, default is true 
 - `legendout`: indicator to move legend outside the plot, default is true 
