@@ -344,7 +344,7 @@ function rankvarcomps(
     σ2path2     :: AbstractMatrix{T};
     tol         :: Float64 = 1e-6,
     resvarcomp  :: Bool = true,
-    resvarcomp2 :: Bool = true
+    resvarcomp2 :: Bool = false
     ) where {T <: Real}
 
     @assert size(σ2path, 2) == size(σ2path2, 2) "both solution path should have the same number of tuning parameters!\n"
@@ -360,35 +360,39 @@ function rankvarcomps(
     end 
 
     if resvarcomp2 
-        m2 = nvarcomps - 1 
+        m2 = nvarcomps2 - 1 
     else 
-        m2 = nvarcomps
+        m2 = nvarcomps2
     end 
 
     @assert m == m2 "solution paths need to have the same number of variance components!\n"
 
     # initialize array for ranks
     ranks = Int[]
+    normpath = similar(σ2path)
 
     # go through solution path and find the order in which variance component enters
     for col in nlambda:-1:2
         bothpath = [view(σ2path, 1:m, col) view(σ2path2, 1:m2, col)]
-        normmat = mapslices(norm, bothpath; dims=2)
-        idx = findall(x -> x > tol, normmat)
-        sortedidx = sortperm(normmat[idx], rev=true)
+        normpath[1:m, col] = mapslices(norm, bothpath; dims=2)
+        idx = findall(x -> x > tol, view(normpath, 1:m, col))
+        sortedidx = sortperm(normpath[idx, col], rev=true)
         for j in idx[sortedidx]
             if !(j in ranks)
                 push!(ranks, j)
             end
         end
     end 
+    normpath[1:m, 1] = mapslices(norm, [view(σ2path, 1:m, 1) view(σ2path2, 1:m2, 1)]; dims=2)
+    normpath[end, :] .= σ2path[end, :]
+
     # rest of the variance components that are estimated to be zero at all λ > 0
     rest = setdiff(1:m, ranks)
     if resvarcomp 
         rest = [rest; nvarcomps]
     end 
 
-    return ranks, rest 
+    return ranks, rest, normpath 
 end 
 
 """
@@ -419,10 +423,10 @@ function plotsolpath(
     σ2path    :: AbstractMatrix{T},
     λpath     :: AbstractVector{T};
     title     :: AbstractString = "Solution Path",
-    xlab      :: AbstractString = "\\lambda",
+    xlab      :: AbstractString = "\$\\lambda\$",
     xmin      :: AbstractFloat = minimum(λpath),
     xmax      :: AbstractFloat = maximum(λpath),
-    ylab      :: AbstractString = "\\sigma^2",
+    ylab      :: AbstractString = "\$\\sigma_i^2\$",
     nranking  :: Int = size(σ2path, 1),
     linewidth :: AbstractFloat = 1.0, 
     legend    :: Bool = true,
@@ -475,11 +479,111 @@ function plotsolpath(
             plot(pt1, pt2, layout=l)
         end 
        
-           
-
     # no legend 
     else 
         plot(λpath, tr_σ2path[:, [ranking; rest]], legend=false, 
+        xaxis=(xlab, (xmin, xmax)), yaxis=(ylab), width=linewidth)
+        title!(title)     
+    end 
+
+end 
+
+"""
+    plotsolpath(σ2path, σ2intpath, λpath; title="Solution Path", xlab="λ", ylab="σ2", 
+            xmin=minimum(λpath), xmax=minimum(λpath), tol=1e-6)
+
+Output plot of a paired solution path at varying λ values. Use backend such as `gr()`.
+
+# Input
+- `σ2path`: solution path (in numeric matrix) to be plotted, each column should 
+    represent variance components at specific λ 
+    as in output from `vcselect`, `vcselectpath`
+- `σ2path`: solution path (in numeric matrix) to be plotted, each column should 
+    represent variance components at specific λ 
+    as in output from `vcselect`, `vcselectpath`
+- `λpath`: vector of tuning parameter λ values 
+
+# Keyword 
+- `title`: title of the figure, default is "Solution Path"
+- `xlab`: x-axis label, default is minimum of λpath
+- `ylab`: y-axis label, default is maximum of λpath
+- `nranks`: no. of ranks to display on legend, default is total number of variance components
+- `linewidth`: line width, default is 1.0
+- `legend`: indicator to include legend or not, default is true 
+- `legendout`: indicator to move legend outside the plot, default is true 
+
+# Output 
+- plot of solution path 
+"""
+function plotsolpath(
+    σ2path      :: AbstractMatrix{T},
+    σ2intpath   :: AbstractMatrix{T},
+    λpath       :: AbstractVector{T};
+    title       :: AbstractString = "Solution Path",
+    xlab        :: AbstractString = "\$\\lambda\$",
+    xmin        :: AbstractFloat = minimum(λpath),
+    xmax        :: AbstractFloat = maximum(λpath),
+    ylab        :: AbstractString = "\$||(\\sigma_{i1}^2, \\sigma_{i2}^2)||\$",
+    nranking    :: Int = size(σ2path, 1),
+    linewidth   :: AbstractFloat = 1.0, 
+    legend      :: Bool = true,
+    legendout   :: Bool = false,
+    resvarcomp  :: Bool = true,
+    resvarcomp2 :: Bool = false
+) where {T <: Real}
+
+    # error handling 
+    @assert size(σ2path, 2) == size(σ2intpath, 2) "both solution paths must have the same number of lambdas!\n"
+
+    # size of solution path 
+    m, nlambda = size(σ2intpath)
+
+    # get ranking of variance components
+    ranking, rest, normpath = rankvarcomps(σ2path, σ2intpath; 
+            resvarcomp=resvarcomp, resvarcomp2=resvarcomp2)
+
+    # transpose solpath s.t. each row is estimates at particular lambda
+    trnormpath = normpath'
+
+    if legend && nranking > 0 
+        legendlabel = "\\sigma^{2}[$(ranking[1])]"
+        if nranking == m+1 # display all non-zero variance components 
+            
+            for i in ranking[2:end]
+                legendlabel = hcat(legendlabel, "\\sigma^{2}[$i]")
+            end
+            nranking = length(ranking)
+           
+        elseif nranking > 1 # display the first non-zero variance component to enter the path  
+            for i in ranking[2:nranking]
+                legendlabel = hcat(legendlabel, "\\sigma^{2}[$i]")
+            end
+
+        end 
+
+        for i in 1:(m + 1 - nranking)
+            legendlabel = hcat(legendlabel, "")
+        end 
+
+        # plot permuted solution path (decreasing order)
+        if !legendout
+            plot(λpath, trnormpath[:, [ranking; rest]], label=legendlabel, 
+            xaxis=(xlab, (xmin, xmax)), yaxis=(ylab), width=linewidth, legendtitle="ranking")
+            title!(title) 
+        else 
+            pt1 = plot(λpath, trnormpath[:, [ranking; rest]],  legend=false,
+                xaxis=(xlab, (xmin, xmax)), yaxis=(ylab), width=linewidth, 
+                legendtitle="ranking")
+            title!(title)
+            pt2 = plot(λpath, trnormpath[:, [ranking; rest]], label=legendlabel, grid=false, 
+                        showaxis=false, xlims=(20,3), legendtitle="ranking") 
+            l = @layout [b c{0.13w}]
+            plot(pt1, pt2, layout=l)
+        end 
+       
+    # no legend 
+    else 
+        plot(λpath, trnormpath[:, [ranking; rest]], legend=false, 
         xaxis=(xlab, (xmin, xmax)), yaxis=(ylab), width=linewidth)
         title!(title)     
     end 
