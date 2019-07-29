@@ -21,8 +21,6 @@ call `vcselect(y, V; penfun, λ, penwt, σ2, maxiter, tol, verbose)`
 - `maxiter`: maximum number of iterations, default is 1000
 - `tol`: tolerance in difference of objective values for MM loop, default is 1e-8
 - `verbose`: display switch, default is false 
-- `checkfrobnorm`: if true, makes sures elements of `V` have frobenius norm 1.
-    Default is true 
 
 # Output
 - `σ2`: vector of estimated variance components 
@@ -41,14 +39,8 @@ function vcselect(
     σ2            :: AbstractVector{T} = ones(T, length(V)),
     maxiter       :: Int = 1000,
     tol           :: AbstractFloat = 1e-8,
-    verbose       :: Bool = false,
-    checkfrobnorm :: Bool = true
+    verbose       :: Bool = false
     ) where {T <: Real}
-
-    if checkfrobnorm 
-        # check frob norm equals to 1 
-        checkfrobnorm!(V)
-    end 
 
     # project onto null space 
     ynew, Vnew = nullprojection(y, X, V)
@@ -56,10 +48,10 @@ function vcselect(
     # call vcselect 
     if verbose 
         σ2, obj, niters, _, objvec  = vcselect(ynew, Vnew; penfun=penfun, λ=λ, penwt=penwt, 
-                σ2=σ2, maxiter=maxiter, tol=tol, verbose=verbose, checkfrobnorm=false)
+                σ2=σ2, maxiter=maxiter, tol=tol, verbose=verbose)
     else 
         σ2, obj, niters,  = vcselect(ynew, Vnew; penfun=penfun, λ=λ, penwt=penwt, 
-                σ2=σ2, maxiter=maxiter, tol=tol, verbose=verbose, checkfrobnorm=false)
+                σ2=σ2, maxiter=maxiter, tol=tol, verbose=verbose)
     end 
     
     # update Ω with estimated variance components 
@@ -108,8 +100,6 @@ Minimization is achieved via majorization-minimization (MM) algorithm.
 - `maxiter`: maximum number of iterations, default is 1000
 - `tol`: tolerance in difference of objective values for MM loop, default is 1e-6
 - `verbose`: display switch, default is false 
-- `checkfrobnorm`: if true, makes sures elements of `V` have frobenius norm 1.
-    Default is true 
 
 # Output
 - `σ2`: vector of estimated variance components 
@@ -422,14 +412,13 @@ function vcselectpath(
         for iter in 1:nlambda 
             σ2, objpath[iter], niterspath[iter], = 
                     vcselect(y, V; penfun=penfun, λ=λpath[iter], penwt=penwt, 
-                    σ2=σ2, maxiter=maxiter, tol=tol, verbose=verbose, checkfrobnorm=false)
+                    σ2=σ2, maxiter=maxiter, tol=tol, verbose=verbose)
             σ2path[:, iter] = σ2 
         end
 
     else # if no penalty, there is no lambda grid 
         σ2path, objpath, niterspath, = vcselect(y, V; 
-                penfun=penfun, maxiter=maxiter, tol=tol, verbose=verbose, 
-                checkfrobnorm=false)
+                penfun=penfun, maxiter=maxiter, tol=tol, verbose=verbose)
     end 
 
     # output 
