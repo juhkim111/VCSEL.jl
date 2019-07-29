@@ -427,7 +427,7 @@ function plotsolpath(
     xmin      :: AbstractFloat = minimum(λpath),
     xmax      :: AbstractFloat = maximum(λpath),
     ylab      :: AbstractString = "\$\\sigma_i^2\$",
-    nranking  :: Int = size(σ2path, 1),
+    nranks    :: Int = size(σ2path, 1),
     linewidth :: AbstractFloat = 1.0, 
     legend    :: Bool = true,
     legendout :: Bool = false
@@ -442,23 +442,23 @@ function plotsolpath(
     # transpose solpath s.t. each row is estimates at particular lambda
     tr_σ2path = σ2path'
 
-    if legend && nranking > 0 
+    if legend && nranks > 0 
         legendlabel = "\\sigma^{2}[$(ranking[1])]"
-        if nranking == nvarcomps # display all non-zero variance components 
+        if nranks == nvarcomps # display all non-zero variance components 
             
             for i in ranking[2:end]
                 legendlabel = hcat(legendlabel, "\\sigma^{2}[$i]")
             end
-            nranking = length(ranking)
+            nranks = length(ranking)
            
-        elseif nranking > 1 # display the first non-zero variance component to enter the path  
-            for i in ranking[2:nranking]
+        elseif nranks > 1 # display the first non-zero variance component to enter the path  
+            for i in ranking[2:nranks]
                 legendlabel = hcat(legendlabel, "\\sigma^{2}[$i]")
             end
 
         end 
 
-        for i in 1:(nvarcomps - nranking)
+        for i in 1:(nvarcomps - nranks)
             legendlabel = hcat(legendlabel, "")
         end 
 
@@ -498,7 +498,7 @@ Output plot of a paired solution path at varying λ values. Use backend such as 
 - `σ2path`: solution path (in numeric matrix) to be plotted, each column should 
     represent variance components at specific λ 
     as in output from `vcselect`, `vcselectpath`
-- `σ2path`: solution path (in numeric matrix) to be plotted, each column should 
+- `σ2intpath`: solution path (in numeric matrix) to be plotted, each column should 
     represent variance components at specific λ 
     as in output from `vcselect`, `vcselectpath`
 - `λpath`: vector of tuning parameter λ values 
@@ -523,8 +523,8 @@ function plotsolpath(
     xlab        :: AbstractString = "\$\\lambda\$",
     xmin        :: AbstractFloat = minimum(λpath),
     xmax        :: AbstractFloat = maximum(λpath),
-    ylab        :: AbstractString = "\$||(\\sigma_{i1}^2, \\sigma_{i2}^2)||\$",
-    nranking    :: Int = size(σ2path, 1),
+    ylab        :: AbstractString = "\$||(\\sigma_{i1}^2, \\sigma_{i2}^2)||_2\$",
+    nranks      :: Int = size(σ2path, 1),
     linewidth   :: AbstractFloat = 1.0, 
     legend      :: Bool = true,
     legendout   :: Bool = false,
@@ -545,23 +545,23 @@ function plotsolpath(
     # transpose solpath s.t. each row is estimates at particular lambda
     trnormpath = normpath'
 
-    if legend && nranking > 0 
+    if legend && nranks > 0 
         legendlabel = "\\sigma^{2}[$(ranking[1])]"
-        if nranking == m+1 # display all non-zero variance components 
+        if nranks == m+1 # display all non-zero variance components 
             
             for i in ranking[2:end]
                 legendlabel = hcat(legendlabel, "\\sigma^{2}[$i]")
             end
-            nranking = length(ranking)
+            nranks = length(ranking)
            
-        elseif nranking > 1 # display the first non-zero variance component to enter the path  
-            for i in ranking[2:nranking]
+        elseif nranks > 1 # display the first non-zero variance component to enter the path  
+            for i in ranking[2:nranks]
                 legendlabel = hcat(legendlabel, "\\sigma^{2}[$i]")
             end
 
         end 
 
-        for i in 1:(m + 1 - nranking)
+        for i in 1:(m + 1 - nranks)
             legendlabel = hcat(legendlabel, "")
         end 
 
