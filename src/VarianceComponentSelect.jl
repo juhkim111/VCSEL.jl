@@ -19,7 +19,6 @@ export
 # maximum lambda 
     maxlambda, 
 # utilities function 
-    checkfrobnorm!,
     matarray2mat,
     nvarcomps,
     plotsolpath, resetVCModel!, 
@@ -140,8 +139,6 @@ end
     VCModel(Yobs, Xobs, Vobs, [Σ])
 
 Default constructor of [`VCModel`](@ref) type.
-
-** components of V need to have frobenius norm 1 ** 
 """
 function VCModel(
     Yobs  :: AbstractMatrix{T},
