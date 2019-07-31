@@ -467,7 +467,7 @@ function vcselectpath!(
     λpath        :: AbstractArray = zeros(0), 
     maxiters     :: Int = 1000, 
     standardize  :: Bool = true, 
-    tol          :: AbstractFloat = 1e-8, 
+    tol          :: AbstractFloat = 1e-6, 
     verbose      :: Bool = false
     ) 
 
@@ -544,9 +544,9 @@ end
 - `penfun`: penalty function, default is NoPenalty()
 - `λ`: tuning parameter, default is 1      
 - `penwt`: penalty weights, default is [1,...1,0]
-- `maxiters`: maximum number of iterations, default is 1000
 - `standardize`: logical flag for covariance matrix standardization, default is `true`.
     If true, `V[i]` is standardized by its Frobenius norm
+- `maxiters`: maximum number of iterations, default is 1000
 - `tol`: tolerance for convergence, default is 1e-8
 - `verbose`: display switch, default is false  
 - `checktype`: check argument type switch, default is true
@@ -563,9 +563,9 @@ function vcselect!(
     penfun       :: Penalty = NoPenalty(),
     λ            :: Real = 1.0,
     penwt        :: AbstractVector = [ones(nvarcomps(vcm)-1); 0.0],
-    maxiters     :: Int = 1000,
     standardize  :: Bool = true, 
-    tol          :: Real = 1e-8,
+    maxiters     :: Int = 1000,
+    tol          :: Real = 1e-6,
     verbose      :: Bool = false,
     checktype    :: Bool = true 
     ) 
@@ -582,28 +582,36 @@ function vcselect!(
     # univariate update 
     if length(vcm) == 1
         if verbose 
-            Σ̂, β̂, obj, niters, Ω̂, objvec = mm_update_σ2!(vcm; penfun=penfun, λ=λ, 
+            _, _, obj, niters, Ω̂, objvec = mm_update_σ2!(vcm; penfun=penfun, λ=λ, 
                 penwt=penwt, maxiters=maxiters, tol=tol, verbose=true)
-            return Σ̂, β̂, obj, niters, Ω̂, objvec
         else 
-            Σ̂, β̂, obj, niters, Ω̂ = mm_update_σ2!(vcm; penfun=penfun, λ=λ, 
+            _, _, obj, niters, Ω̂ = mm_update_σ2!(vcm; penfun=penfun, λ=λ, 
                 penwt=penwt, maxiters=maxiters, tol=tol)
-            return Σ̂, β̂, obj, niters, Ω̂
         end 
       
     # multivariate update 
     elseif length(vcm) > 1
         if verbose 
-            Σ̂, β̂, obj, niters, Ω̂, objvec = mm_update_Σ!(vcm; penfun=penfun, λ=λ, 
+            _, _, obj, niters, Ω̂, objvec = mm_update_Σ!(vcm; penfun=penfun, λ=λ, 
             penwt=penwt, maxiters=maxiters, tol=tol, verbose=verbose)
-            # output 
-            return Σ̂, β̂, obj, niters, Ω̂, objvec
         else 
-            Σ̂, β̂, obj, niters, Ω̂ = mm_update_Σ!(vcm; penfun=penfun, λ=λ, 
+            _, _, obj, niters, Ω̂ = mm_update_Σ!(vcm; penfun=penfun, λ=λ, 
             penwt=penwt, maxiters=maxiters, tol=tol, verbose=verbose)
-            # output 
-            return Σ̂, β̂, obj, niters, Ω̂
         end 
+    end 
+
+    # if standardize=true, multiply by frobenius norm 
+    if standardize 
+        for i in 1:nvarcomps(vcm)
+            vcm.Σ[i] .*= norm(vcm.V[i])
+        end 
+    end 
+
+    # output 
+    if verbose 
+        return vcm.Σ̂, vcm.β̂, obj, niters, Ω̂, objvec
+    else
+        return vcm.Σ̂, vcm.β̂, obj, niters, Ω̂
     end 
 
 end 
@@ -614,14 +622,13 @@ end
 Update `Σ` using MM algorithm.
 """
 function mm_update_Σ!(
-    vcm         :: VCModel;
-    penfun      :: Penalty = NoPenalty(),
-    λ           :: Real = 1.0,
-    penwt       :: AbstractVector = [ones(nvarcomps(vcm)-1); 0.0],
-    maxiters    :: Int = 1000,
-    standardize :: Bool = true, 
-    tol         :: Real = 1e-8,
-    verbose     :: Bool = false 
+    vcm       :: VCModel;
+    penfun    :: Penalty = NoPenalty(),
+    λ         :: Real = 1.0,
+    penwt     :: AbstractVector = [ones(nvarcomps(vcm)-1); 0.0],
+    maxiters  :: Int = 1000, 
+    tol       :: Real = 1e-6,
+    verbose   :: Bool = false 
     ) 
 
     # initialize algorithm 
@@ -748,14 +755,13 @@ end
 Update `σ2` using MM algorithm. 
 """
 function mm_update_σ2!(
-    vcm         :: VCModel;
-    penfun      :: Penalty = NoPenalty(),
-    λ           :: Real = 1.0,
-    penwt       :: AbstractVector = [ones(nvarcomps(vcm)-1); 0.0],
-    maxiters    :: Int = 1000,
-    standardize :: Bool = true, 
-    tol         :: Real = 1e-8,
-    verbose     :: Bool = false 
+    vcm       :: VCModel;
+    penfun    :: Penalty = NoPenalty(),
+    λ         :: Real = 1.0,
+    penwt     :: AbstractVector = [ones(nvarcomps(vcm)-1); 0.0],
+    maxiters  :: Int = 1000,
+    tol       :: Real = 1e-6,
+    verbose   :: Bool = false 
     )
 
     # initialize algorithm 
