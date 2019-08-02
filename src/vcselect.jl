@@ -545,7 +545,8 @@ end
 - `λ`: tuning parameter, default is 1      
 - `penwt`: penalty weights, default is [1,...1,0]
 - `standardize`: logical flag for covariance matrix standardization, default is `true`.
-    If true, `V[i]` is standardized by its Frobenius norm
+    If true, `V[i]` is standardized by its Frobenius norm, and parameter estimates are 
+    returned on the original scale
 - `maxiters`: maximum number of iterations, default is 1000
 - `tol`: tolerance for convergence, default is 1e-8
 - `verbose`: display switch, default is false  
@@ -579,6 +580,11 @@ function vcselect!(
         @assert all(norm.(vcm.Σ) .> 0) "starting Σ should be strictly positive or non-zero matrices"
     end 
 
+    # update weight with reciprocal of frobenius norm 
+    if standardize 
+        vcm.wt .= 1 ./ norm.(vcm.V)
+    end 
+
     # univariate update 
     if length(vcm) == 1
         if verbose 
@@ -592,26 +598,19 @@ function vcselect!(
     # multivariate update 
     elseif length(vcm) > 1
         if verbose 
-            _, _, obj, niters, Ω̂, objvec = mm_update_Σ!(vcm; penfun=penfun, λ=λ, 
+            _, _, obj, niters, _, objvec = mm_update_Σ!(vcm; penfun=penfun, λ=λ, 
             penwt=penwt, maxiters=maxiters, tol=tol, verbose=verbose)
         else 
-            _, _, obj, niters, Ω̂ = mm_update_Σ!(vcm; penfun=penfun, λ=λ, 
+            _, _, obj, niters, = mm_update_Σ!(vcm; penfun=penfun, λ=λ, 
             penwt=penwt, maxiters=maxiters, tol=tol, verbose=verbose)
-        end 
-    end 
-
-    # if standardize=true, multiply by frobenius norm 
-    if standardize 
-        for i in 1:nvarcomps(vcm)
-            vcm.Σ[i] .*= norm(vcm.V[i])
         end 
     end 
 
     # output 
     if verbose 
-        return vcm.Σ̂, vcm.β̂, obj, niters, Ω̂, objvec
+        return vcm, obj, niters, objvec
     else
-        return vcm.Σ̂, vcm.β̂, obj, niters, Ω̂
+        return vcm, obj, niters
     end 
 
 end 
@@ -626,6 +625,7 @@ function mm_update_Σ!(
     penfun    :: Penalty = NoPenalty(),
     λ         :: Real = 1.0,
     penwt     :: AbstractVector = [ones(nvarcomps(vcm)-1); 0.0],
+    standardize :: Bool = true, 
     maxiters  :: Int = 1000, 
     tol       :: Real = 1e-6,
     verbose   :: Bool = false 
@@ -637,10 +637,7 @@ function mm_update_Σ!(
 
     # working arrays 
     kron_I_one = kron(Matrix(I, d, d), ones(n)) # dn x d
-    # ones_d = ones(d, d)
-    # for i in 1:m
-    #     #vcm.kron_ones_V[i] = kron(ones_d, vcm.V[i])
-    # end 
+   
 
     # initial objective value 
     obj = objvalue(vcm; penfun=penfun, λ=λ, penwt=penwt)
@@ -660,12 +657,13 @@ function mm_update_Σ!(
             # if previous iterate is zero, move on to the next component
             if iszero(norm(vcm.Σ[i])) 
                 continue 
-            # if penalty weight is zero, move onto the next component 
-            elseif iszero(penwt[i]) && i < m
-                fill!(vcm.Σ[i], 0)
-                #vcm.Σ[i] = zeros(d, d)
-                continue 
             end 
+            # # if penalty weight is zero, move onto the next component 
+            # elseif iszero(penwt[i]) && i < m
+            #     fill!(vcm.Σ[i], 0)
+            #     #vcm.Σ[i] = zeros(d, d)
+            #     continue 
+            # end 
 
             # `(kron_I_one)' * [kron(ones(d, d), V[i]) .* Ωinv] * (kron_I_one)`
             copyto!(vcm.Mndxnd, vcm.kron_ones_V[i] .* vcm.Ωinv)
@@ -732,6 +730,12 @@ function mm_update_Σ!(
 
     end # end of iteration 
 
+    # back to original scale  
+    if standardize 
+        vcm.Σ .*= vcm.wt
+        vcm.wt .= ones(m + 1)
+    end 
+
     # construct final Ω matrix
     updateΩ!(vcm)
     updateΩobs!(vcm)
@@ -755,20 +759,23 @@ end
 Update `σ2` using MM algorithm. 
 """
 function mm_update_σ2!(
-    vcm       :: VCModel;
-    penfun    :: Penalty = NoPenalty(),
-    λ         :: Real = 1.0,
-    penwt     :: AbstractVector = [ones(nvarcomps(vcm)-1); 0.0],
-    maxiters  :: Int = 1000,
-    tol       :: Real = 1e-6,
-    verbose   :: Bool = false 
+    vcm         :: VCModel;
+    penfun      :: Penalty = NoPenalty(),
+    λ           :: Real = 1.0,
+    penwt       :: AbstractVector = [ones(nvarcomps(vcm)-1); 0.0],
+    standardize :: Bool = true, 
+    maxiters    :: Int = 1000,
+    tol         :: Real = 1e-6,
+    verbose     :: Bool = false 
     )
 
     # initialize algorithm 
     n = size(vcm)[1]
-    m = nvarcomps(vcm)
+    m = nvarcomps(vcm) - 1
 
     # initial objective value 
+    updateΩ!(vcm)
+    update_arrays!(vcm)
     obj = objvalue(vcm; penfun=penfun, λ=λ, penwt=penwt)
   
     # display 
@@ -779,22 +786,16 @@ function mm_update_σ2!(
         objvec = obj 
     end    
 
-    σ2tmp = zeros(m)
+    σ2tmp = zeros(m + 1)
   
     # MM loop 
     niters = 0
     for iter in 1:maxiters
           # update variance components
-          for j in 1:(m - 1)
+          for j in 1:m
               # move onto the next variance component if previous iterate is 0
               if iszero(vcm.Σ[j]) 
                   σ2tmp[j] = 0 
-                  continue 
-              # set to 0 and move onto the next variance component if penalty weight is 0
-              elseif iszero(penwt[j]) 
-                  #vcm.Σ[j] = 0
-                  σ2tmp[j] = 0 
-                  #fill!(vcm.Σ[j], 0)
                   continue 
               end 
   
@@ -808,18 +809,14 @@ function mm_update_σ2!(
                     penstrength = λ * penwt[j]
                     # L1 penalty 
                     if isa(penfun, L1Penalty)  
-                        σ2tmp[j] = vcm.Σ[j] * √(const2 / (const1 + penstrength / sqrt(vcm.Σ[j])))
-                        #vcm.Σ[j] *= √(const2 / (const1 + penstrength / sqrt(vcm.Σ[j])))
+                        σ2tmp[j] = vcm.Σ[j] * √(const2 / (const1 + 
+                                penstrength / (vcm.wt[j] * sqrt(vcm.Σ[j]))))
                     # MCP penalty 
                     elseif isa(penfun, MCPPenalty) 
                         if vcm.Σ[j] <= (penfun.γ * λ)^2
-                            σ2tmp[j] = vcm.Σ[j] *
-                                √(const2 / (const1 + (λ / sqrt(vcm.Σ[j])) - (1 / penfun.γ)))
-                        
-                            #vcm.Σ[j] *= 
-                            #√(const2 / (const1 + (λ / sqrt(vcm.Σ[j])) - (1 / penfun.γ)))
+                            σ2tmp[j] = vcm.Σ[j] * √(const2 / (const1 + 
+                                (λ / sqrt(vcm.Σ[j]) - 1 / penfun.γ) * (1 / vcm.wt[j])))
                         else 
-                            
                             σ2tmp[j] = vcm.Σ[j] * √(const2 / const1)  
                             #vcm.Σ[j] *= √(const2 / const1)  
                         end 
@@ -835,11 +832,6 @@ function mm_update_σ2!(
           # update last variance component and Ω
           σ2tmp[end] = vcm.Σ[end] *  √(dot(vcm.ΩinvY, vcm.ΩinvY) / tr(vcm.Ωinv))
           σ2tmp[end] = clamp(σ2tmp[end], tol, Inf)
-        #   vcm.Σ[end] *= √(dot(vcm.ΩinvY, vcm.ΩinvY) / tr(vcm.Ωinv))
-        #   clamp!(vcm.Σ[end], tol, Inf)
-          
-        #   vcm.Σ[end] *= √(dot(vcm.ΩinvY, vcm.ΩinvY) / tr(vcm.Ωinv))
-        #   vcm.Σ[end] = clamp(vcm.Σ[end], tol, Inf)
 
           vcm.Σ .= σ2tmp
 
@@ -866,6 +858,12 @@ function mm_update_σ2!(
           end
   
       end # end of iteration 
+
+      # back to original scale  
+      if standardize 
+            vcm.Σ .*= vcm.wt
+            vcm.wt .= ones(m + 1)
+      end 
   
       # construct Ω matrix 
       updateΩ!(vcm)
