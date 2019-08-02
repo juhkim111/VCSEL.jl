@@ -27,7 +27,6 @@ function objvalue(
     ) where {T <: Real}
    
     obj = logdet(vcm.ΩcholL) + (1 // 2) * dot(vcm.vecY, vcm.ΩinvY)
-    #obj = (1 // 2) * logdet(vcm.Ωchol) + (1 // 2) * dot(vcm.vecY, vcm.ΩinvY)
     obj += (1 // 2) * prod(size(vcm)) * log(2π)
 
     # add penalty term 
@@ -96,9 +95,10 @@ function nullprojection(
             mul!(tmp, V[i], B)
             Vnew[i] = BLAS.gemm('T', 'N', B, tmp)
             # divide by its frobenius norm  
-            Vnew[i] ./= norm(Vnew[i])
+            #Vnew[i] ./= norm(Vnew[i])
         end 
-        Vnew[end] = Matrix{eltype(B)}(I, s, s) ./ √s
+        Vnew[end] = Matrix{eltype(B)}(I, s, s)
+        #Vnew[end] = Matrix{eltype(B)}(I, s, s) ./ √s
 
         # output 
         return ynew, Vnew, B 
