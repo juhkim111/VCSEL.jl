@@ -50,6 +50,7 @@ struct VCModel{T <: Real}
     β           :: AbstractVecOrMat{T}
     Σ           :: Union{AbstractVector{T}, AbstractVector{Matrix{T}}}
     # covariance matrix and working arrays 
+    wt          :: AbstractVector{T}         # weight for standardization 
     Ω           :: AbstractMatrix{T}         # covariance matrix 
     ΩcholL      :: LowerTriangular{T}        # cholesky factor 
     Ωinv        :: AbstractMatrix{T}         # inverse of covariance matrix 
@@ -88,6 +89,7 @@ function VCModel(
     # 
     β = Vector{T}(undef, size(Xobs, 2)) # px1 
     # accumulate covariance matrix 
+    wt = ones(length(Vobs))
     Ω = zeros(T, n, n)
     for j in 1:length(σ2) 
         Ω .+= σ2[j] .* V[j]
@@ -108,7 +110,7 @@ function VCModel(
 
     # 
     VCModel{T}(yobs, Xobs, Vobs, y, vecY, V,
-            β, σ2, Ω, Ωchol.L, Ωinv, ΩinvY, 
+            β, σ2, wt, Ω, Ωchol.L, Ωinv, ΩinvY, 
             R, kron_ones_V, L, Linv, Mndxnd, Mdxd, Mnxd,
             Ωobs)
 end 
@@ -158,6 +160,8 @@ function VCModel(
     p = size(Xobs, 2)
     # 
     β = Matrix{T}(undef, p, d)
+    #
+    wt = ones(length(Vobs))
     # accumulate covariance matrix 
     Ω = zeros(T, nd, nd)
     for j in 1:length(Σ)
@@ -184,7 +188,7 @@ function VCModel(
 
     # 
     VCModel{T}(Yobs, Xobs, Vobs, Y, vecY, V,
-            β, Σ, Ω, Ωchol.L, Ωinv, ΩinvY, 
+            β, Σ, wt, Ω, Ωchol.L, Ωinv, ΩinvY, 
             R, kron_ones_V, L, Linv, Mndxnd, Mdxd, Mnxd,
             Ωobs)
 
@@ -255,7 +259,7 @@ Update covariance matrix `Ω`.
 function updateΩ!(vcm::VCModel)
     fill!(vcm.Ω, 0)
     for k in 1:nvarcomps(vcm)
-        kronaxpy!(vcm.Σ[k], vcm.V[k], vcm.Ω)
+        kronaxpy!(vcm.wt[k] .* vcm.Σ[k], vcm.V[k], vcm.Ω)
     end
     vcm.Ω
 end
