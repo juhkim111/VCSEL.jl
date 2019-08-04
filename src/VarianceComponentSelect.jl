@@ -146,7 +146,8 @@ function VCModel(
     Yobs  :: AbstractMatrix{T},
     Xobs  :: AbstractVecOrMat{T},
     Vobs  :: AbstractVector{Matrix{T}},
-    Σ     :: AbstractVector{Matrix{T}} = fill(ones(T, size(Y, 2), size(Y, 2)), length(V)),
+    Σ     :: AbstractVector{Matrix{T}} = [Matrix(one(T)*I, 
+                                        size(Yobs, 2), size(Yobs, 2)) for i in 1:length(Vobs)]
     ) where {T <: AbstractFloat}
 
     # handle error 
@@ -171,7 +172,7 @@ function VCModel(
     Ωchol = cholesky!(Symmetric(Ω))
     Ωinv = inv(Ωchol) 
     ΩinvY = Ωinv * vecY  
-    R = reshape(ΩinvY, n, d)
+    R = reshape(ΩinvY, n, d) # n x d 
     kron_ones_V = similar(V)
     kron_I_one = kron(Matrix(I, d, d), ones(n)) # dn x d
     ones_d = ones(d, d)
@@ -181,7 +182,7 @@ function VCModel(
     L = Matrix{T}(undef, d, d)
     Linv = Matrix{T}(undef, d, d)
     Mndxnd = Matrix{T}(undef, nd, nd)
-    Mdxd = Matrix{T}(undef, d, d)
+    Mdxd = Matrix{T}(undef, d, d) # d x d 
     Mnxd = Matrix{T}(undef, n, d)
     # 
     Ωobs = Matrix{T}(undef, length(Yobs), length(Yobs))
