@@ -18,15 +18,17 @@ export plotsolpath, rankvarcomps, matarray2mat
 #     end 
 # end 
 """
-    rankvarcomps(σ2path; tol=1e-6)
+    rankvarcomps(σ2path; tol=1e-8)
 
 # Input
 - `σ2path`: solution path (in numeric matrix), each column should 
     represent estimated variance components at specific λ 
-    as in output from `vcselect`, `vcselectpath`
+    as in output from `vcselect!`, `vcselectpath!`
+- `resvarcomp`: logical flag indicating the presence of residual variance component 
+    in `σ2path`. If `true`, last row of `σ2path` is ignored. Default is `true`
 
 # Keyword Argument 
-- `tol`: a variance component less than `tol` is considered zero, default is 1e-6 
+- `tol`: a variance component less than `tol` is considered zero, default is 1e-8 
 
 # Output 
 - `ranking`: rank of each variance component based on the order in which it enters 
@@ -34,42 +36,56 @@ export plotsolpath, rankvarcomps, matarray2mat
 - `rest`: rest of the variance components that are estimated to be zero at all λ > 0
 """
 function rankvarcomps(
-    σ2path :: AbstractMatrix{T};
-    tol    :: Float64=1e-6
+    σ2path     :: AbstractMatrix{T};
+    tol        :: Float64 = 1e-8,
+    resvarcomp :: Bool = true
     ) where {T <: Real}
 
     # size of solution path 
-    novarcomp, nlambda = size(σ2path)
+    novarcomps, nlambda = size(σ2path)
+
+    # check if residual variance component is present in solution path 
+    if resvarcomp 
+        m = novarcomps - 1 
+    else 
+        m = novarcomps 
+    end 
 
     # initialize array for ranking 
     ranking = Int[]
 
     # go through solution path and find the order in which variance component enters
     for col in nlambda:-1:2
-        tmp = findall(x -> x > tol, view(σ2path, 1:(novarcomp-1), col))
-        for j in tmp 
+        idx = findall(x -> x > tol, view(σ2path, 1:m, col))
+        sortedidx = sortperm(σ2path[idx], rev=true)
+        for j in idx[sortedidx] 
             if !(j in ranking)
                 push!(ranking, j)
             end
         end
     end 
     # rest of the variance components that are estimated to be zero at all λ > 0
-    rest = setdiff(1:(novarcomp-1), ranking)
-    rest = [rest; novarcomp]
-
+    rest = setdiff(1:m, ranking)
+    if resvarcomp
+        rest = [rest; novarcomps]
+    end 
+    
     return ranking, rest 
 end 
 
 """
-    rankvarcomps(Σpath; tol=1e-6)
+    rankvarcomps(Σpath; tol=1e-8)
 
 # Input
-- `Σpath`: solution path (matrix of matrix), each column should 
+- `Σpath`: solution path (matrix of matrices), each column should 
     contain estimated variance components at specific λ 
     as in output from `vcselectpath!`
+- `resvarcomp`: logical flag indicating the presence of residual variance component 
+    in `σ2path`. If `true`, last row of `σ2path` is ignored. Default is `true`
 
 # Keyword Argument 
-- `tol`: a variance component whose `p`-norm is less than `tol` is considered zero, default is 1e-6 
+- `tol`: a variance component whose `p`-norm is less than `tol` is considered zero, 
+    default is 1e-8 
 - `p`: `p` for determining which norm to use, default is 2. See [`norm(A, p::Real=2)`](@ref)
 
 # Output 
@@ -78,29 +94,41 @@ end
 - `rest`: rest of variance components that are estimated to be zero at all λ > 0
 """
 function rankvarcomps(
-    Σpath  :: AbstractMatrix{Matrix{T}};
-    tol    :: Float64=1e-6,
-    p      :: Real = 2
+    Σpath      :: AbstractMatrix{Matrix{T}};
+    tol        :: Float64 = 1e-8,
+    p          :: Real = 2,
+    resvarcomp :: Bool = true
     ) where {T <: Real}
 
     # size of solution path 
-    nvarcomps, nlambda = size(Σpath)
+    novarcomps, nlambda = size(Σpath)
+
+    # check if residual variance component is present in solution path 
+    if resvarcomp 
+        m = novarcomps - 1 
+    else 
+        m = novarcomps 
+    end
 
     # initialize array for ranking 
     ranking = Int[]
 
     # go through solution path and find the order in which variance component enters
     for col in nlambda:-1:2
-        tmp = findall(x -> norm(x, p) > tol, view(Σpath, 1:(nvarcomps-1), col))
-        for j in tmp 
+        idx = findall(x -> norm(x, p) > tol, view(Σpath, 1:m, col))
+        sortedidx = sortperm(norm.(Σpath[idx]), rev=true)
+        for j in idx[sortedidx] 
             if !(j in ranking)
                 push!(ranking, j)
             end
         end
     end 
+    
     # rest of the variance components that are estimated to be zero at all λ > 0
-    rest = setdiff(1:(nvarcomps-1), ranking)
-    rest = [rest; nvarcomps]
+    rest = setdiff(1:m, ranking)
+    if resvarcomp 
+        rest = [rest; novarcomps]
+    end 
 
     return ranking, rest 
 end 
