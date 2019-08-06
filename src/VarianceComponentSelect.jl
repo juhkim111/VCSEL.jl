@@ -20,7 +20,7 @@ export
     maxlambda, 
 # utilities function 
     matarray2mat,
-    nvarcomps,
+    ncovariates, nvarcomps, nmeanparams, 
     plotsolpath, resetVCModel!, 
     rankvarcomps,   
     updateΩ!, update_arrays!,
@@ -147,7 +147,7 @@ function VCModel(
     Xobs  :: AbstractVecOrMat{T},
     Vobs  :: AbstractVector{Matrix{T}},
     Σ     :: AbstractVector{Matrix{T}} = [Matrix(one(T)*I, 
-                                        size(Yobs, 2), size(Yobs, 2)) for i in 1:length(Vobs)]
+            size(Yobs, 2), size(Yobs, 2)) for i in 1:length(Vobs)]
     ) where {T <: AbstractFloat}
 
     # handle error 
@@ -203,7 +203,8 @@ Construct [`VCModel`](@ref) from `Y` and `V` where `Y` is matrix. `X` is treated
 function VCModel(
     Yobs  :: AbstractMatrix{T},
     Vobs  :: AbstractVector{Matrix{T}},
-    Σ     :: AbstractVector{Matrix{T}} = fill(ones(T, size(Y, 2), size(Y, 2)), length(V)),
+    Σ     :: AbstractVector{Matrix{T}} = [Matrix(one(T)*I, 
+            size(Yobs, 2), size(Yobs, 2)) for i in 1:length(Vobs)]
     ) where {T <: Real}
 
     # handle error 
@@ -326,18 +327,13 @@ function resetVCModel!(
     vcm :: VCModel
     ) 
     d = length(vcm)
-    if d == 1
-        fill!(vcm.Σ, 1)
-        #vcm.Σ = ones(eltype(vcm.Σ), nvarcomps(vcm))
+    if typeof(vcm.Σ[1]) <: Matrix 
+        resetVCModel!(vcm, 
+                [Matrix(one(eltype(vcm.Σ[1]))*I, d, d) for i in eachindex(vcm.Σ)])
     else 
-        fill!(vcm.Σ, ones(eltype(vcm.Σ[1]), d, d))
-        #vcm.Σ = fill(ones(eltype(vcm.Σ[1]), length(vcm), length(vcm)), nvarcomps(vcm))
+        resetVCModel!(vcm,
+                ones(eltype(vcm.Σ[1]), nvarcomps(vcm)))
     end 
-    updateΩ!(vcm)
-    # allocate arrays 
-    updateΩobs!(vcm)
-    update_arrays!(vcm)
-    vcm.R .= reshape(vcm.ΩinvY, size(vcm))
 end 
 
 include("vcselect.jl")
