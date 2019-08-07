@@ -361,13 +361,11 @@ function mm_update_σ2!(
                                 (λ / sqrt(vcm.Σ[j]) - 1 / penfun.γ) * (1 / vcm.wt[j])))
                         else 
                             σ2tmp[j] = vcm.Σ[j] * √(const2 / const1)  
-                            #vcm.Σ[j] *= √(const2 / const1)  
                         end 
                     end 
               # update variance component under no penalty 
               elseif isa(penfun, NoPenalty)
                 σ2tmp[j] = vcm.Σ[j] * √(const2 / const1)  
-                #vcm.Σ[j] *= √(const2 / const1)
               end
   
           end # end of for loop over j
@@ -423,7 +421,11 @@ function mm_update_σ2!(
 
 end 
 
+"""
+    vcselect(Y, V; penfun=NoPenalty(), λ=1.0, penwt=[ones(length(V)-1); 0.0],
+                standardize=true, maxiters=1000, tol=1e-6, verbose=false, checktype=true)
 
+"""
 function vcselect(
     Y           :: AbstractVecOrMat{T},
     V           :: AbstractVector{Matrix{T}};
