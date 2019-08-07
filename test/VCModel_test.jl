@@ -25,7 +25,6 @@ V[m + 1] = Matrix(I, n, n) ./ √n
 # form Ω
 Ω = zeros(n, n)
 for i = 1:(m + 1)
-   #Ω .+= σ2[i] * V[i]
    axpy!(σ2[i], V[i], Ω)
 end
 Ωchol = cholesky(Symmetric(Ω))
@@ -35,57 +34,25 @@ y = X * β + Ωchol.L * randn(n)
 vcm1 = VCModel(yreml, V, [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 1.0])
 vcm2 = VCModel(y, X, V, [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 1.0])
 
-
-# Σ̂path, β̂path, λpath, objpath, niterspath = vcselectpath!(vcm2; penfun=L1Penalty())
-# @testset begin 
-#   @test vcm2.Σ == Σ̂path[:, end]
-
-# end 
-
-# @info "OGOG"
-# sigma2path, objpath, λpath, _, betapath = vcselectpath(y2, X, V; σ2=[0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 1.0],
-# penfun=L1Penalty(), fixedeffects=true)
-
-# println("Σpath = ", Σpath)
-# println("sigma2path=", sigma2path)
-# println("βpath = ", βpath)
-
-#   println("betapath = ", betapath)
-
-#   @test Σpath == sigma2path
-#   @test βpath == betapath
-
-# σ2_est, beta_est, = vcselect(y2, X, V; penfun=L1Penalty(), λ=5.0, σ2=[0.5, 0.5, 0.5, 0.5, 0.5, 1.0])
-# println("σ2_est = ", σ2_est)
-# println("beta_est =", beta_est)
-# @testset begin
-#   @test vcm1.Σ == σ2_est
-# end 
-
-# vcselect!(vcm2; penfun=L1Penalty(), λ=5.0)
-# println(vcm2.Σ)
-# σ2,= vcselect(y2, X, V; penfun=L1Penalty(), λ=5.0, σ2=[0.5, 0.5, 0.5, 0.5, 0.5, 1.0])
-# println(σ2)
-# @testset begin
-#   @test vcm2.Σ == σ2
-# end 
-
-# @testset begin 
-#   @test nvarcomps(vcm1) == m 
-#   @test nvarcomps(vcm2) == m
-# end 
+@testset begin
+  @test length(vcm1) == 1
+  @test ncovariates(vcm2) == p 
+  @test size(vcm1) == (n, )
+  @test nmeanparams(vcm2) == p 
+  @test nvarcomps(vcm1) == m + 1
+end 
 
 ## generate data from a d-variate (d>1) response variance component model
 Random.seed!(123)
 n = 50         # no. observations
 d = 3           # no. categories
-nvarcomps = 5   # no. variance components
+m = 5   # no. variance components
 p = 4           # no. covariates
 X = randn(n, p) # covariate matrix 
 β = ones(p, d)  # fixed effects parameter matrix 
 
 # variance component matrix 
-Σ = [zeros(d, d) for i in 1:nvarcomps]
+Σ = [zeros(d, d) for i in 1:(m+1)]
 for i in [1, 4]
   Σi = randn(d, d)
   Σ[i] = Σi * Σi'
@@ -93,8 +60,8 @@ end
 Σ[end] = Matrix(I, d, d)
 
 # vector of covariance matrix 
-V  = Array{Matrix{Float64}}(undef, nvarcomps)
-for i = 1:(nvarcomps - 1)
+V  = Array{Matrix{Float64}}(undef, m+1)
+for i = 1:m
   Vi = randn(n, 20)
   V[i] = Vi * Vi'
   V[i] = V[i] ./ norm(V[i])
@@ -103,7 +70,7 @@ V[end] = Matrix(I, n, n) ./ √n
 
 # form Ω
 Ω = zeros(n*d, n*d)
-for i = 1:nvarcomps
+for i = 1:(m + 1)
     Ω .+= kron(Σ[i], V[i])
 end
 Ωchol = cholesky!(Symmetric(Ω))
@@ -113,73 +80,20 @@ Yreml = reshape(Ωchol.L * randn(n*d), n, d)
 Y = X * β + reshape(Ωchol.L * randn(n*d), n, d)
 
 # define VCModel
-Σinit = [ones(d, d) for i in 1:nvarcomps]
-Σinit[end] = Matrix(I, d, d)
-vcmreml_mult = VCModel(Yreml, V, Σinit)
-Σinit = [ones(d, d) for i in 1:nvarcomps]
-Σinit[end] = Matrix(I, d, d)
-vcm_mult = VCModel(Y, X, V, Σinit)
+Σinit = [Matrix(1.0*I, d, d) for i in 1:(m+1)]
+vcm1 = VCModel(Yreml, V)
+vcm1_init = VCModel(Yreml, V, Σinit)
 
+vcm2 = VCModel(Y, X, V)
+vcm2_init = VCModel(Y, X, V, Σinit)
 
-
-# # Σ̂, β̂, obj, niters, Ω̂, objvec = vcselect!(vcm; penfun=L1Penalty(), λ=5.0, verbose=true)
-
-# # @testset begin 
-# #   for i in 1:(length(objvec) - 1)
-# #     @test objvec[i] >= objvec[i+1]
-# #   end 
-# # end 
-
-# # Σinit = [ones(d, d) for i in 1:nvarcomps]
-# # Σinit[end] = Matrix(I, d, d)
-# # Σ̂, β, = vcselect(Y, X, V; penfun=L1Penalty(), λ=25.0, Σ=Σinit)
-# # println("vcm.Σ = ", vcm.Σ)
-# # println("Σ̂ = ", Σ̂)
-# # println("vcm.β = ", vcm.β)
-# # println("β =", β)
-# # @testset begin
-# # @test Σ̂ == vcmreml.Σ
-# # end
-
-# nlambda = 2 
-
-
-# @info "vcselectpath OG"
-
-# Σinit = [ones(d, d) for i in 1:nvarcomps]
-# Σinit[end] = Matrix(I, d, d)
-# @time Σpath_og, objpath_og, lambdapath_og, _, betapath_og   = vcselectpath(Y, X, V;
-#       penfun=L1Penalty(), nlambda=nlambda, Σ=Σinit, fixedeffects=true, verbose=true)
-# # # 
-
-# # @info "vcselectpath!"
-
-# @info "vcselectpath!"
-# @time Σ̂path, betapath, lambdapath, objpath,  = vcselectpath!(vcm; penfun=L1Penalty(), 
-#   nλ=nlambda, verbose=true)
-
-# # Σinit = [ones(d, d) for i in 1:nvarcomps]
-# # Σinit[end] = Matrix(I, d, d)
-
-# # @info "vcselectpath OG"
-# # @time Σpath_og, objpath_og, lambdapath_og,   = vcselectpath(Yreml, V;
-# #   penfun=L1Penalty(), nlambda=nlambda, Σ=Σinit, verbose=true)
-
-
-# println("objpath = ", objpath)
-# println("objpath_og =", objpath_og)
-# println("Σpath_og = ", Σpath_og)
-# println("Σpath = ", Σ̂path)
-# println("betapath = ", betapath)
-# println("betapath_og=", betapath_og)
-
-
-
-# @testset begin 
-# @test Σ̂path == Σpath_og
-# @test betapath == betapath_og 
-#end 
-
+@testset begin 
+  @test nvarcomps(vcm1) == m + 1
+  @test vcm1.Σ == vcm1_init.Σ
+  @test vcm2.Σ == vcm2_init.Σ
+  @test vcm1.Ω == vcm1_init.Ω
+  @test vcm2.Ω == vcm2_init.Ω
+end 
 
 
 end 
