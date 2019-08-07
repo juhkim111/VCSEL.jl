@@ -9,7 +9,7 @@ using PenaltyFunctions, LinearAlgebra, StatsBase, Distributions, Reexport, Plots
 import Base: size, length, +
 export 
 # struct 
-    VCModel, 
+    VCModel, VCintModel, 
 # operations 
     clamp_diagonal!,
     fixedeffects,
@@ -67,6 +67,7 @@ struct VCModel{T <: Real}
 end
 
 
+
 """
     VCModel(yobs, Xobs, Vobs, [σ2])
 
@@ -82,14 +83,17 @@ function VCModel(
     # handle error 
     @assert length(Vobs) == length(σ2) "vector of covariance matrices and vector of variance components should have the same length!\n"
 
-    # covariance matrix using original scale 
+    # project onto null space 
     y, V, = nullprojection(yobs, Xobs, Vobs)
     n = length(y)
     vecY = y 
-    # 
+
+    # initialize fixed effects parameter 
     β = Vector{T}(undef, size(Xobs, 2)) # px1 
-    # accumulate covariance matrix 
+
     wt = ones(length(Vobs))
+
+    # overall covariance matrix 
     Ω = zeros(T, n, n)
     for j in 1:length(σ2) 
         Ω .+= σ2[j] .* V[j]
@@ -215,8 +219,129 @@ function VCModel(
 
     # call VCModel constructor 
     VCModel(Yobs, Xobs, Vobs, Σ)
-
 end 
+
+"""
+    VCintModel 
+    VCintModel(Y, X, V, Σ)
+    VCintModel(Y, X, V)
+    VCintModel(Y, V, Σ)
+    VCintModel(Y, V)
+
+Variance component interaction model type. Stores the data and model parameters of a variance 
+component model. 
+"""
+struct VCintModel{T <: Real} 
+    # data
+    Yobs        :: AbstractVecOrMat{T}
+    Xobs        :: AbstractVecOrMat{T}
+    Vobs        :: AbstractVector{Matrix{T}}
+    Vintobs     :: AbstractVector{Matrix{T}}
+    Y           :: AbstractVecOrMat{T}       # projected response matrix 
+    vecY        :: AbstractVector{T}         # vectorized projected response matrix 
+    V           :: AbstractVector{Matrix{T}} # projected V
+    Vint        :: AbstractVector{Matrix{T}}
+    # model parameters 
+    β           :: AbstractVecOrMat{T}
+    Σ           :: Union{AbstractVector{T}}
+    Σint        :: Union{AbstractVector{T}}
+    # covariance matrix and working arrays 
+    wt          :: AbstractVector{T}         # weight for standardization 
+    Ω           :: AbstractMatrix{T}         # covariance matrix 
+    ΩcholL      :: LowerTriangular{T}        # cholesky factor 
+    Ωinv        :: AbstractMatrix{T}         # inverse of covariance matrix 
+    ΩinvY       :: AbstractVector{T}         # Ωinv * Y OR Ωinv * vec(Y) 
+    R           :: AbstractVecOrMat{T}
+    kron_ones_V :: AbstractVector{Matrix{T}}
+    L           :: AbstractVecOrMat{T}
+    Linv        :: AbstractVecOrMat{T}
+    Mndxnd      :: AbstractMatrix{T}
+    Mdxd        :: AbstractVecOrMat{T}
+    Mnxd        :: AbstractVecOrMat{T}
+    # covariance matrix in original dimension 
+    Ωobs        :: AbstractMatrix{T}
+end
+
+"""
+    VCintModel(yobs, Xobs, Vobs, Vintobs, σ2, σ2int)
+
+    Default constructor of [`VCModel`](@ref) type when `y` is vector. 
+"""
+function VCintModel(
+    yobs    :: AbstractVecOrMat{T},
+    Xobs    :: AbstractVecOrMat{T},
+    Vobs    :: AbstractVector{Matrix{T}},
+    Vintobs :: AbstractVector{Matrix{T}},
+    σ2      :: AbstractVector{T} = ones(length(Vobs)),
+    σ2int   :: AbstractVector{T} = ones(length(Vintobs))
+    ) where {T <: Real}
+
+    # handle error 
+    @assert size(yobs, 2) == 1 "VCintModel can take only a vector!\n"
+
+    # project onto null space 
+    y, V, Vint, = nullprojection(yobs, Xobs, Vobs, Vintobs)
+    n = size(y, 1)
+    vecY = y 
+
+    # initialize fixed effects parameter 
+    β = Vector{T}(undef, size(Xobs, 2)) # px1 
+    wt = ones(length(Vobs))
+
+    # overall covariance matrix 
+    Ω = zeros(T, n, n)
+    for j in 1:length(σ2int)
+        axpy!(σ2[j], V[j], Ω) 
+        axpy!(σ2int[j], Vint[j], Ω) 
+    end
+    axpy!(σ2[end], V[end], Ω)
+
+    # allocate arrays 
+    Ωchol = cholesky!(Symmetric(Ω))
+    Ωinv = inv(Ωchol) 
+    ΩinvY = Ωinv * y
+    R = reshape(ΩinvY, n, 1)
+    kron_ones_V = similar(V)
+    L = Vector{T}(undef, 1)
+    Linv = Vector{T}(undef, 1)
+    Mndxnd = Matrix{T}(undef, n, 0)
+    Mdxd = Vector{T}(undef, 1)
+    Mnxd = Vector{T}(undef, n) # nx1
+    # allocate matrix in obs diemension
+    Ωobs = Matrix{T}(undef, size(yobs, 1), size(yobs, 1))
+
+    # 
+    VCintModel{T}(yobs, Xobs, Vobs, Vintobs, y, vecY, V, Vint,
+            β, σ2, σ2int, wt, Ω, Ωchol.L, Ωinv, ΩinvY, 
+            R, kron_ones_V, L, Linv, Mndxnd, Mdxd, Mnxd,
+            Ωobs)
+end 
+
+"""
+    VCintModel(yobs, Vobs, Vintobs, [σ2, σ2int])
+
+Construct [`VCModel`](@ref) from `y`, `V`, and `Vint` where `y` is vector. 
+`X` is treated empty. 
+"""
+function VCintModel(
+    yobs    :: AbstractVecOrMat{T},
+    Vobs    :: AbstractVector{Matrix{T}},
+    Vintobs :: AbstractVector{Matrix{T}},
+    σ2      :: AbstractVector{T} = ones(length(Vobs)),
+    σ2int   :: AbstractVector{T} = ones(length(Vintobs))
+    ) where {T <: Real}
+
+    # handle error 
+    @assert length(Vobs) == length(σ2) "vector of covariance matrices and vector of variance components should have the same length!\n"
+    @assert length(Vintobs) == length(σ2int) "vector of covariance matrices and vector of variance components should have the same length!\n"
+
+    # create empty matrix for Xobs 
+    Xobs = zeros(T, length(yobs), 0)
+
+    # call VCintModel constructor 
+    VCModel(yobs, Xobs, Vobs, Vintobs, σ2, σ2int)
+end 
+
 
 """
     length(vcm)
