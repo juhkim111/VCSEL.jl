@@ -422,3 +422,25 @@ function mm_update_σ2!(
       return vcm, obj, niters 
 
 end 
+
+
+function vcselect(
+    Y           :: AbstractVecOrMat{T},
+    V           :: AbstractVector{Matrix{T}};
+    penfun      :: Penalty = NoPenalty(),
+    λ           :: Real = 1.0,
+    penwt       :: AbstractVector = [ones(length(V)-1); 0.0],
+    standardize :: Bool = true, 
+    maxiters    :: Int = 1000,
+    tol         :: Real = 1e-6,
+    verbose     :: Bool = false,
+    checktype   :: Bool = true 
+    ) where {T <: Real}
+
+    vcmtmp = VCModel(Y, V)
+    _, obj, niters = vcselect!(vcmtmp; penfun=penfun, λ=λ, penwt=penwt, standardize=standardize,
+            maxiters=maxiters, tol=tol, verbose=verbose, checktype=checktype)
+
+    return vcmtmp.Σ, obj, niters
+
+end 
