@@ -337,7 +337,7 @@ function resetVCModel!(
 end 
 
 include("vcselect.jl")
-include("vcselect_multivariate.jl")
+#include("vcselect_multivariate.jl")
 include("maxlambda.jl")
 include("utilities.jl")
 include("linalg_operations.jl")
