@@ -66,38 +66,40 @@ function vcselectpath!(
         # initialize arrays 
         objpath = zeros(T, nλ)
         niterspath = zeros(Int, nλ)
-        if typeof(vcm.Yobs) <: Vector 
+        if typeof(vcm.Σ[1]) <: Matrix 
             # initialize arrays
-            Σ̂path = zeros(T, nvarcomps(vcm), nλ)
-            β̂path = zeros(T, p, nλ)
+            Σ̂path = Array{Matrix{T}}(undef, nvarcomps(vcm), nλ)
+            β̂path = Array{Matrix{T}}(undef, nλ)
             # solution path 
             for iter in 1:nλ
-                _, objpath[iter], niterspath[iter], = 
-                        vcselect!(vcm; penfun=penfun, λ=λpath[iter], penwt=penwt, 
-                        maxiters=maxiters, tol=tol, verbose=verbose, checktype=false)
-                Σ̂path[:, iter] = vcm.Σ 
-                β̂path[:, iter] = vcm.β
-            end
-        elseif typeof(vcm.Yobs) <: Matrix 
-            # initialize arrayss
-            Σ̂path = fill(Matrix{Float64}(undef, d, d), nvarcomps(vcm), nλ)
-            β̂path = fill(Matrix{Float64}(undef, p, d), nλ)
-            # solution path 
-            for iter in 1:nλ
-                _, _, objpath[iter], niterspath[iter], = 
+                _, objpath[iter], niterspath[iter] = 
                         vcselect!(vcm; penfun=penfun, λ=λpath[iter], penwt=penwt, 
                         maxiters=maxiters, tol=tol, verbose=verbose, checktype=false)
                 Σ̂path[:, iter] = vcm.Σ 
                 β̂path[iter] = vcm.β
             end
+        else
+            # initialize arrays
+            Σ̂path = zeros(T, nvarcomps(vcm), nλ)
+            β̂path = zeros(T, p, nλ)
+            # solution path 
+            for iter in 1:nλ
+                _, objpath[iter], niterspath[iter] = 
+                        vcselect!(vcm; penfun=penfun, λ=λpath[iter], penwt=penwt, 
+                        maxiters=maxiters, tol=tol, verbose=verbose, checktype=false)
+                Σ̂path[:, iter] .= vcm.Σ
+                β̂path[:, iter] .= vcm.β
+            end
         end 
 
+        return Σ̂path, β̂path, λpath, objpath, niterspath
+
     else # if no penalty, there is no lambda grid 
-        Σ̂path, β̂path, objpath, niterspath, = vcselect!(vcm; penfun=penfun, penwt=penwt, 
+        _, objpath, niterspath = vcselect!(vcm; penfun=penfun, penwt=penwt, 
             maxiters=maxiters, tol=tol, verbose=verbose, checktype=false)
-    end 
-   
-    return Σ̂path, β̂path, λpath, objpath, niterspath
+        
+        return vcm.Σ, vcm.β, zeros(0), objpath, niterspath 
+    end  
 
 end 
 
@@ -153,14 +155,14 @@ function vcselect!(
         vcm.wt .= 1 ./ norm.(vcm.V)
     end 
 
-    # univariate update 
-    if typeof(vcm.Yobs) <: Vector # length(vcm) == 1 
-        _, obj, niters = mm_update_σ2!(vcm; penfun=penfun, λ=λ, 
+    # multivariate update 
+    if typeof(vcm.Σ[1]) <: Matrix  # length(vcm) > 1
+        _, obj, niters = mm_update_Σ!(vcm; penfun=penfun, λ=λ, 
             penwt=penwt, maxiters=maxiters, tol=tol, verbose=verbose)
     
-    # multivariate update 
-    elseif typeof(vcm.Yobs) <: Matrix # length(vcm) > 1
-        _, obj, niters = mm_update_Σ!(vcm; penfun=penfun, λ=λ, 
+    # univariate update 
+    else
+        _, obj, niters = mm_update_σ2!(vcm; penfun=penfun, λ=λ, 
             penwt=penwt, maxiters=maxiters, tol=tol, verbose=verbose)
     end 
 
@@ -204,6 +206,8 @@ function mm_update_Σ!(
         #objvec = obj 
     end  
 
+    Σtmp = deepcopy(vcm.Σ)
+
     ## MM loop 
     niters = 0
     for iter in 1:maxiters
@@ -239,13 +243,15 @@ function mm_update_Σ!(
             @inbounds for k in 1:d
                 storage.values[k] = storage.values[k] > 0 ? √storage.values[k] : 0
             end 
-            copyto!(vcm.Σ[i], BLAS.gemm('N', 'T', 
+            copyto!(Σtmp[i], BLAS.gemm('N', 'T', 
                     storage.vectors * Diagonal(storage.values), storage.vectors))
-            copyto!(vcm.Σ[i], BLAS.gemm('T', 'N', 
-                    sqrt(vcm.wt[i]), vcm.Linv, vcm.Σ[i] * vcm.Linv))
+            copyto!(Σtmp[i], BLAS.gemm('T', 'N', 
+                    sqrt(vcm.wt[i]), vcm.Linv, Σtmp[i] * vcm.Linv))
         end 
 
-        clamp_diagonal!(vcm.Σ[end], tol, Inf)
+        # update Σ
+        clamp_diagonal!(Σtmp[end], tol, Inf)
+        vcm.Σ .= Σtmp
 
         # update working arrays 
         updateΩ!(vcm)
