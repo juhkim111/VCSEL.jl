@@ -17,7 +17,6 @@ penalty terms.
 
 # Output 
 - `obj`: objective value 
-
 """
 function objvalue(
     vcm    :: VCModel;
@@ -34,6 +33,49 @@ function objvalue(
         pen = 0.0
         for j in 1:(nvarcomps(vcm) - 1)
             pen += penwt[j] * value(penfun, √tr(vcm.Σ[j]))
+        end 
+        obj += λ * pen
+    end 
+
+    return obj 
+end 
+
+"""
+    objvalue(vcm; penfun, λ, penwt)
+
+Calculate objective value, i.e. negative log-likelihood of [`VCintModel`](@ref) instance 
+plus penalty terms. 
+
+# Input 
+- `vcm`: VCintModel
+
+# Keyword Argument 
+- `penfun`: penalty function (e.g. NoPenalty(), L1Penalty()), default is NoPenalty()
+- `λ`: tuning parameter, default is 1
+- `penwt`: penalty weight, default is (1,...1,0)
+
+# Output 
+- `obj`: objective value    
+"""
+function objvalue(
+    vcm    :: VCintModel;
+    penfun :: Penalty = NoPenalty(),
+    λ      :: T = one(T),
+    penwt  :: AbstractVector{T} = [ones(T, ngroups(vcm)); zero(T)]
+    ) where {T <: Real}
+
+    obj = logdet(vcm.ΩcholL) + (1 // 2) * dot(vcm.vecY, vcm.ΩinvY)
+    obj += (1 // 2) * size(vcm, 1) * log(2π)
+
+    # add penalty term 
+    if !isa(penfun, NoPenalty)
+        pen = 0.0 
+        for j in 1:ngroups(vcm)
+            if iszero(vcm.Σ[j]) && iszero(vcm.Σint[j])
+                continue 
+            else 
+                pen += penwt[j] * value(penfun, √(vcm.Σ[j] + vcm.Σint[j]))
+            end 
         end 
         obj += λ * pen
     end 
