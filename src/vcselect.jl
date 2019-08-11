@@ -7,25 +7,24 @@ Generate solution path of variance components along varying lambda values.
 - `vcm`: VCModel
 
 # Keyword 
-- `penfun`: penalty function, default is NoPenalty()
+- `penfun`: penalty function (e.g. NoPenalty(), L1Penalty(), MCPPenalty()), default is NoPenalty()
 - `penwt`: weights for penalty term, default is (1,1,...1,0)
-- `nlambda`: number of tuning parameter values, default is 100
-- `λpath`: user-supplied grid of tuning parameter values
-        If unspeficied, internally generate a grid
-- `σ2`: initial estimates, default is (1,1,...,1)
+- `nλ`: number of tuning parameter values, default is 100
+- `λpath`: a user supplied `λ` sequence. Typically the program computes its own `λ` 
+        sequence based on `nλ`; supplying `λpath` overrides this
 - `maxiter`: maximum number of iteration for MM loop, default is 1000
 - `standardize`: logical flag for covariance matrix standardization, default is `true`.
     If true, `V[i]` is standardized by its Frobenius norm
-- `tol`: tolerance in difference of objective values for MM loop, default is 1e-8
+- `tol`: convergence tolerance, default is `1e-6`
 - `verbose`: display switch, default is false 
 
 # Output 
-- `σ2path`: matrix of estimated variance components at each tuning parameter `λ`,
+- `Σ̂path`: matrix of estimated variance components at each tuning parameter `λ`,
         each column gives vector of estimated variance components `σ2` at certain `λ`
-- `objpath`: vector of objective values at each tuning parameter `λ`
-- `λpath`: vector of tuning parameter values used 
+- `β̂path`: matrix of fixed parameter estimates at each `λ`
+- `λpath`: sequence of `λ` values used
+- `objpath`: vector of objective values at each tuning parameter `λ` 
 - `niterspath`: vector of no. of iterations to convergence 
-
 """
 function vcselectpath!(
     vcm          :: VCModel; 
@@ -98,7 +97,7 @@ function vcselectpath!(
         _, objpath, niterspath = vcselect!(vcm; penfun=penfun, penwt=penwt, 
             maxiters=maxiters, tol=tol, verbose=verbose, checktype=false)
         
-        return vcm.Σ, vcm.β, zeros(0), objpath, niterspath 
+        return vcm.Σ, vcm.β, zeros(1), objpath, niterspath 
     end  
 
 end 
@@ -118,7 +117,7 @@ end
     If true, `V[i]` is standardized by its Frobenius norm, and parameter estimates are 
     returned on the original scale
 - `maxiters`: maximum number of iterations, default is 1000
-- `tol`: tolerance for convergence, default is 1e-8
+- `tol`: convergence tolerance, default is `1e-6`
 - `verbose`: display switch, default is false  
 - `checktype`: check argument type switch, default is true
 
