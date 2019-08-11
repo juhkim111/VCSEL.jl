@@ -246,7 +246,8 @@ struct VCintModel{T <: Real}
     Σ           :: Union{AbstractVector{T}}
     Σint        :: Union{AbstractVector{T}}
     # covariance matrix and working arrays 
-    wt          :: AbstractVector{T}         # weight for standardization 
+    wt          :: AbstractVector{T}         # weight for standardization
+    wt_int      :: AbstractVector{T}         # weight for standardization  
     Ω           :: AbstractMatrix{T}         # covariance matrix 
     ΩcholL      :: LowerTriangular{T}        # cholesky factor 
     Ωinv        :: AbstractMatrix{T}         # inverse of covariance matrix 
@@ -263,7 +264,7 @@ struct VCintModel{T <: Real}
 end
 
 """
-    VCintModel(yobs, Xobs, Vobs, Vintobs, σ2, σ2int)
+    VCintModel(yobs, Xobs, Vobs, Vintobs, [σ2, σ2int])
 
     Default constructor of [`VCModel`](@ref) type when `y` is vector. 
 """
@@ -286,7 +287,10 @@ function VCintModel(
 
     # initialize fixed effects parameter 
     β = Vector{T}(undef, size(Xobs, 2)) # px1 
+
+    # initialize weight vector 
     wt = ones(length(Vobs))
+    wt_int = ones(length(Vintobs))
 
     # overall covariance matrix 
     Ω = zeros(T, n, n)
@@ -312,7 +316,7 @@ function VCintModel(
 
     # 
     VCintModel{T}(yobs, Xobs, Vobs, Vintobs, y, vecY, V, Vint,
-            β, σ2, σ2int, wt, Ω, Ωchol.L, Ωinv, ΩinvY, 
+            β, σ2, σ2int, wt, wt_int, Ω, Ωchol.L, Ωinv, ΩinvY, 
             R, kron_ones_V, L, Linv, Mndxnd, Mdxd, Mnxd,
             Ωobs)
 end 
@@ -339,7 +343,7 @@ function VCintModel(
     Xobs = zeros(T, length(yobs), 0)
 
     # call VCintModel constructor 
-    VCModel(yobs, Xobs, Vobs, Vintobs, σ2, σ2int)
+    VCintModel(yobs, Xobs, Vobs, Vintobs, σ2, σ2int)
 end 
 
 
@@ -349,6 +353,7 @@ end
 Length `d` of response. 
 """
 length(vcm::VCModel) = size(vcm.Y, 2)
+length(vcm::VCintModel) = size(vcm.Y, 2)
 
 """
     ncovariates(vcm)
@@ -356,6 +361,7 @@ length(vcm::VCModel) = size(vcm.Y, 2)
 Number of fixed effects parameters `p` of a [`VCModel`](@ref). 
 """
 ncovariates(vcm::VCModel) = size(vcm.Xobs, 2)
+ncovariates(vcm::VCintModel) = size(vcm.Xobs, 2)
 
 """
     size(vcm)
@@ -363,6 +369,7 @@ ncovariates(vcm::VCModel) = size(vcm.Xobs, 2)
 Size `(n, d)` of response matrix of a [`VCModel`](@ref). 
 """
 size(vcm::VCModel) = size(vcm.Y)
+size(vcm::VCintModel) = size(vcm.Y)
 
 """
     nmeanparams(vcm)
@@ -370,6 +377,7 @@ size(vcm::VCModel) = size(vcm.Y)
 Number of mean parameters `p * d` of [`VCModel`](@ref).
 """
 nmeanparams(vcm::VCModel) = length(vcm.β)
+nmeanparams(vcm::VCintModel) = length(vcm.β)
 
 """
     nvarcomps(vcm)
@@ -377,11 +385,20 @@ nmeanparams(vcm::VCModel) = length(vcm.β)
 Number of variance components. 
 """
 nvarcomps(vcm::VCModel) = length(vcm.Σ)
+nvarcomps(vcm::VCintModel) = length(vcm.Σ) + length(vcm.Σint)
+
+""" 
+    ngroups(vcm)
+
+Number of groups, `m`.
+"""
+ngroups(vcm::VCModel) = nvarcomps(vcm) - 1
+ngroups(vcm::VCintModel) = length(vcm.Σ) - 1
 
 """
-    updateΩ!(vcm)
+    updateΩ!(vcm::VCModel)
 
-Update covariance matrix `Ω`.
+Update covariance matrix `Ω` for `VCModel`.
 """
 function updateΩ!(vcm::VCModel)
     fill!(vcm.Ω, 0)
@@ -392,9 +409,24 @@ function updateΩ!(vcm::VCModel)
 end
 
 """
-    updateΩobs!(vcm)
+    updateΩ!(vcm::VCintModel)
 
-Update covariance matrix `Ωobs`. `Ωobs` has the same dimension as `Vobs`. 
+Update covariance matrix `Ω` for `VCintModel`.
+"""
+function updateΩ!(vcm::VCintModel)
+    fill!(vcm.Ω, 0)
+    for k in 1:ngroups(vcm)
+        kronaxpy!(vcm.wt[k] .* vcm.Σ[k], vcm.V[k], vcm.Ω)
+        kronaxpy!(vcm.wt_int[k] .* vcm.Σint[k], vcm.Vint[k], vcm.Ω)
+    end
+    kronaxpy!(vcm.wt[end] .* vcm.Σ[end], vcm.V[end], vcm.Ω)
+    vcm.Ω
+end
+
+"""
+    updateΩobs!(vcm::VCModel)
+
+Update covariance matrix `Ωobs` for `VCModel`. `Ωobs` has the same dimension as `Vobs`. 
 """
 function updateΩobs!(vcm::VCModel)
 
@@ -410,11 +442,31 @@ function updateΩobs!(vcm::VCModel)
 end
 
 """
+    updateΩobs!(vcm::VCintModel)
+
+Update covariance matrix `Ωobs` for `VCintModel`. `Ωobs` has the same dimension as `Vobs`. 
+"""
+function updateΩobs!(vcm::VCintModel)
+
+    if isempty(vcm.Xobs) 
+        vcm.Ωobs .= vcm.Ω
+    else
+        fill!(vcm.Ωobs, 0)
+        for k in 1:ngroups(vcm)
+            kronaxpy!(vcm.Σ[k], vcm.Vobs[k], vcm.Ωobs)
+            kronaxpy!(vcm.Σint[k], vcm.Vintobs[k], vcm.Ωobs)
+        end
+        kronaxpy!(vcm.Σ[end], vcm.Vobs[end], vcm.Ωobs)
+    end 
+    vcm.Ωobs
+end
+
+"""
     update_arrays!(vcm)
 
 Update working arrays `Ωchol`, `Ωinv`, `ΩinvY`, `R`.
 """
-function update_arrays!(vcm::VCModel)
+function update_arrays!(vcm::Union{VCModel, VCintModel})
     # vcm.Ωchol = cholesky!(Symmetric(vcm.Ω))
     # vcm.Ωinv[:] = inv(vcm.Ωchol)
     Ωchol = cholesky!(Symmetric(vcm.Ω))
@@ -462,7 +514,7 @@ function resetVCModel!(
 end 
 
 include("vcselect.jl")
-#include("vcselect_multivariate.jl")
+include("vcselect_interact.jl")
 include("maxlambda.jl")
 include("utilities.jl")
 include("linalg_operations.jl")
