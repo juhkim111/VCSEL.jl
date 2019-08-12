@@ -44,7 +44,6 @@ end
 Ωchol = cholesky(Symmetric(Ω))
 y = Ωchol.L * randn(n)
 y2 = X * β + Ωchol.L * randn(n)
-nlambda = 20 
 
 # initialize VCintModel 
 vcm = VCintModel(y, V, Vint)
@@ -66,6 +65,10 @@ _, obj, niters, objvec = vcselect!(vcmX; verbose=true)
     @test objvec[i] >= objvec[i+1]
   end 
 end
+
+vcmXΣ = deepcopy(vcmX.Σ)
+vcmXΣint = deepcopy(vcmX.Σint)
+vcmXβ = deepcopy(vcmX.β)
 
 # reset model 
 resetModel!(vcm)
@@ -89,13 +92,40 @@ _, obj, niters, objvec = vcselect!(vcmX; penfun=L1Penalty(), λ=1.5, verbose=tru
   end 
 end
 
-println("vcm.Σ=", vcm.Σ)
-println("vcm.Σint=", vcm.Σint)
-println("vcm.β=", vcm.β)
-println("vcmX.Σ=", vcmX.Σ)
-println("vcmX.Σint=", vcmX.Σint)
-println("vcmX.β=", vcmX.β)
+# reset model 
+resetModel!(vcm)
+resetModel!(vcmX)
 
-# obtains solution path 
+# obtain solution path (no penalty)
+Σ̂path, Σ̂intpath, β̂path, λpath, objpath, niterspath = vcselectpath!(vcmX; penfun=NoPenalty())
+resetModel!(vcmX)
+Σ̂path2, Σ̂intpath2, β̂path2, λpath2, objpath2, niterspath2 = vcselectpath!(vcmX)
+
+@testset begin
+  @test vcmXΣ == Σ̂path
+  @test vcmXΣint == Σ̂intpath
+  @test vcmXβ == β̂path
+  @test Σ̂path == Σ̂path2
+  @test Σ̂intpath == Σ̂intpath2
+  @test β̂path == β̂path2
+  @test λpath == λpath2
+  @test objpath == objpath2
+  @test niterspath == niterspath2 
+end 
+
+# obtain solution path, not given lambda grid 
+Σ̂path, β̂path, λpath, objpath, niterspath = vcselectpath!(vcm; penfun=L1Penalty(), nλ=20)
+println("Σ̂path=", Σ̂path)
+println("β̂path=", β̂path)
+println("λpath=", λpath)
+println("objpath=", objpath)
+
+# obtain solution path, given lambda grid
+Σ̂path, β̂path, λpath, objpath, niterspath = vcselectpath!(vcm; penfun=L1Penalty(), 
+    λpath=range(1,10,length=20))
+println("Σ̂path=", Σ̂path)
+println("β̂path=", β̂path)
+println("λpath=", λpath)
+println("objpath=", objpath)
 
 end # end of module 
