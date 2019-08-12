@@ -1,4 +1,4 @@
-module vcselectTest
+module vcselect_test
 
 #using Random, LinearAlgebra, VarianceComponentSelect, Test
 include("../src/VarianceComponentSelect.jl")
@@ -73,7 +73,7 @@ _, obj2, niters2 = vcselect!(vcm1_Y2; verbose=true, standardize=false,
   @test vcm_Y2.Σ == vcm1_Y2.Σ
 end 
 
-resetVCModel!(vcm_Y2)
+resetModel!(vcm_Y2)
 
 vcselect!(vcm_Y2; penfun=L1Penalty(), λ=2.5)
 
@@ -93,7 +93,7 @@ prevβ = deepcopy(vcm_y.β)
   @test vcm1_y.β == vcm_y.β
 end 
 
-resetVCModel!(vcm_y)
+resetModel!(vcm_y)
 _, obj22, niters22 = vcselect!(vcm_y; penfun=MCPPenalty())
 @testset begin
   @test obj2 == obj22
@@ -112,8 +112,8 @@ _, obj2, niters2 = vcselect!(vcm_Y)
   @test vcm1_Y.Σ == vcm_Y.Σ
 end 
 
-resetVCModel!(vcm_y)
-resetVCModel!(vcm_y2)
+resetModel!(vcm_y)
+resetModel!(vcm_y2)
 Σ̂path, β̂path, λpath, objpath, niterspath = vcselectpath!(vcm_y; 
       penfun=MCPPenalty(), λpath=range(0, 8, length=10))
 ranking, = rankvarcomps(Σ̂path)
@@ -123,7 +123,7 @@ ranking, = rankvarcomps(Σ̂path)
 ranking, = rankvarcomps(Σ̂path)
 
 
-resetVCModel!(vcm_Y2)
+resetModel!(vcm_Y2)
 Σ̂path2, β̂path2, λpath2, objpath2, niterspath2 = vcselectpath!(vcm_Y2; 
       penfun=L1Penalty(), λpath=range(0, 6, length=5))
 ranking2, = rankvarcomps(Σ̂path2)
@@ -138,7 +138,7 @@ end
   @test ranking == ranking2
 end 
 
-resetVCModel!(vcm_Y, [Matrix(1.0*I, 1, 1) for i in 1:nvarcomps(vcm_Y)])
+resetModel!(vcm_Y, [Matrix(1.0*I, 1, 1) for i in 1:nvarcomps(vcm_Y)])
 
 ## generate data from a 3-variate response variance component model
 Random.seed!(123)
@@ -190,8 +190,8 @@ _, obj1, niters1 = vcselect!(vcm1; standardize=true)
   @test vcm.β == vcm1.β
 end 
 
-resetVCModel!(vcm)
-resetVCModel!(vcm1)
+resetModel!(vcm)
+resetModel!(vcm1)
 
 @testset begin 
   @test vcm.Σ == [Matrix(1.0*I, d, d) for i in 1:(m+1)]
@@ -209,30 +209,20 @@ _, obj1, niters1 = vcselect!(vcm1; penfun=L1Penalty(), λ=2.5)
 end 
 
 # path given lambda grid 
-resetVCModel!(vcm)
-resetVCModel!(vcm1)
+resetModel!(vcm)
+resetModel!(vcm1)
 
 Σ̂path, β̂path, λpath, objpath, niterspath = vcselectpath!(vcm; 
       penfun=NoPenalty(), λpath=range(1,10,length=20))
-      println("Σ̂path=", Σ̂path)
-      println("β̂path=", β̂path)
-      println("λpath=", λpath)
-      println("objpath=", objpath)
-      println("niterspath=", niterspath)
 
 Σ̂path, β̂path, λpath, objpath, niterspath = vcselectpath!(vcm1; penfun=L1Penalty(), 
       λpath=range(1,10,length=20))
-      println("Σ̂path=", Σ̂path)
-      println("β̂path=", β̂path)
-      println("λpath=", λpath)
-      println("objpath=", objpath)
-      println("niterspath=", niterspath)
 
 ranking, = rankvarcomps(Σ̂path)
 
 # path not given lambda grid 
-resetVCModel!(vcm)
-resetVCModel!(vcm1)
+resetModel!(vcm)
+resetModel!(vcm1)
 
 Σ̂path, β̂path, λpath, objpath, niterspath = vcselectpath!(vcm; 
       penfun=L1Penalty(), nλ=20)
