@@ -3,13 +3,12 @@ module MaxLambdaTest
 #using Random, LinearAlgebra, VarianceComponentSelect, Test
 include("../src/VarianceComponentSelect.jl") #
 using .VarianceComponentSelect #
-using Random, LinearAlgebra, Test #
+using Random, LinearAlgebra, Test, StatsBase #
 Random.seed!(123)
-tol = 1e-10
-
-Random.seed!(123)
+tol = 1e-8
 
 # generate data from an univariate response variance component model 
+@info "testing maxlambda for univariate model"
 n = 100   # no. observations
 m = 5     # no. variance components
 p = 4     # no. covariates
@@ -62,6 +61,7 @@ maxλ_lasso, = maxlambda(Y, V; penfun=L1Penalty())
 end 
 
 ## generate data from a d-variate response variance component model
+@info "testing maxlambda for multivariate model"
 n = 100         # no. observations
 d = 3           # no. categories
 m = 5   # no. variance components
@@ -102,6 +102,74 @@ maxλ_lasso, iter = maxlambda(Y, V; penfun=L1Penalty())
     for i in 1:m
       @test isapprox(Σ̂_lasso[i], zeros(d, d); atol=tol)
     end 
+end 
+
+## generate interaction model 
+@info "testing maxlambda for interaction model"
+n = 100   # no. observations
+m = 10    # no. variance components
+p = 3     # no. covariates
+X = randn(n, p)
+β = ones(p)
+
+G  = Array{Matrix{Float64}}(undef, m)
+V  = Array{Matrix{Float64}}(undef, m + 1)
+Vint  = Array{Matrix{Float64}}(undef, m)
+W  = Array{Matrix{Float64}}(undef, m + 1)
+Wint  = Array{Matrix{Float64}}(undef, m)
+trt = zeros(Int, n)
+sample!([0, 1], trt)
+trtmat = Diagonal(trt)
+for i = 1:m
+  G[i] = randn(n, 50)
+  V[i] = G[i] * G[i]'
+  Vint[i] = trtmat * V[i] * trtmat 
+  W[i] = V[i] / norm(V[i])
+  Wint[i] = Vint[i] / norm(Vint[i])
+end
+V[end] = Matrix(I, n, n) #
+W[end] = Matrix(I, n, n) ./ √n
+
+# truth 
+σ2, σ2int = zeros(m + 1), zeros(m)
+σ2[1] = σ2[4] = σ2[9] = 5.0
+σ2int[1] = σ2int[4] = σ2int[9] = 5.0
+σ2[end] = 1.0
+
+# form Ω
+Ω = zeros(n, n)
+for i = 1:m
+   Ω .+= σ2[i] * V[i]
+   Ω .+= σ2int[i] * Vint[i]
+end
+Ω .+= σ2[end] * V[end]
+
+Ωchol = cholesky(Symmetric(Ω))
+y = Ωchol.L * randn(n)
+
+# initialize VCModel 
+vcm = VCintModel(y, V, Vint)
+vcmW = VCintModel(y, W, Wint)
+
+# find max lambda 
+maxλ, iter = maxlambda(y, V, Vint; penfun=L1Penalty())
+vcselect!(vcm; penfun=L1Penalty(), λ=maxλ) 
+
+@testset begin 
+    for i in 1:m
+      @test isapprox(vcm.Σ[i], 0.0; atol=tol)
+    end 
+end 
+
+# find max lambda
+maxλ, iter = maxlambda(y, W, Wint; penfun=L1Penalty())
+print
+vcselect!(vcmW; penfun=L1Penalty(), λ=maxλ) 
+
+@testset begin 
+  for i in 1:m
+    @test isapprox(vcmW.Σ[i], 0.0; atol=tol)
+  end 
 end 
 
 end 
