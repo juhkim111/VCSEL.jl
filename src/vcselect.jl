@@ -1,5 +1,6 @@
 """
-    vcselectpath!(vcm; penfun, penwt, nλ, λpath, maxiters, tol, verbose, fixedeffects)
+    vcselectpath!(vcm; penfun=NoPenalty(), penwt=[ones(nvarcomps(vcm)-1); 0], nλ=100, 
+                    λpath=zeros(0), maxiters=1000, tol=1e-6, verbose=false)
 
 Generate solution path of variance components along varying lambda values.
 
@@ -102,7 +103,6 @@ function vcselectpath!(
 
 end 
 
-
 """
     vcselect!(vcm; penfun, λ, penwt, maxiters, tol, verbose)
 
@@ -122,11 +122,10 @@ end
 - `checktype`: check argument type switch, default is true
 
 # Output 
-- `Σ̂`: estimated variance components 
-- `β̂`: estimated fixed effects parameters vector 
+- `vcm`: VCModel with updated `Σ` and `β` 
+    Access estimates with `vcm.Σ` and `vcm.β`
 - `obj`: objective value at convergence 
 - `niters`: number of iterations to convergence 
-- `Ω̂`: covariance matrix at estimated variance components 
 """
 function vcselect!(
     vcm          :: VCModel;
