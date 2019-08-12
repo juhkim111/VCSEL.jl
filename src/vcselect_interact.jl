@@ -1,5 +1,5 @@
 """
-    vcselectpath!(vcm; penfun, penwt, nλ, λpath, maxiters, tol, verbose, fixedeffects)
+    vcselectpath!(vcm; penfun, penwt, nλ, λpath, maxiters, tol, verbose)
 
 Generate solution path of variance components along varying lambda values.
 
@@ -90,10 +90,29 @@ function vcselectpath!(
 
 end 
 
-
-
 """
+    vcselect!(vcm; penfun, λ, penwt, maxiters, tol, verbose)
 
+# Input 
+- `vcm`: VCintModel
+
+# Keyword Argument 
+- `penfun`: penalty function, default is NoPenalty()
+- `λ`: tuning parameter, default is 1      
+- `penwt`: penalty weights, default is [1,...1,0]
+- `standardize`: logical flag for covariance matrix standardization, default is `true`.
+    If true, `V[i]` is standardized by its Frobenius norm, and parameter estimates are 
+    returned on the original scale
+- `maxiters`: maximum number of iterations, default is 1000
+- `tol`: convergence tolerance, default is `1e-6`
+- `verbose`: display switch, default is false  
+- `checktype`: check argument type switch, default is true
+
+# Output 
+- `vcm`: VCintModel with updated `Σ`, `Σint` and `β` 
+    Access estimates with `vcm.Σ`, `vcm.Σint` and `vcm.β`
+- `obj`: objective value at convergence 
+- `niters`: number of iterations to convergence 
 """
 function vcselect!(
     vcm          :: VCintModel;
@@ -246,10 +265,10 @@ function mm_update_σ2!(
 
     # back to original scale  
     if standardize 
-            vcm.Σ .*= vcm.wt
-            vcm.Σ .*= vcm.wt_int
-            vcm.wt .= ones(m + 1)
-            vcm.wt_int .= ones(m)
+        vcm.Σ .*= vcm.wt
+        vcm.Σint .*= vcm.wt_int
+        vcm.wt .= ones(m + 1)
+        vcm.wt_int .= ones(m)
     end 
 
     # construct Ω matrix 
