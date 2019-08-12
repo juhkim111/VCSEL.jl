@@ -65,7 +65,7 @@ function objvalue(
     ) where {T <: Real}
 
     obj = logdet(vcm.ΩcholL) + (1 // 2) * dot(vcm.vecY, vcm.ΩinvY)
-    obj += (1 // 2) * size(vcm, 1) * log(2π)
+    obj += (1 // 2) * size(vcm)[1] * log(2π)
 
     # add penalty term 
     if !isa(penfun, NoPenalty)
@@ -217,7 +217,7 @@ where `Ω` being `∑ σ2[i] * V[i]` or `∑ Σ[i] ⊗ V[i]` where `σ2` or `Σ`
 - `vcm.β`: updated fixed parameter estimates 
 """
 function updateβ!( 
-    vcm :: VCModel
+    vcm :: Union{VCModel, VCintModel}
     ) 
 
     # quick return if there is no mean parameters
