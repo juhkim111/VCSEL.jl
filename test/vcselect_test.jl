@@ -53,8 +53,20 @@ vcm_y = VCModel(y, X, V, ones(m+1))
 vcm1_Y = VCModel(Y, X, V)
 vcm_Y = VCModel(Y, X, V, [ones(1, 1) for i in 1:m+1])
 
-_, obj1, niters1 = vcselect!(vcm_y2; penfun=L1Penalty(), λ=2.5)
-_, obj2, niters2  = vcselect!(vcm1_y2; penfun=L1Penalty(), λ=2.5)
+_, obj1, niters1, objvec1 = vcselect!(vcm_y2; penfun=L1Penalty(), λ=2.5, verbose=true)
+_, obj2, niters2, objvec2  = vcselect!(vcm1_y2; penfun=L1Penalty(), λ=2.5, verbose=true)
+
+@testset begin 
+  for i in 1:(length(objvec1) - 1)
+    @test objvec1[i] >= objvec1[i+1]
+  end 
+end 
+
+@testset begin 
+  for i in 1:(length(objvec2) - 1)
+    @test objvec2[i] >= objvec2[i+1]
+  end 
+end 
 
 @testset begin 
   @test obj1 == obj2 
@@ -62,10 +74,22 @@ _, obj2, niters2  = vcselect!(vcm1_y2; penfun=L1Penalty(), λ=2.5)
   @test vcm_y2.Σ == vcm1_y2.Σ
 end 
 
-_, obj1, niters1  = vcselect!(vcm_Y2; verbose=true, standardize=false, 
+_, obj1, niters1, objvec1 = vcselect!(vcm_Y2; verbose=true, standardize=false, 
     penfun=L1Penalty(), λ=2.5)
-_, obj2, niters2 = vcselect!(vcm1_Y2; verbose=true, standardize=false, 
+_, obj2, niters2, objvec2 = vcselect!(vcm1_Y2; verbose=true, standardize=false, 
     penfun=L1Penalty(), λ=2.5)
+
+@testset begin 
+  for i in 1:(length(objvec1) - 1)
+    @test objvec1[i] >= objvec1[i+1]
+  end 
+end 
+
+@testset begin 
+  for i in 1:(length(objvec2) - 1)
+    @test objvec2[i] >= objvec2[i+1]
+  end 
+end 
 
 @testset begin 
   @test obj1 == obj2 
@@ -81,10 +105,22 @@ vcselect!(vcm_Y2; penfun=L1Penalty(), λ=2.5)
   @test vcm_y2.Σ[i] ≈ vcm_Y2.Σ[i][1]
 end
 
-_, obj1, niters1 = vcselect!(vcm1_y; penfun=MCPPenalty())
-_, obj2, niters2 = vcselect!(vcm_y; penfun=MCPPenalty(), λ=1.0)
+_, obj1, niters1, objvec1 = vcselect!(vcm1_y; penfun=MCPPenalty(), verbose=true)
+_, obj2, niters2, objvec2 = vcselect!(vcm_y; penfun=MCPPenalty(), λ=1.0, verbose=true)
 prevΣ = deepcopy(vcm_y.Σ)
 prevβ = deepcopy(vcm_y.β)
+
+@testset begin 
+  for i in 1:(length(objvec1) - 1)
+    @test objvec1[i] >= objvec1[i+1]
+  end 
+end 
+
+@testset begin 
+  for i in 1:(length(objvec2) - 1)
+    @test objvec2[i] >= objvec2[i+1]
+  end 
+end 
 
 @testset begin 
   @test obj1 == obj2 
@@ -94,7 +130,7 @@ prevβ = deepcopy(vcm_y.β)
 end 
 
 resetModel!(vcm_y)
-_, obj22, niters22 = vcselect!(vcm_y; penfun=MCPPenalty())
+_, obj22, niters22, objvec = vcselect!(vcm_y; penfun=MCPPenalty())
 @testset begin
   @test obj2 == obj22
   @test niters2 == niters22
@@ -102,8 +138,14 @@ _, obj22, niters22 = vcselect!(vcm_y; penfun=MCPPenalty())
   @test vcm_y.β == prevβ
 end 
 
-_, obj1, niters1 = vcselect!(vcm1_Y; penfun=NoPenalty(), λ=1.0)
-_, obj2, niters2 = vcselect!(vcm_Y)
+@testset begin 
+  for i in 1:(length(objvec) - 1)
+    @test objvec[i] >= objvec[i+1]
+  end 
+end 
+
+_, obj1, niters1, = vcselect!(vcm1_Y; penfun=NoPenalty(), λ=1.0)
+_, obj2, niters2, = vcselect!(vcm_Y)
 
 @testset begin 
   @test obj1 == obj2 
@@ -180,8 +222,8 @@ vcm1 = VCModel(Y, X, V, [Matrix(1.0*I, d, d) for i in 1:(m + 1)])
 
 vcm2 = VCModel(Y2, V)
 
-_, obj, niters = vcselect!(vcm; standardize=true)
-_, obj1, niters1 = vcselect!(vcm1; standardize=true)
+_, obj, niters, objvec = vcselect!(vcm; standardize=true)
+_, obj1, niters1, objvec1 = vcselect!(vcm1; standardize=true)
 
 @testset begin 
   @test obj == obj1 
@@ -198,8 +240,8 @@ resetModel!(vcm1)
   @test vcm1.Σ == [Matrix(1.0*I, d, d) for i in 1:(m+1)]
 end 
 
-_, obj, niters = vcselect!(vcm; penfun=L1Penalty(), λ=2.5)
-_, obj1, niters1 = vcselect!(vcm1; penfun=L1Penalty(), λ=2.5)
+_, obj, niters, objvec = vcselect!(vcm; penfun=L1Penalty(), λ=2.5)
+_, obj1, niters1, objvec1 = vcselect!(vcm1; penfun=L1Penalty(), λ=2.5)
 
 @testset begin 
   @test obj == obj1 
