@@ -21,7 +21,7 @@ export
 # utilities function 
     matarray2mat,
     ncovariates, nvarcomps, nmeanparams, 
-    plotsolpath, resetVCModel!, 
+    plotsolpath, resetModel!, 
     rankvarcomps,   
     updateΩ!, update_arrays!,
 # algorithm 
@@ -118,7 +118,6 @@ function VCModel(
             R, kron_ones_V, L, Linv, Mndxnd, Mdxd, Mnxd,
             Ωobs)
 end 
-
 
 """
     VCModel(yobs, Vobs, [σ2])
@@ -252,12 +251,6 @@ struct VCintModel{T <: Real}
     ΩcholL      :: LowerTriangular{T}        # cholesky factor 
     Ωinv        :: AbstractMatrix{T}         # inverse of covariance matrix 
     ΩinvY       :: AbstractVector{T}         # Ωinv * Y OR Ωinv * vec(Y) 
-    R           :: AbstractVecOrMat{T}
-    kron_ones_V :: AbstractVector{Matrix{T}}
-    L           :: AbstractVecOrMat{T}
-    Linv        :: AbstractVecOrMat{T}
-    Mndxnd      :: AbstractMatrix{T}
-    Mdxd        :: AbstractVecOrMat{T}
     Mnxd        :: AbstractVecOrMat{T}
     # covariance matrix in original dimension 
     Ωobs        :: AbstractMatrix{T}
@@ -266,7 +259,7 @@ end
 """
     VCintModel(yobs, Xobs, Vobs, Vintobs, [σ2, σ2int])
 
-    Default constructor of [`VCModel`](@ref) type when `y` is vector. 
+Default constructor of [`VCintModel`](@ref) type when `y` is vector. 
 """
 function VCintModel(
     yobs    :: AbstractVecOrMat{T},
@@ -304,12 +297,6 @@ function VCintModel(
     Ωchol = cholesky!(Symmetric(Ω))
     Ωinv = inv(Ωchol) 
     ΩinvY = Ωinv * y
-    R = reshape(ΩinvY, n, 1)
-    kron_ones_V = similar(V)
-    L = Vector{T}(undef, 1)
-    Linv = Vector{T}(undef, 1)
-    Mndxnd = Matrix{T}(undef, n, 0)
-    Mdxd = Vector{T}(undef, 1)
     Mnxd = Vector{T}(undef, n) # nx1
     # allocate matrix in obs diemension
     Ωobs = Matrix{T}(undef, size(yobs, 1), size(yobs, 1))
@@ -317,14 +304,13 @@ function VCintModel(
     # 
     VCintModel{T}(yobs, Xobs, Vobs, Vintobs, y, vecY, V, Vint,
             β, σ2, σ2int, wt, wt_int, Ω, Ωchol.L, Ωinv, ΩinvY, 
-            R, kron_ones_V, L, Linv, Mndxnd, Mdxd, Mnxd,
-            Ωobs)
+            Mnxd, Ωobs)
 end 
 
 """
     VCintModel(yobs, Vobs, Vintobs, [σ2, σ2int])
 
-Construct [`VCModel`](@ref) from `y`, `V`, and `Vint` where `y` is vector. 
+Construct [`VCintModel`](@ref) from `y`, `V`, and `Vint` where `y` is vector. 
 `X` is treated empty. 
 """
 function VCintModel(
@@ -358,7 +344,7 @@ length(vcm::VCintModel) = size(vcm.Y, 2)
 """
     ncovariates(vcm)
 
-Number of fixed effects parameters `p` of a [`VCModel`](@ref). 
+Number of fixed effects parameters `p` of a [`VCModel`](@ref) or [`VCintModel`](@ref). 
 """
 ncovariates(vcm::VCModel) = size(vcm.Xobs, 2)
 ncovariates(vcm::VCintModel) = size(vcm.Xobs, 2)
@@ -366,7 +352,7 @@ ncovariates(vcm::VCintModel) = size(vcm.Xobs, 2)
 """
     size(vcm)
 
-Size `(n, d)` of response matrix of a [`VCModel`](@ref). 
+Size `(n, d)` of response matrix of a [`VCModel`](@ref) or [`VCintModel`](@ref). 
 """
 size(vcm::VCModel) = size(vcm.Y)
 size(vcm::VCintModel) = size(vcm.Y)
@@ -374,7 +360,7 @@ size(vcm::VCintModel) = size(vcm.Y)
 """
     nmeanparams(vcm)
 
-Number of mean parameters `p * d` of [`VCModel`](@ref).
+Number of mean parameters `p * d` of [`VCModel`](@ref) or [`VCintModel`](@ref).
 """
 nmeanparams(vcm::VCModel) = length(vcm.β)
 nmeanparams(vcm::VCintModel) = length(vcm.β)
@@ -390,7 +376,7 @@ nvarcomps(vcm::VCintModel) = length(vcm.Σ) + length(vcm.Σint)
 """ 
     ngroups(vcm)
 
-Number of groups, `m`.
+Number of groups, `m`, for `VCModel` or `VCintModel`.
 """
 ngroups(vcm::VCModel) = nvarcomps(vcm) - 1
 ngroups(vcm::VCintModel) = length(vcm.Σ) - 1
@@ -473,16 +459,18 @@ function update_arrays!(vcm::Union{VCModel, VCintModel})
     vcm.ΩcholL .= Ωchol.L
     vcm.Ωinv[:] = inv(Ωchol)
     mul!(vcm.ΩinvY, vcm.Ωinv, vcm.vecY)
-    vcm.R .= reshape(vcm.ΩinvY, size(vcm))
+    if typeof(vcm) <: VCModel
+        vcm.R .= reshape(vcm.ΩinvY, size(vcm))
+    end 
     nothing 
 end 
 
 """
-    resetVCModel!(vcm, Σ)
+    resetModel!(vcm, Σ)
 
 Reset [`VCModel`](@ref) with initial estimates `Σ`.
 """
-function resetVCModel!(
+function resetModel!(
     vcm :: VCModel,
     Σ :: Union{AbstractVector{T}, AbstractVector{Matrix{T}}} 
     ) where {T <: Real}
@@ -495,22 +483,42 @@ function resetVCModel!(
 end 
 
 """
-    resetVCModel!(vcm, Σ)
+    resetModel!(vcm, Σ)
 
-Reset [`VCModel`](@ref) with initial estimates `Σ`. If `Σ` is unspecified, it is set to 
-a vector of ones or all-one matrices based on its dimension.
+Reset [`VCModel`](@ref) with initial estimates `Σ`. If `Σ` is unspecified, 
+it is set to a vector of ones or identity matrices based on its dimension.
 """
-function resetVCModel!(
+function resetModel!(
     vcm :: VCModel
     ) 
     d = length(vcm)
     if typeof(vcm.Σ[1]) <: Matrix 
-        resetVCModel!(vcm, 
+        resetModel!(vcm, 
                 [Matrix(one(eltype(vcm.Σ[1]))*I, d, d) for i in eachindex(vcm.Σ)])
     else 
-        resetVCModel!(vcm,
+        resetModel!(vcm,
                 ones(eltype(vcm.Σ[1]), nvarcomps(vcm)))
     end 
+end 
+
+"""
+    resetModel!(vcm, [Σ, Σint])
+
+Reset [`VCModel`](@ref) with initial estimates `Σ` and `Σint` (if given). If unspecified, 
+it is set to a vector of ones.
+"""
+function resetModel!(
+    vcm  :: VCintModel,
+    Σ    :: AbstractVector = ones(ngroups(vcm) + 1),
+    Σint :: AbstractVector = ones(ngroups(vcm)) 
+    ) 
+   
+    vcm.Σ .= Σ
+    vcm.Σint .= Σint 
+    updateΩ!(vcm)
+    updateΩobs!(vcm)
+    update_arrays!(vcm)
+
 end 
 
 include("vcselect.jl")
