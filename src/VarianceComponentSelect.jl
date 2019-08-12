@@ -222,10 +222,10 @@ end
 
 """
     VCintModel 
-    VCintModel(Y, X, V, Σ)
-    VCintModel(Y, X, V)
-    VCintModel(Y, V, Σ)
-    VCintModel(Y, V)
+    VCintModel(Y, X, V, Vint, Σ, Σint)
+    VCintModel(Y, X, V, Vint)
+    VCintModel(Y, V, Vint, Σ, Σint)
+    VCintModel(Y, V, Vint)
 
 Variance component interaction model type. Stores the data and model parameters of a variance 
 component model. 
@@ -331,7 +331,6 @@ function VCintModel(
     # call VCintModel constructor 
     VCintModel(yobs, Xobs, Vobs, Vintobs, σ2, σ2int)
 end 
-
 
 """
     length(vcm)
