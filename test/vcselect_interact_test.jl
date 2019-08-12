@@ -97,7 +97,8 @@ resetModel!(vcm)
 resetModel!(vcmX)
 
 # obtain solution path (no penalty)
-Σ̂path, Σ̂intpath, β̂path, λpath, objpath, niterspath = vcselectpath!(vcmX; penfun=NoPenalty())
+Σ̂path, Σ̂intpath, β̂path, λpath, objpath, niterspath = vcselectpath!(vcmX; 
+      penfun=NoPenalty())
 resetModel!(vcmX)
 Σ̂path2, Σ̂intpath2, β̂path2, λpath2, objpath2, niterspath2 = vcselectpath!(vcmX)
 
@@ -113,17 +114,24 @@ resetModel!(vcmX)
   @test niterspath == niterspath2 
 end 
 
+# reset model 
+resetModel!(vcm)
+resetModel!(vcmX)
+
 # obtain solution path, not given lambda grid 
-Σ̂path, β̂path, λpath, objpath, niterspath = vcselectpath!(vcm; penfun=L1Penalty(), nλ=20)
+Σ̂path, Σ̂intpath, β̂path, λpath, objpath, niterspath = vcselectpath!(vcm; 
+      penfun=L1Penalty(), nλ=20)
 println("Σ̂path=", Σ̂path)
+println("Σ̂intpath=", Σ̂intpath)
 println("β̂path=", β̂path)
 println("λpath=", λpath)
 println("objpath=", objpath)
 
 # obtain solution path, given lambda grid
-Σ̂path, β̂path, λpath, objpath, niterspath = vcselectpath!(vcm; penfun=L1Penalty(), 
-    λpath=range(1,10,length=20))
+Σ̂path, Σ̂intpath, β̂path, λpath, objpath, niterspath = vcselectpath!(vcmX; 
+      penfun=L1Penalty(), λpath=range(0, 2, length=5))
 println("Σ̂path=", Σ̂path)
+println("Σ̂intpath=", Σ̂intpath)
 println("β̂path=", β̂path)
 println("λpath=", λpath)
 println("objpath=", objpath)
