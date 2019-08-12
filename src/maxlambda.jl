@@ -19,7 +19,7 @@ Find the value of λ where all σ turns 0. At any value greater than λ, all σ'
     If true, `V[i]` and `Vint[i]` is standardized by its Frobenius norm, and parameter 
     estimates are returned on the original scale
 - `maxiters`: maximum number of iterations, default is 500
-- `tol`: value below which σ is considered 0
+- `tol`: value below which estimate is considered zero
 
 # Output
 - `maxλ`: value of λ where all coeffecients turn zero, maximum λ on the solution path 
@@ -31,7 +31,7 @@ function maxlambda(
     penwt       :: AbstractVector{T} = [ones(T, length(V)-1); zero(T)],
     standardize :: Bool = true, 
     maxiters    :: Int = 500,
-    tol         :: AbstractFloat = 1e-10
+    tol         :: AbstractFloat = 1e-8
     ) where {T <: Real}
 
     # initialize values 
@@ -119,7 +119,7 @@ Find the value of λ where all σ turns 0. At any value greater than λ, all σ'
     If true, `V[i]` and `Vint[i]` is standardized by its Frobenius norm, and parameter 
     estimates are returned on the original scale
 - `maxiters`: maximum number of iterations, default is 500
-- `tol`: value below which σ is considered 0
+- `tol`: value below which estimate is considered zero
 
 # Output
 - `maxλ`: value of λ where all coeffecients turn zero, maximum λ on the solution path 
@@ -131,7 +131,7 @@ function maxlambda(
     penwt   :: AbstractVector{T} = [ones(T, length(V)-1); zero(T)],
     standardize :: Bool = true, 
     maxiters :: Int = 500,
-    tol     :: AbstractFloat = 1e-10,
+    tol     :: AbstractFloat = 1e-8,
     tempλ   :: AbstractFloat = 50.0
     ) where {T <: Real}
 
@@ -230,10 +230,10 @@ Find the value of λ where all σ turns 0. At any value greater than λ, all σ'
     If true, `V[i]` and `Vint[i]` is standardized by its Frobenius norm, and parameter 
     estimates are returned on the original scale
 - `maxiters`: maximum number of iterations, default is 500
-- `tol`: value below which σ is considered 0
+- `tol`: value below which estimate is considered zero
 
 # Output
-- `maxλ`: value of λ where all coeffecients turn zero, maximum λ on the solution path 
+- `maxλ`: value of `λ` where all coeffecients turn zero, maximum λ on the solution path 
 """
 function maxlambda(
     y           :: AbstractVector{T},
@@ -243,7 +243,7 @@ function maxlambda(
     penwt       :: AbstractVector{T} = [ones(T, length(Vint)); zero(T)],
     standardize :: Bool = true, 
     maxiters    :: Int = 500,
-    tol         :: AbstractFloat = 1e-10
+    tol         :: AbstractFloat = 1e-8
     ) where {T <: Real}
 
     # initialize values 
@@ -264,14 +264,12 @@ function maxlambda(
       λpath_int[i] = (1 / penwt[i]) * (-tr(Vint[i]) / σ2_0 + dot(y, Vy) / σ2_0^2)
     end
 
-    println("λpath=", λpath)
-
     # find maximum among m different lambdas
     tempλ = abs(minimum([λpath; λpath_int]))
     if isapprox(tempλ, 0; atol=1e-8)
       tempλ = maximum(λpath)
     end 
-    println("tempλ=", tempλ)
+
     σ2 = zeros(Float64, m+1)
     σ2int = zeros(Float64, m)
 
