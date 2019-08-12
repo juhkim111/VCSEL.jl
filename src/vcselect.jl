@@ -35,8 +35,7 @@ function vcselectpath!(
     λpath        :: AbstractArray = zeros(0), 
     maxiters     :: Int = 1000, 
     standardize  :: Bool = true, 
-    tol          :: AbstractFloat = 1e-6, 
-    verbose      :: Bool = false
+    tol          :: AbstractFloat = 1e-6
     ) 
 
     # handle errors 
@@ -72,9 +71,9 @@ function vcselectpath!(
             β̂path = Array{Matrix{T}}(undef, nλ)
             # solution path 
             for iter in 1:nλ
-                _, objpath[iter], niterspath[iter] = 
+                _, objpath[iter], niterspath[iter], = 
                         vcselect!(vcm; penfun=penfun, λ=λpath[iter], penwt=penwt, 
-                        maxiters=maxiters, tol=tol, verbose=verbose, checktype=false)
+                        maxiters=maxiters, tol=tol, verbose=false, checktype=false)
                 Σ̂path[:, iter] = vcm.Σ 
                 β̂path[iter] = vcm.β
             end
@@ -84,9 +83,9 @@ function vcselectpath!(
             β̂path = zeros(T, p, nλ)
             # solution path 
             for iter in 1:nλ
-                _, objpath[iter], niterspath[iter] = 
+                _, objpath[iter], niterspath[iter], = 
                         vcselect!(vcm; penfun=penfun, λ=λpath[iter], penwt=penwt, 
-                        maxiters=maxiters, tol=tol, verbose=verbose, checktype=false)
+                        maxiters=maxiters, tol=tol, verbose=false, checktype=false)
                 Σ̂path[:, iter] .= vcm.Σ
                 β̂path[:, iter] .= vcm.β
             end
@@ -95,8 +94,8 @@ function vcselectpath!(
         return Σ̂path, β̂path, λpath, objpath, niterspath
 
     else # if no penalty, there is no lambda grid 
-        _, objpath, niterspath = vcselect!(vcm; penfun=penfun, penwt=penwt, 
-            maxiters=maxiters, tol=tol, verbose=verbose, checktype=false)
+        _, objpath, niterspath, = vcselect!(vcm; penfun=penfun, penwt=penwt, 
+            maxiters=maxiters, tol=tol, verbose=false, checktype=false)
         
         return vcm.Σ, vcm.β, zeros(1), objpath, niterspath 
     end  
@@ -126,6 +125,7 @@ end
     Access estimates with `vcm.Σ` and `vcm.β`
 - `obj`: objective value at convergence 
 - `niters`: number of iterations to convergence 
+- `objvec`: vector of objvective values at each iteration 
 """
 function vcselect!(
     vcm          :: VCModel;
@@ -155,17 +155,17 @@ function vcselect!(
 
     # multivariate update 
     if typeof(vcm.Σ[1]) <: Matrix  # length(vcm) > 1
-        _, obj, niters = mm_update_Σ!(vcm; penfun=penfun, λ=λ, 
+        _, obj, niters, objvec = mm_update_Σ!(vcm; penfun=penfun, λ=λ, 
             penwt=penwt, maxiters=maxiters, tol=tol, verbose=verbose)
     
     # univariate update 
     else
-        _, obj, niters = mm_update_σ2!(vcm; penfun=penfun, λ=λ, 
+        _, obj, niters, objvec = mm_update_σ2!(vcm; penfun=penfun, λ=λ, 
             penwt=penwt, maxiters=maxiters, tol=tol, verbose=verbose)
     end 
 
     # output 
-    return vcm, obj, niters
+    return vcm, obj, niters, objvec
 
 end 
 
@@ -201,7 +201,7 @@ function mm_update_Σ!(
         println("iter = 0")
         println("Σ    = ", vcm.Σ)
         println("obj  = ", obj)
-        #objvec = obj 
+        objvec = obj 
     end  
 
     Σtmp = deepcopy(vcm.Σ)
@@ -264,7 +264,7 @@ function mm_update_Σ!(
             println("iter = ", iter)
             println("Σ    = ", vcm.Σ)
             println("obj  = ", obj)
-            #objvec = [objvec; obj]
+            objvec = [objvec; obj]
         end
 
         # check convergence 
@@ -291,7 +291,11 @@ function mm_update_Σ!(
         niters = maxiters
     end 
  
-    return vcm, obj, niters; 
+    if verbose 
+        return vcm, obj, niters, objvec
+    else
+        return vcm, obj, niters, zeros(0)
+    end 
 end 
 
 """
@@ -324,7 +328,7 @@ function mm_update_σ2!(
         println("iter = 0")
         println("σ2   = ", vcm.Σ)
         println("obj  = ", obj)
-        #objvec = obj 
+        objvec = obj 
     end    
 
     σ2tmp = zeros(m + 1)
@@ -387,7 +391,7 @@ function mm_update_σ2!(
               println("iter = ", iter)
               println("σ2   = ", vcm.Σ)
               println("obj  = ", obj)
-              #objvec = [objvec; obj] 
+              objvec = [objvec; obj] 
           end
   
           # check convergence
@@ -415,7 +419,11 @@ function mm_update_σ2!(
       end
    
       # 
-      return vcm, obj, niters 
+      if verbose 
+        return vcm, obj, niters, objvec
+      else
+        return vcm, obj, niters, zeros(0)
+      end 
 
 end 
 
@@ -438,9 +446,9 @@ function vcselect(
     ) where {T <: Real}
 
     vcmtmp = VCModel(Y, V)
-    _, obj, niters = vcselect!(vcmtmp; penfun=penfun, λ=λ, penwt=penwt, standardize=standardize,
+    _, obj, niters, objvec = vcselect!(vcmtmp; penfun=penfun, λ=λ, penwt=penwt, standardize=standardize,
             maxiters=maxiters, tol=tol, verbose=verbose, checktype=checktype)
 
-    return vcmtmp.Σ, obj, niters
+    return vcmtmp.Σ, obj, niters, objvec
 
 end 

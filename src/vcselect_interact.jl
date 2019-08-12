@@ -38,8 +38,7 @@ function vcselectpath!(
     λpath        :: AbstractArray = zeros(0), 
     maxiters     :: Int = 1000, 
     standardize  :: Bool = true, 
-    tol          :: AbstractFloat = 1e-6, 
-    verbose      :: Bool = false
+    tol          :: AbstractFloat = 1e-6
     )
 
     # handle errors 
@@ -68,13 +67,13 @@ function vcselectpath!(
         niterspath = zeros(Int, nλ)
         Σ̂path = zeros(T, ngroups(vcm) + 1, nλ)
         Σ̂intpath = zeros(T, ngroups(vcm), nλ)
-        β̂path = zeros(T, p, nλ)
+        β̂path = zeros(T, ncovariates(vcm), nλ)
 
         # solution path 
         for iter in 1:nλ
             _, objpath[iter], niterspath[iter] = 
                     vcselect!(vcm; penfun=penfun, λ=λpath[iter], penwt=penwt, 
-                    maxiters=maxiters, tol=tol, verbose=verbose, checktype=false)
+                    maxiters=maxiters, tol=tol, verbose=false, checktype=false)
             Σ̂path[:, iter] .= vcm.Σ
             Σ̂intpath[:, iter] .= vcm.Σint
             β̂path[:, iter] .= vcm.β
@@ -84,7 +83,7 @@ function vcselectpath!(
 
     else # if no penalty, there is no lambda grid 
         _, objpath, niterspath = vcselect!(vcm; penfun=penfun, penwt=penwt, 
-            maxiters=maxiters, tol=tol, verbose=verbose, checktype=false)
+            maxiters=maxiters, tol=tol, verbose=false, checktype=false)
 
         return vcm.Σ, vcm.Σint, vcm.β, zeros(1), objpath, niterspath 
     end 
@@ -108,6 +107,7 @@ end
 - `tol`: convergence tolerance, default is `1e-6`
 - `verbose`: display switch, default is false 
 - `checktype`: check argument type switch, default is true
+- `objvec`: vector of objvective values at each iteration 
 
 # Output 
 - `vcm`: VCintModel with updated `Σ`, `Σint` and `β` 
@@ -311,10 +311,10 @@ function vcselect(
     ) where {T <: Real}
 
     vcmtmp = VCintModel(Y, V, Vint)
-    _, obj, niters = vcselect!(vcmtmp; penfun=penfun, λ=λ, penwt=penwt, 
+    _, obj, niters, objvec = vcselect!(vcmtmp; penfun=penfun, λ=λ, penwt=penwt, 
             standardize=standardize, maxiters=maxiters, tol=tol, verbose=verbose, 
             checktype=checktype)
 
-    return vcmtmp.Σ, vcmtmp.Σint, obj, niters
+    return vcmtmp.Σ, vcmtmp.Σint, obj, niters, objvec
 
 end 
