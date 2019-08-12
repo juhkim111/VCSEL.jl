@@ -56,7 +56,8 @@ function vcselectpath!(
 
         # create a lambda grid if not specified 
         if isempty(λpath) 
-            maxλ, = maxlambda(vcm.Y, vcm.V, vcm.Vint; penfun=penfun, penwt=penwt)
+            maxλ, = maxlambda(vcm.Y, vcm.V, vcm.Vint; penfun=penfun, penwt=penwt, 
+                            standardize=standardize)
             λpath = range(0, stop=maxλ, length=nλ)
         else # if lambda grid specified, make sure nlambda matches 
             nλ = length(λpath)
@@ -96,16 +97,16 @@ end
 # Input 
 - `vcm`: VCintModel
 
-# Keyword Argument 
-- `penfun`: penalty function, default is NoPenalty()
-- `λ`: tuning parameter, default is 1      
-- `penwt`: penalty weights, default is [1,...1,0]
-- `standardize`: logical flag for covariance matrix standardization, default is `true`.
-    If true, `V[i]` is standardized by its Frobenius norm, and parameter estimates are 
-    returned on the original scale
+# Keyword 
+- `penfun`: penalty function (e.g. NoPenalty(), L1Penalty()), default is NoPenalty()
+- `λ`: tuning parameter, default is 1   
+- `penwt`: weights for penalty term, default is (1,1,...1,0)
 - `maxiters`: maximum number of iterations, default is 1000
+- `standardize`: logical flag for covariance matrix standardization, default is `true`.
+    If true, `V[i]` and `Vint[i]` is standardized by its Frobenius norm, and parameter 
+    estimates are returned on the original scale
 - `tol`: convergence tolerance, default is `1e-6`
-- `verbose`: display switch, default is false  
+- `verbose`: display switch, default is false 
 - `checktype`: check argument type switch, default is true
 
 # Output 
@@ -289,3 +290,31 @@ function mm_update_σ2!(
     end 
 
 end
+
+"""
+    vcselect(Y, V, Vint; penfun=NoPenalty(), λ=1.0, penwt=[ones(length(V)-1); 0.0],
+            standardize=true, maxiters=1000, tol=1e-6, verbose=false, checktype=true)
+
+"""
+function vcselect(
+    Y           :: AbstractVecOrMat{T},
+    V           :: AbstractVector{Matrix{T}},
+    Vint        :: AbstractVector{Matrix{T}};
+    penfun      :: Penalty = NoPenalty(),
+    λ           :: Real = 1.0,
+    penwt       :: AbstractVector = [ones(length(V)-1); 0.0],
+    standardize :: Bool = true, 
+    maxiters    :: Int = 1000,
+    tol         :: Real = 1e-6,
+    verbose     :: Bool = false,
+    checktype   :: Bool = true 
+    ) where {T <: Real}
+
+    vcmtmp = VCintModel(Y, V, Vint)
+    _, obj, niters = vcselect!(vcmtmp; penfun=penfun, λ=λ, penwt=penwt, 
+            standardize=standardize, maxiters=maxiters, tol=tol, verbose=verbose, 
+            checktype=checktype)
+
+    return vcmtmp.Σ, vcmtmp.Σint, obj, niters
+
+end 
