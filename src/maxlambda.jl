@@ -12,8 +12,8 @@ Find the value of λ where all σ turns 0. At any value greater than λ, all σ'
 - `V`: vector of covariance matrices
 
 # Keyword 
-- `penfun`: penalty function, 
-      possible options are NoPenalty() (default), L1Penalty(), MCPPenalty()
+- `penfun`: penalty function, possible options are `L1Penalty()` (default), `MCPPenalty()`, 
+    and `NoPenalty()`. If `penfun=NoPenalty()`, 0 is returned
 - `penwt`: vector of penalty weights, default is (1,1,...1,0)
 - `standardize`: logical flag for covariance matrix standardization, default is `true`.
     If true, `V[i]` and `Vint[i]` is standardized by its Frobenius norm, and parameter 
@@ -33,6 +33,11 @@ function maxlambda(
     maxiters    :: Int = 500,
     tol         :: AbstractFloat = 1e-8
     ) where {T <: Real}
+
+    # if no penalty, return 0 
+    if isa(penfun, NoPenalty)
+      return zero(T), 0
+    end 
 
     # initialize values 
     n = length(y)
@@ -112,8 +117,8 @@ Find the value of λ where all σ turns 0. At any value greater than λ, all σ'
 - `V`: vector of covariance matrices
 
 # Keyword 
-- `penfun`: penalty function, 
-      possible options are NoPenalty() (default), L1Penalty(), MCPPenalty()
+- `penfun`: penalty function, possible options are `L1Penalty()` (default), `MCPPenalty()`, 
+    and `NoPenalty()`. If `penfun=NoPenalty()`, 0 is returned
 - `penwt`: vector of penalty weights, default is (1,1,...1,0)
 - `standardize`: logical flag for covariance matrix standardization, default is `true`.
     If true, `V[i]` and `Vint[i]` is standardized by its Frobenius norm, and parameter 
@@ -134,6 +139,11 @@ function maxlambda(
     tol     :: AbstractFloat = 1e-8,
     tempλ   :: AbstractFloat = 50.0
     ) where {T <: Real}
+
+    # if no penalty, return 0 
+    if isa(penfun, NoPenalty)
+      return zero(T), 0
+    end 
 
     # initialize values 
     n, d = size(Y)
@@ -223,8 +233,8 @@ Find the value of λ where all σ turns 0. At any value greater than λ, all σ'
 - `Vint`: vector of covariance matrices for interaction 
 
 # Keyword 
-- `penfun`: penalty function, 
-      possible options are NoPenalty() (default), L1Penalty(), MCPPenalty()
+- `penfun`: penalty function, possible options are `L1Penalty()` (default), `MCPPenalty()`, 
+    and `NoPenalty()`. If `penfun=NoPenalty()`, 0 is returned
 - `penwt`: vector of penalty weights, default is (1,1,...1,0)
 - `standardize`: logical flag for covariance matrix standardization, default is `true`.
     If true, `V[i]` and `Vint[i]` is standardized by its Frobenius norm, and parameter 
@@ -245,6 +255,11 @@ function maxlambda(
     maxiters    :: Int = 500,
     tol         :: AbstractFloat = 1e-8
     ) where {T <: Real}
+
+    # if no penalty, return 0 
+    if isa(penfun, NoPenalty)
+      return zero(T), 0
+    end 
 
     # initialize values 
     n = length(y)
