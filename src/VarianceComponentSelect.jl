@@ -63,7 +63,7 @@ struct VCModel{T <: Real}
     Mdxd        :: AbstractVecOrMat{T}
     Mnxd        :: AbstractVecOrMat{T}
     # covariance matrix in original dimension 
-    Ωobs        :: AbstractMatrix{T}
+    Ωest        :: AbstractMatrix{T}
 end
 
 
@@ -110,13 +110,13 @@ function VCModel(
     Mdxd = Vector{T}(undef, 1)
     Mnxd = Vector{T}(undef, n) # nx1
     # allocate matrix in obs diemension
-    Ωobs = Matrix{T}(undef, size(yobs, 1), size(yobs, 1))
+    Ωest = Matrix{T}(undef, size(yobs, 1), size(yobs, 1))
 
     # 
     VCModel{T}(yobs, Xobs, Vobs, y, vecY, V,
             β, σ2, wt, Ω, Ωchol.L, Ωinv, ΩinvY, 
             R, kron_ones_V, L, Linv, Mndxnd, Mdxd, Mnxd,
-            Ωobs)
+            Ωest)
 end 
 
 """
@@ -188,13 +188,13 @@ function VCModel(
     Mdxd = Matrix{T}(undef, d, d) # d x d 
     Mnxd = Matrix{T}(undef, n, d)
     # 
-    Ωobs = Matrix{T}(undef, length(Yobs), length(Yobs))
+    Ωest = Matrix{T}(undef, length(Yobs), length(Yobs))
 
     # 
     VCModel{T}(Yobs, Xobs, Vobs, Y, vecY, V,
             β, Σ, wt, Ω, Ωchol.L, Ωinv, ΩinvY, 
             R, kron_ones_V, L, Linv, Mndxnd, Mdxd, Mnxd,
-            Ωobs)
+            Ωest)
 
 end 
 
@@ -253,7 +253,7 @@ struct VCintModel{T <: Real}
     ΩinvY       :: AbstractVector{T}         # Ωinv * Y OR Ωinv * vec(Y) 
     Mnxd        :: AbstractVecOrMat{T}
     # covariance matrix in original dimension 
-    Ωobs        :: AbstractMatrix{T}
+    Ωest        :: AbstractMatrix{T}
 end
 
 """
@@ -299,12 +299,12 @@ function VCintModel(
     ΩinvY = Ωinv * y
     Mnxd = Vector{T}(undef, n) # nx1
     # allocate matrix in obs diemension
-    Ωobs = Matrix{T}(undef, size(yobs, 1), size(yobs, 1))
+    Ωest = Matrix{T}(undef, size(yobs, 1), size(yobs, 1))
 
     # 
     VCintModel{T}(yobs, Xobs, Vobs, Vintobs, y, vecY, V, Vint,
             β, σ2, σ2int, wt, wt_int, Ω, Ωchol.L, Ωinv, ΩinvY, 
-            Mnxd, Ωobs)
+            Mnxd, Ωest)
 end 
 
 """
@@ -409,41 +409,41 @@ function updateΩ!(vcm::VCintModel)
 end
 
 """
-    updateΩobs!(vcm::VCModel)
+    updateΩest!(vcm::VCModel)
 
-Update covariance matrix `Ωobs` for `VCModel`. `Ωobs` has the same dimension as `Vobs`. 
+Update covariance matrix `Ωest` for `VCModel`. `Ωest` has the same dimension as `Vobs`. 
 """
-function updateΩobs!(vcm::VCModel)
+function updateΩest!(vcm::VCModel)
 
     if isempty(vcm.Xobs) 
-        vcm.Ωobs .= vcm.Ω
+        vcm.Ωest .= vcm.Ω
     else
-        fill!(vcm.Ωobs, 0)
+        fill!(vcm.Ωest, 0)
         for k in 1:nvarcomps(vcm)
-            kronaxpy!(vcm.Σ[k], vcm.Vobs[k], vcm.Ωobs)
+            kronaxpy!(vcm.Σ[k], vcm.Vobs[k], vcm.Ωest)
         end
     end 
-    vcm.Ωobs
+    vcm.Ωest
 end
 
 """
-    updateΩobs!(vcm::VCintModel)
+    updateΩest!(vcm::VCintModel)
 
-Update covariance matrix `Ωobs` for `VCintModel`. `Ωobs` has the same dimension as `Vobs`. 
+Update covariance matrix `Ωest` for `VCintModel`. `Ωest` has the same dimension as `Vobs`. 
 """
-function updateΩobs!(vcm::VCintModel)
+function updateΩest!(vcm::VCintModel)
 
     if isempty(vcm.Xobs) 
-        vcm.Ωobs .= vcm.Ω
+        vcm.Ωest .= vcm.Ω
     else
-        fill!(vcm.Ωobs, 0)
+        fill!(vcm.Ωest, 0)
         for k in 1:ngroups(vcm)
-            kronaxpy!(vcm.Σ[k], vcm.Vobs[k], vcm.Ωobs)
-            kronaxpy!(vcm.Σint[k], vcm.Vintobs[k], vcm.Ωobs)
+            kronaxpy!(vcm.Σ[k], vcm.Vobs[k], vcm.Ωest)
+            kronaxpy!(vcm.Σint[k], vcm.Vintobs[k], vcm.Ωest)
         end
-        kronaxpy!(vcm.Σ[end], vcm.Vobs[end], vcm.Ωobs)
+        kronaxpy!(vcm.Σ[end], vcm.Vobs[end], vcm.Ωest)
     end 
-    vcm.Ωobs
+    vcm.Ωest
 end
 
 """
@@ -476,7 +476,7 @@ function resetModel!(
 
     vcm.Σ .= Σ
     updateΩ!(vcm)
-    updateΩobs!(vcm)
+    updateΩest!(vcm)
     update_arrays!(vcm)
     vcm.R .= reshape(vcm.ΩinvY, size(vcm))
 end 
@@ -515,7 +515,7 @@ function resetModel!(
     vcm.Σ .= Σ
     vcm.Σint .= Σint 
     updateΩ!(vcm)
-    updateΩobs!(vcm)
+    updateΩest!(vcm)
     update_arrays!(vcm)
 
 end 

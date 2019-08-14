@@ -274,7 +274,7 @@ function mm_update_σ2!(
 
     # construct Ω matrix 
     updateΩ!(vcm)
-    updateΩobs!(vcm)
+    updateΩest!(vcm)
     updateβ!(vcm)
 
     # output

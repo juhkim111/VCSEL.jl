@@ -224,7 +224,7 @@ function updateβ!(
     isempty(vcm.β) && return vcm.β
 
     # 
-    Ωchol = cholesky(Symmetric(vcm.Ωobs))
+    Ωchol = cholesky(Symmetric(vcm.Ωest))
     # 
     d = length(vcm)
     p = size(vcm.Xobs, 2)
