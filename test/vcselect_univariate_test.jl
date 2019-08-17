@@ -66,17 +66,17 @@ temp, = vcselectpath(y, X, V)
 @test all(temp .>= 0)
 
 @info "lasso penalty at λ = 2.0 "
-σ2, obj, = vcselect(y, X, V; penfun=L1Penalty(), λ=2.0)
+σ2, β, obj, = vcselect(y, X, V; penfun=L1Penalty(), λ=2.0)
 @test all(σ2 .>= 0)
 
 @info "adaptive lasso penalty at λ = 2.0"
 penwt = zeros(m + 1)
 penwt[1:m] = 1 ./ sqrt.(temp[1:m])
-σ2, obj, = vcselect(y, X, V; penfun=L1Penalty(), λ=2.0, penwt=penwt)
+σ2, β, obj, = vcselect(y, X, V; penfun=L1Penalty(), λ=2.0, penwt=penwt)
 @test all(σ2 .>= 0)
 
 @info "MCP penalty at λ = 2.0"
-σ2, obj, = vcselect(y, X, V; penfun=MCPPenalty(), λ=2.0)
+σ2, β, obj, = vcselect(y, X, V; penfun=MCPPenalty(), λ=2.0)
 @test all(σ2 .>= 0)
 
 ## solution path 
