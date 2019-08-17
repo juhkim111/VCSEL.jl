@@ -5,27 +5,28 @@
 Generate solution path of variance components along varying lambda values.
 
 # Input
-- `vcm`: VCModel
+- `vcm`: [`VCModel`](@ref).
 
 # Keyword 
-- `penfun`: penalty function (e.g. NoPenalty(), L1Penalty(), MCPPenalty()), default is NoPenalty()
-- `penwt`: weights for penalty term, default is (1,1,...1,0)
-- `nλ`: number of tuning parameter values, default is 100
-- `λpath`: a user supplied `λ` sequence. Typically the program computes its own `λ` 
-        sequence based on `nλ`; supplying `λpath` overrides this
-- `maxiter`: maximum number of iteration for MM loop, default is 1000
-- `standardize`: logical flag for covariance matrix standardization, default is `true`.
-    If true, `V[i]` is standardized by its Frobenius norm
-- `tol`: convergence tolerance, default is `1e-6`
-- `verbose`: display switch, default is false 
+- `penfun`: penalty function (e.g. `NoPenalty()``, `L1Penalty()``, `MCPPenalty()`). 
+        Default is `NoPenalty()`.
+- `penwt`: weights for penalty term. Default is (1,1,...1,0).
+- `nλ`: number of tuning parameter values. Default is 100.
+- `λpath`: a user supplied `λ` sequence in ascending order. Typically the program computes its own `λ` 
+        sequence based on `nλ`; supplying `λpath` overrides this.
+- `maxiter`: maximum number of iteration for MM loop. Default is 1000.
+- `standardize`: logical flag for covariance matrix standardization. Default is `true`.
+    If true, `V[i]` is standardized by its Frobenius norm.
+- `tol`: convergence tolerance. Default is `1e-6`.
+- `verbose`: display switch. Default is false.
 
 # Output 
-- `Σ̂path`: matrix of estimated variance components at each tuning parameter `λ`,
-        each column gives vector of estimated variance components `σ2` at certain `λ`
-- `β̂path`: matrix of fixed parameter estimates at each `λ`
-- `λpath`: sequence of `λ` values used
-- `objpath`: vector of objective values at each tuning parameter `λ` 
-- `niterspath`: vector of no. of iterations to convergence 
+- `Σ̂path`: matrix of estimated variance components at each tuning parameter `λ`.
+        Each column gives vector of estimated variance components `σ2` at certain `λ`.
+- `β̂path`: matrix of fixed parameter estimates at each `λ`.
+- `λpath`: sequence of `λ` values used.
+- `objpath`: vector of objective values at each tuning parameter `λ`.
+- `niterspath`: vector of no. of iterations to convergence.
 """
 function vcselectpath!(
     vcm          :: VCModel; 
@@ -106,26 +107,25 @@ end
     vcselect!(vcm; penfun, λ, penwt, maxiters, tol, verbose)
 
 # Input 
-- `vcm`: VCModel
+- `vcm`: [`VCModel`](@ref).
 
 # Keyword Argument 
-- `penfun`: penalty function, default is NoPenalty()
-- `λ`: tuning parameter, default is 1      
-- `penwt`: penalty weights, default is [1,...1,0]
-- `standardize`: logical flag for covariance matrix standardization, default is `true`.
+- `penfun`: penalty function. Default is `NoPenalty()`.
+- `λ`: tuning parameter. Default is 1.    
+- `penwt`: penalty weights. Default is (1,...1,0).
+- `standardize`: logical flag for covariance matrix standardization. Default is `true`.
     If true, `V[i]` is standardized by its Frobenius norm, and parameter estimates are 
-    returned on the original scale
-- `maxiters`: maximum number of iterations, default is 1000
-- `tol`: convergence tolerance, default is `1e-6`
-- `verbose`: display switch, default is false  
-- `checktype`: check argument type switch, default is true
+    returned on the original scale.
+- `maxiters`: maximum number of iterations. Default is 1000.
+- `tol`: convergence tolerance. Default is `1e-6`.
+- `verbose`: display switch. Default is false.
+- `checktype`: check argument type switch. Default is true.
 
 # Output 
-- `vcm`: VCModel with updated `Σ` and `β` 
-    Access estimates with `vcm.Σ` and `vcm.β`
-- `obj`: objective value at convergence 
-- `niters`: number of iterations to convergence 
-- `objvec`: vector of objvective values at each iteration 
+- `vcm`: VCModel with updated `Σ` and `β`.
+- `obj`: objective value at convergence.
+- `niters`: number of iterations to convergence.
+- `objvec`: vector of objvective values at each iteration.
 """
 function vcselect!(
     vcm          :: VCModel;
