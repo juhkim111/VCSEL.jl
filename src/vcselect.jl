@@ -24,7 +24,7 @@ call `vcselect(y, V; penfun, λ, penwt, σ2, maxiter, tol, verbose)`
 
 # Output
 - `σ2`: vector of estimated variance components 
-- `beta`: estimated fixed effects parameter, using REML estimates
+- `β`: estimated fixed effects parameter, using REML estimates
 - `obj`: objective value at the estimated variance components 
 - `niters`: number of iterations to convergence
 - `Ω`: covariance matrix evaluated at the estimated variance components
