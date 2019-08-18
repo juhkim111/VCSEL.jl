@@ -124,52 +124,92 @@ Output plot of solution path at varying λ values. Use backend such as `gr()`.
 
 # Input
 - `σ2path`: solution path (in numeric matrix) to be plotted, each column should 
-        represent variance components at specific λ 
-        as in output from `vcselect`, `vcselectpath`
-- `λpath`: vector of tuning parameter λ values 
+        represent variance components at specific λ as in output from `vcselectpath!`. 
+	The last row of `σ2path` should be for residual variance component. Otherwise set `resvarcomp=false` to indicate the absence. 
+- `λpath`: vector of tuning parameter λ values.
 
 # Keyword 
-- `title`: title of the figure, default is "Solution Path"
-- `xlab`: x-axis label, default is minimum of λpath
-- `ylab`: y-axis label, default is maximum of λpath
-- `linewidth`: line width, default is 1.0
+- `title`: title of the figure. Default is "Solution Path".
+- `xlab`: x-axis label. Default is "lambda".
+- `ylab`: y-axis label. Default is "sigma_i^2".
+- `xmin`: lower limit for x-axis. default is minimum of `λpath`.
+- `xmax`: upper limit for x-axis. default is maximum of `λpath`.
+- `linewidth`: line width. Default is 1.0.
+- `legend`: logical flag for including legend. Default is true.
+- `legendout`: logical flag for moving the legend outside the plot. Default is true. 
+- `resvarcomp`: logical flag for indicating residual variance component in `σ2path`. 	   
+      Default is true. 
 
 # Output 
 - plot of solution path 
 """
 function plotsolpath(
-    σ2path    :: AbstractMatrix{T},
-    λpath     :: AbstractVector{T};
-    title     :: AbstractString = "Solution Path",
-    xlab      :: AbstractString = "\\lambda",
-    xmin      :: AbstractFloat = minimum(λpath),
-    xmax      :: AbstractFloat = maximum(λpath),
-    ylab      :: AbstractString = "\\sigma^2",
-    linewidth :: AbstractFloat = 1.0
+    σ2path     :: AbstractMatrix{T},
+    λpath      :: AbstractVector{T};
+    title      :: AbstractString = "Solution Path",
+    xlab       :: AbstractString = "\\lambda",
+    ylab       :: AbstractString = "\\sigma^2",
+    xmin       :: AbstractFloat = minimum(λpath),
+    xmax       :: AbstractFloat = maximum(λpath),
+    linewidth  :: AbstractFloat = 1.0,
+    legend     :: Bool = true,
+    legendout  :: Bool = true, 
+    resvarcomp :: Bool = true
     ) where {T <: Real}
 
     # size of solution path 
     novarcomp, nlambda = size(σ2path)
 
     # get ranking of variance components
-    ranking, rest = rankvarcomps(σ2path)
+    ranking, rest = rankvarcomps(σ2path; resvarcomp=resvarcomp)
 
     # transpose solpath s.t. each row is estimates at particular lambda
     tr_σ2path = σ2path'
 
-    # label in the permuted order 
-    legendlabel = "\\sigma^{2}[$(ranking[1])]"
-    for i in ranking[2:end]
-        legendlabel = hcat(legendlabel, "\\sigma^{2}[$i]")
-    end
-    for i in 1:length(rest)
-        legendlabel = hcat(legendlabel, "")
-    end 
+   if legend && nranks > 0 
+        legendlabel = "\\sigma^{2}[$(ranking[1])]"
+        if nranks == nvarcomps # display all non-zero variance components 
+            
+            for i in ranking[2:end]
+                legendlabel = hcat(legendlabel, "\\sigma^{2}[$i]")
+            end
+            nranks = length(ranking)
+           
+        elseif nranks > 1 # display the first non-zero variance component to enter the path  
+            for i in ranking[2:nranks]
+                legendlabel = hcat(legendlabel, "\\sigma^{2}[$i]")
+            end
 
-    # plot permuted solution path (decreasing order)
-    plot(λpath, tr_σ2path[:, [ranking; rest]], label=legendlabel, 
-        xaxis=(xlab, (xmin, xmax)), yaxis=(ylab), width=linewidth, legendtitle="ranking")
-    title!(title)     
+        end 
+
+        for i in 1:(nvarcomps - nranks)
+            legendlabel = hcat(legendlabel, "")
+        end 
+
+        # plot permuted solution path (decreasing order)
+
+        if !legendout
+            plot(λpath, tr_σ2path[:, [ranking; rest]], label=legendlabel, 
+            xaxis=(xlab, (xmin, xmax)), yaxis=(ylab), width=linewidth, legendtitle="ranking")
+            title!(title) 
+        else 
+            pt1 = plot(λpath, tr_σ2path[:, [ranking; rest]],  legend=false,
+                xaxis=(xlab, (xmin, xmax)), yaxis=(ylab), width=linewidth, 
+                legendtitle="ranking")
+            title!(title)
+            pt2 = plot(λpath, tr_σ2path[:, [ranking; rest]], label=legendlabel, grid=false, 
+                        showaxis=false, xlims=(20,3), legendtitle="ranking") 
+            l = @layout [b c{0.13w}]
+            plot(pt1, pt2, layout=l)
+        end 
+       
+    # no legend 
+    else 
+        plot(λpath, tr_σ2path[:, [ranking; rest]], legend=false, 
+        xaxis=(xlab, (xmin, xmax)), yaxis=(ylab), width=linewidth)
+        title!(title)     
+    end 
+   
 
 end 
 
