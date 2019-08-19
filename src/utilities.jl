@@ -135,6 +135,7 @@ Output plot of solution path at varying λ values. Use backend such as `gr()`.
 - `xmin`: lower limit for x-axis. default is minimum of `λpath`.
 - `xmax`: upper limit for x-axis. default is maximum of `λpath`.
 - `linewidth`: line width. Default is 1.0.
+- `nranks`: no. of ranks to displayed on legend. Default is total number of variance components.
 - `legend`: logical flag for including legend. Default is true.
 - `legendout`: logical flag for moving the legend outside the plot. Default is true. 
 - `resvarcomp`: logical flag for indicating residual variance component in `σ2path`. 	   
@@ -152,6 +153,7 @@ function plotsolpath(
     xmin       :: AbstractFloat = minimum(λpath),
     xmax       :: AbstractFloat = maximum(λpath),
     linewidth  :: AbstractFloat = 1.0,
+    nranks     :: Int = size(σ2path, 1),
     legend     :: Bool = true,
     legendout  :: Bool = true, 
     resvarcomp :: Bool = true
