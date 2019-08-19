@@ -160,7 +160,7 @@ function plotsolpath(
     ) where {T <: Real}
 
     # size of solution path 
-    novarcomp, nlambda = size(σ2path)
+    novarcomps, nlambda = size(σ2path)
 
     # get ranking of variance components
     ranking, rest = rankvarcomps(σ2path; resvarcomp=resvarcomp)
@@ -170,7 +170,7 @@ function plotsolpath(
 
    if legend && nranks > 0 
         legendlabel = "\\sigma^{2}[$(ranking[1])]"
-        if nranks == nvarcomps # display all non-zero variance components 
+        if nranks == novarcomps # display all non-zero variance components 
             
             for i in ranking[2:end]
                 legendlabel = hcat(legendlabel, "\\sigma^{2}[$i]")
