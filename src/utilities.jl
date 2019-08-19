@@ -184,7 +184,7 @@ function plotsolpath(
 
         end 
 
-        for i in 1:(nvarcomps - nranks)
+        for i in 1:(novarcomps - nranks)
             legendlabel = hcat(legendlabel, "")
         end 
 
