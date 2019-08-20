@@ -138,6 +138,7 @@ Output plot of solution path at varying λ values. Use backend such as `gr()`.
 - `nranks`: no. of ranks to displayed on legend. Default is total number of variance components.
 - `legend`: logical flag for including legend. Default is true.
 - `legendout`: logical flag for moving the legend outside the plot. Default is true. 
+- `legendtitle`: legend title. Default is "Ranking". 
 - `resvarcomp`: logical flag for indicating residual variance component in `σ2path`. 	   
       Default is true. 
 
@@ -156,6 +157,7 @@ function plotsolpath(
     nranks     :: Int = size(σ2path, 1),
     legend     :: Bool = true,
     legendout  :: Bool = true, 
+    legendtitle :: AbstractString = "Ranking",
     resvarcomp :: Bool = true
     ) where {T <: Real}
 
@@ -192,15 +194,15 @@ function plotsolpath(
 
         if !legendout
             plot(λpath, tr_σ2path[:, [ranking; rest]], label=legendlabel, 
-            xaxis=(xlab, (xmin, xmax)), yaxis=(ylab), width=linewidth, legendtitle="ranking")
+            xaxis=(xlab, (xmin, xmax)), yaxis=(ylab), width=linewidth, legendtitle=legendtitle)
             title!(title) 
         else 
             pt1 = plot(λpath, tr_σ2path[:, [ranking; rest]],  legend=false,
                 xaxis=(xlab, (xmin, xmax)), yaxis=(ylab), width=linewidth, 
-                legendtitle="ranking")
+                legendtitle=legendtitle)
             title!(title)
             pt2 = plot(λpath, tr_σ2path[:, [ranking; rest]], label=legendlabel, grid=false, 
-                        showaxis=false, xlims=(20,3), legendtitle="ranking") 
+                        showaxis=false, xlims=(20,3), legendtitle=legendtitle) 
             l = @layout [b c{0.13w}]
             plot(pt1, pt2, layout=l)
         end 
@@ -216,30 +218,134 @@ function plotsolpath(
 end 
 
 """
-    matarray2mat(matarray)
+    plotsolpath(Σpath, λpath; title="Solution Path", xlab="λ", ylab="σ2", 
+            xmin=minimum(λpath), xmax=minimum(λpath), tol=1e-6)
 
-Convert array of matrices to single matrix. All matrices in `matarray` should have 
-the same dimension. e.g. Σpath
+Output plot of solution path at varying λ values. Use backend such as `gr()`.
 
-# Input 
-- `matarray`: array of matrices to be converted 
+# Input
+- `Σpath`: solution path (in numeric matrix) to be plotted, each column should 
+        represent variance components at specific λ as in output from `vcselectpath!`. 
+        The last row of `Σpath` should be for residual variance component. 
+        Otherwise set `resvarcomp=false` to indicate the absence. 
+- `λpath`: vector of tuning parameter λ values.
+
+# Keyword 
+- `title`: title of the figure. Default is "Solution Path".
+- `xlab`: x-axis label. Default is "lambda".
+- `ylab`: y-axis label. Default is "sigma_i^2".
+- `xmin`: lower limit for x-axis. default is minimum of `λpath`.
+- `xmax`: upper limit for x-axis. default is maximum of `λpath`.
+- `linewidth`: line width. Default is 1.0.
+- `nranks`: no. of ranks to displayed on legend. Default is total number of variance components.
+- `legend`: logical flag for including legend. Default is true.
+- `legendout`: logical flag for moving the legend outside the plot. Default is true. 
+- `legendtitle`: legend title. Default is "Ranking". 
+- `resvarcomp`: logical flag for indicating residual variance component in `σ2path`. 	   
+      Default is true. 
 
 # Output 
-- `mat`: single matrix containing all matrices in `Σpath`
+- plot of solution path 
 """
-function matarray2mat(matarray)
-  
-    nvarcomps, nlambda = size(matarray)
-    d = size(matarray[1, 1], 1)
-    mat = zeros(nvarcomps * d, nlambda * d)
-  
-    for r in 1:nvarcomps
-      for c in 1:nlambda 
-        mat[(r * d - d + 1):(r * d), (c * d - d + 1):(c * d)] = matarray[r, c]
-      end 
+function plotsolpath(
+    Σpath       :: AbstractMatrix{Matrix{T}},
+    λpath      :: AbstractVector{T};
+    title      :: AbstractString = "Solution Path",
+    xlab       :: AbstractString = "\\lambda",
+    ylab       :: AbstractString = "\\Sigma",
+    xmin       :: AbstractFloat = minimum(λpath),
+    xmax       :: AbstractFloat = maximum(λpath),
+    linewidth  :: AbstractFloat = 1.0,
+    nranks     :: Int = size(Σpath, 1),
+    legend     :: Bool = true,
+    legendout  :: Bool = true, 
+    legendtitle :: AbstractString = "Ranking",
+    resvarcomp :: Bool = true
+    ) where {T <: Real}
+
+    # size of solution path 
+    novarcomps, nlambda = size(Σpath)
+
+    # get ranking of variance components
+    ranking, rest = rankvarcomps(Σpath; resvarcomp=resvarcomp)
+
+    # transpose solpath s.t. each row is estimates at particular lambda
+    tr_Σpath = norm.(Σpath)'
+
+   if legend && nranks > 0 
+        legendlabel = "\\Sigma[$(ranking[1])]"
+        if nranks == novarcomps # display all non-zero variance components 
+            
+            for i in ranking[2:end]
+                legendlabel = hcat(legendlabel, "\\Sigma[$i]")
+            end
+            nranks = length(ranking)
+           
+        elseif nranks > 1 # display the first non-zero variance component to enter the path  
+            for i in ranking[2:nranks]
+                legendlabel = hcat(legendlabel, "\\Sigma[$i]")
+            end
+
+        end 
+
+        for i in 1:(novarcomps - nranks)
+            legendlabel = hcat(legendlabel, "")
+        end 
+
+        # plot permuted solution path (decreasing order)
+
+        if !legendout
+            plot(λpath, tr_Σpath[:, [ranking; rest]], label=legendlabel, 
+            xaxis=(xlab, (xmin, xmax)), yaxis=(ylab), width=linewidth, legendtitle=legendtitle)
+            title!(title) 
+        else 
+            pt1 = plot(λpath, tr_Σpath[:, [ranking; rest]],  legend=false,
+                xaxis=(xlab, (xmin, xmax)), yaxis=(ylab), width=linewidth, 
+                legendtitle=legendtitle)
+            title!(title)
+            pt2 = plot(λpath, tr_Σpath[:, [ranking; rest]], label=legendlabel, grid=false, 
+                        showaxis=false, xlims=(20,3), legendtitle=legendtitle) 
+            l = @layout [b c{0.13w}]
+            plot(pt1, pt2, layout=l)
+        end 
+       
+    # no legend 
+    else 
+        plot(λpath, tr_Σpath[:, [ranking; rest]], legend=false, 
+        xaxis=(xlab, (xmin, xmax)), yaxis=(ylab), width=linewidth)
+        title!(title)     
     end 
-  
-    return mat 
+   
+
 end 
+
+
+
+# """
+#     matarray2mat(matarray)
+
+# Convert array of matrices to single matrix. All matrices in `matarray` should have 
+# the same dimension. e.g. Σpath
+
+# # Input 
+# - `matarray`: array of matrices to be converted 
+
+# # Output 
+# - `mat`: single matrix containing all matrices in `Σpath`
+# """
+# function matarray2mat(matarray)
+  
+#     nvarcomps, nlambda = size(matarray)
+#     d = size(matarray[1, 1], 1)
+#     mat = zeros(nvarcomps * d, nlambda * d)
+  
+#     for r in 1:nvarcomps
+#       for c in 1:nlambda 
+#         mat[(r * d - d + 1):(r * d), (c * d - d + 1):(c * d)] = matarray[r, c]
+#       end 
+#     end 
+  
+#     return mat 
+# end 
 
 
