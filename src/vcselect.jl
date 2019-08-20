@@ -18,7 +18,6 @@ Generate solution path of variance components along varying lambda values.
 - `standardize`: logical flag for covariance matrix standardization. Default is `true`.
     If true, `V[i]` is standardized by its Frobenius norm.
 - `tol`: convergence tolerance. Default is `1e-6`.
-- `verbose`: display switch. Default is false.
 
 # Output 
 - `Σ̂path`: matrix of estimated variance components at each tuning parameter `λ`.
