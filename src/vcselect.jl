@@ -68,14 +68,14 @@ function vcselectpath!(
         if typeof(vcm.Σ[1]) <: Matrix 
             # initialize arrays
             Σ̂path = Array{Matrix{T}}(undef, nvarcomps(vcm), nλ)
-            β̂path = Array{Matrix{T}}(undef, nλ)
+            β̂path = [zeros(T, p, d) for i in 1:nλ]
             # solution path 
             for iter in 1:nλ
                 _, objpath[iter], niterspath[iter], = 
                         vcselect!(vcm; penfun=penfun, λ=λpath[iter], penwt=penwt, 
                         maxiters=maxiters, tol=tol, verbose=false, checktype=false)
                 Σ̂path[:, iter] = vcm.Σ 
-                β̂path[iter] = vcm.β
+                β̂path[iter] .= vcm.β
             end
         else
             # initialize arrays
