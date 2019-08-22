@@ -1,5 +1,3 @@
-export plotsolpath, rankvarcomps, 
-
 """
     rankvarcomps(Σpath; tol=1e-8)
 
