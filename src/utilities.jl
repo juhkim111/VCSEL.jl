@@ -17,7 +17,7 @@
 - `rest`: rest of the variance components that are estimated to be zero at all λ > 0
 """
 function rankvarcomps(
-    Σpath     :: AbstractMatrix{T};
+    Σpath      :: AbstractMatrix{T};
     tol        :: Float64 = 1e-8,
     resvarcomp :: Bool = true
     ) where {T <: Real}
@@ -172,7 +172,7 @@ function rankvarcomps(
     # go through solution path and find the order in which variance component enters
     for col in nlambda:-1:2
         bothpath = [view(Σpath, 1:m, col) view(Σpath2, 1:m2, col)]
-        normpath[1:m, col] = mapslices(norm, bothpath; dims=2)
+        normpath[1:m, col] = mapslices(norm, bothpath; dims=2) #mapslices(x -> norm(x, p), bothpath; dims=2)
         idx = findall(x -> x > tol, view(normpath, 1:m, col))
         sortedidx = sortperm(normpath[idx, col], rev=true)
         for j in idx[sortedidx]
@@ -398,6 +398,7 @@ end
     plotsolpath(Σpath, Σpath2, λpath; title="Solution Path", xlab="λ", ylab="σ2", 
             xmin=minimum(λpath), xmax=minimum(λpath), tol=1e-6)
 Output plot of a paired solution path at varying λ values. Use backend such as `gr()`.
+
 # Input
 - `Σpath`: solution path (in numeric matrix) to be plotted, each column should 
     represent variance components at specific λ 
@@ -406,20 +407,27 @@ Output plot of a paired solution path at varying λ values. Use backend such as 
     represent variance components at specific λ 
     as in output from `vcselect`, `vcselectpath`
 - `λpath`: vector of tuning parameter λ values 
+
 # Keyword 
-- `title`: title of the figure, default is "Solution Path"
-- `xlab`: x-axis label, default is minimum of λpath
-- `ylab`: y-axis label, default is maximum of λpath
-- `nranks`: no. of ranks to display on legend, default is total number of variance components
-- `linewidth`: line width, default is 1.0
-- `legend`: indicator to include legend or not, default is true 
-- `legendout`: indicator to move legend outside the plot, default is true 
+- `title`: title of the figure. Default is "Solution Path".
+- `xlab`: x-axis label. Default is "lambda".
+- `ylab`: y-axis label. Default is "sigma_i^2".
+- `xmin`: lower limit for x-axis. default is minimum of `λpath`.
+- `xmax`: upper limit for x-axis. default is maximum of `λpath`.
+- `linewidth`: line width. Default is 1.0.
+- `nranks`: no. of ranks to displayed on legend. Default is total number of variance components.
+- `legend`: logical flag for including legend. Default is true.
+- `legendout`: logical flag for moving the legend outside the plot. Default is true. 
+- `legendtitle`: legend title. Default is "Ranking". 
+- `resvarcomp`: logical flag for indicating residual variance component in `Σpath`. 	   
+      Default is true. 
+
 # Output 
 - plot of solution path 
 """
 function plotsolpath(
     Σpath       :: AbstractMatrix{T},
-    Σpath2    :: AbstractMatrix{T},
+    Σpath2      :: AbstractMatrix{T},
     λpath       :: AbstractVector{T};
     title       :: AbstractString = "Solution Path",
     xlab        :: AbstractString = "\$\\lambda\$",
@@ -430,6 +438,7 @@ function plotsolpath(
     linewidth   :: AbstractFloat = 1.0, 
     legend      :: Bool = true,
     legendout   :: Bool = false,
+    legendtitle :: AbstractString = "Ranking",
     resvarcomp  :: Bool = true,
     resvarcomp2 :: Bool = false
 ) where {T <: Real}
@@ -470,15 +479,15 @@ function plotsolpath(
         # plot permuted solution path (decreasing order)
         if !legendout
             plot(λpath, trnormpath[:, [ranking; rest]], label=legendlabel, 
-            xaxis=(xlab, (xmin, xmax)), yaxis=(ylab), width=linewidth, legendtitle="ranking")
+            xaxis=(xlab, (xmin, xmax)), yaxis=(ylab), width=linewidth, legendtitle=legendtitle)
             title!(title) 
         else 
             pt1 = plot(λpath, trnormpath[:, [ranking; rest]],  legend=false,
                 xaxis=(xlab, (xmin, xmax)), yaxis=(ylab), width=linewidth, 
-                legendtitle="ranking")
+                legendtitle=legendtitle)
             title!(title)
             pt2 = plot(λpath, trnormpath[:, [ranking; rest]], label=legendlabel, grid=false, 
-                        showaxis=false, xlims=(20,3), legendtitle="ranking") 
+                        showaxis=false, xlims=(20,3), legendtitle=legendtitle) 
             l = @layout [b c{0.13w}]
             plot(pt1, pt2, layout=l)
         end 
