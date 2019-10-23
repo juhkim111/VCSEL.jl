@@ -218,12 +218,17 @@ function mm_update_Σ!(
             copyto!(vcm.Mndxnd, vcm.kron_ones_V[i] .* vcm.Ωinv)
             copyto!(vcm.Mdxd, BLAS.gemm('T', 'N', vcm.wt[i], kron_I_one, vcm.Mndxnd * kron_I_one))
         
-            # add penalty unless it's the last variance component 
+            # add penalty as long as it is NOT the last variance component 
             if isa(penfun, L1Penalty) && i < nvarcomps(vcm) 
                 penconst = λ * penwt[i] / √tr(vcm.Σ[i])
                 for j in 1:d
                     vcm.Mdxd[j, j] += penconst  
                 end             
+            elseif isa(penfun, MCPPenalty) && (i < nvarcomps(vcm)) && (√tr(vcm.Σ[i]) <= penfun.γ * λ)
+                penconst = λ * penwt[i] / √tr(vcm.Σ[i]) - 1 / penfun.γ
+                for j in 1:d
+                    vcm.Mdxd[j, j] += penconst  
+                end
             end 
 
             copyto!(vcm.L, cholesky!(Symmetric(vcm.Mdxd)).L)
