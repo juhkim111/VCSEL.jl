@@ -231,6 +231,7 @@ function mm_update_Σ!(
                 end
             end 
 
+            # cholesky decomposition & inverse 
             copyto!(vcm.L, cholesky!(Symmetric(vcm.Mdxd)).L)
             vcm.Linv[:] = inv(vcm.L)
 
