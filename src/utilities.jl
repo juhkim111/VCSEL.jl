@@ -220,7 +220,7 @@ Output plot of solution path at varying λ values. Use backend such as `gr()`.
       Default is true. 
 
 # Output 
-- plot of solution path 
+- plot of solution path. 
 """
 function plotsolpath(
     Σpath     :: AbstractMatrix{T},
@@ -321,14 +321,14 @@ Output plot of solution path at varying λ values. Use backend such as `gr()`.
       Default is true. 
 
 # Output 
-- plot of solution path 
+- plot of solution path.
 """
 function plotsolpath(
     Σpath      :: AbstractMatrix{Matrix{T}},
     λpath      :: AbstractVector{T};
     title      :: AbstractString = "Solution Path",
     xlab       :: AbstractString = "\\lambda",
-    ylab       :: AbstractString = "\\Sigma",
+    ylab       :: AbstractString = "||\\Sigma||_2",
     xmin       :: AbstractFloat = minimum(λpath),
     xmax       :: AbstractFloat = maximum(λpath),
     linewidth  :: AbstractFloat = 1.0,
