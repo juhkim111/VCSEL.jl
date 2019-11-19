@@ -1,5 +1,5 @@
 """
-    vcselect(y, V1, V2; penfun, λ, penwt, σ2, maxiter, tol, verbose)
+    vcselect(y, V, Vint; penfun, λ, penwt, σ2, maxiter, tol, verbose)
 
 Select variance components at specified lambda by minimizing penalized negative 
 log-likelihood of variance component model. 
@@ -331,7 +331,50 @@ function vcselect(
 end 
 
 """
+    vcselect(y, X, G, trt; penfun, λ, penwt, σ2, σ2int, B, Ω, Ωinv, maxiter, tol, verbose)
 
+Select variance components at specified lambda by minimizing penalized negative 
+log-likelihood of variance component model. 
+The objective function to minimize is
+  `0.5n*log(2π) + 0.5logdet(Ω) + 0.5y'*inv(Ω)*y + λ * sum(penwt.*penfun(σ))`
+where 
+`Ω = (σ2[1]*V[1] + σ2int[1]*Vint[1]) + ... (σ2[m]*V[m] + σ2int[m]*Vint[m]) + σ2[end]*V[end]`, 
+`m` is no. of groups, and `V[i]` and `Vint[i]` are i-th covariance matrices for main 
+effect and interaction effect, respectively. Minimization is achieved via majorization
+minimization (MM) algorithm. `V[i]` and `Vint[i]` are either included or excluded together.
+
+# Input
+- `y`: nx1 trait/response vector
+- `X`: covariate matrix 
+- `G`: mx1 vector of genotype matrices (matrix of minor allele counts) for each SNP-set, 
+    (G[1],G[2],...,G[m]) where all G[i] have n rows 
+- `trt`: nx1 vector or nxn diagonal matrix whose entries indicate treatment status 
+    of each individual 
+
+# Keyword
+- `penfun`: penalty function, e.g., NoPenalty() (default), L1Penalty()
+- `λ`: penalty strength, default is 1.0
+- `penwt`: vector of penalty weights, default is (1,1,...1,0)
+- `σ2`: (m+1)x1 initial values for genetic effect, default is (1,1,...,1), 
+    note: m+1 because it includes residual error variance component 
+- `σ2int`: mx1 initial values for interaction effect, default is (1,1,...,1)
+- `B`: projection matrix 
+- `Ω`: initial overall covariance matrix `Ω`
+- `Ωinv`: initial inverse matrix of overall covariance matrix `Ω`
+- `maxiter`: maximum number of iterations, default is 1000
+- `tol`: tolerance in difference of objective values for MM loop, default is 1e-6
+- `verbose`: display switch, default is false 
+- `checkfrobnorm`: if true, makes sures elements of `V` have frobenius norm 1.
+    Default is true 
+
+# Output
+- `σ2`: vector of estimated variance components 
+- `σ2int`: vector of estimated variance components for interaction matrices 
+- `β`: vector of estimated fixed effects coefficients 
+- `obj`: objective value at the estimated variance components 
+- `niters`: number of iterations to convergence
+- `Ω`: covariance matrix evaluated at the estimated variance components
+- `objvec`: vector of objective values at each iteration 
 """
 function vcselect( 
     y           :: AbstractVector{T},
@@ -390,20 +433,6 @@ function vcselect(
         V[end] = Matrix(I, n, n)
     end 
 
-    # # construct overall covariance matrix 
-    # Ω = fill!(Ω, 0)     # covariance matrix 
-    # for i in 1:m
-    #     if iszero(σ2[i]) && iszero(σ2int[i])
-    #         continue 
-    #     else 
-    #         axpy!(σ2[i], V[i], Ω) 
-    #         axpy!(σ2int[i], Vint[i], Ω) 
-    #     end 
-    # end
-    # axpy!(σ2[end], V[end], Ω)
-
-    # estimate fixed effects 
-    #β = betaestimate(y, X, Ω)
     β = betaestimate(y, X, V, Vint, σ2, σ2int)
 
     # output 
@@ -416,7 +445,7 @@ function vcselect(
 end 
 
 """
-    vcselectpath()
+    vcselectpath(y, G, trt; penfun, penwt, nλ, λpath, σ2, σ2int, maxiter, tol, standardize)
 
 # Input 
 - `y`: response vector
@@ -445,10 +474,9 @@ end
 - `σ̂2path`: matrix of estimated variance components for genetic main effects 
 - `σ̂2intpath`: matrix of estimated variance components for interaction effects 
 - `β̂path`: matrix of fixed effects parameter estimates 
-* `objpath`: vector of objective value at `σ̂2` and `σ̂2int`
-* `λpath`: the actual sequence of `λ` values used
-* `niterspath`: vector of the number of iterations to convergence.
-
+- `objpath`: vector of objective value at `σ̂2` and `σ̂2int`
+- `λpath`: the actual sequence of `λ` values used
+- `niterspath`: vector of the number of iterations to convergence.
 """
 function vcselectpath(
     y           :: AbstractVector{T},
@@ -564,8 +592,108 @@ function vcselectpath(
                 view(σ2intpath, :, iter))
     end 
 
-
-
     # output 
     return σ2path, σ2intpath, βpath, objpath, λpath, niterspath
+end 
+
+
+"""
+
+"""
+function vcselectpath(
+    y           :: AbstractVector{T},
+    V           :: Vector{Matrix{T}},
+    Vint        :: Vector{Matrix{T}};
+    penfun      :: Penalty = NoPenalty(),
+    penwt       :: AbstractVector{T} = [ones(T, length(V)-1); zero(T)],
+    nλ          :: Int = 100, 
+    λpath       :: AbstractVector{T} = T[], 
+    σ2          :: AbstractVector{T} = ones(T, length(V)),
+    σ2int       :: AbstractVector{T} = ones(T, length(Vint)),
+    maxiter     :: Int = 1000,
+    tol         :: AbstractFloat = 1e-5,
+    standardize :: Bool = true
+    ) where {T <: Real}
+
+    if penfun != NoPenalty()
+        # assign 
+        m = length(G) 
+
+        # create a lambda grid if not specified
+        if isempty(λpath)
+            maxλ = maxlambda(y, V, Vint; penfun=penfun, penwt=penwt, 
+                    maxiter=maxiter, tol=tol, standardize=standardize, B=B)
+            λpath = range(0, stop=maxλ, length=nλ)
+        else 
+            nλ = length(λpath)
+        end 
+
+        # initialize arrays 
+        σ2path = Matrix{T}(undef, m+1, nλ) 
+        σ2intpath = Matrix{T}(undef, m, nλ)  
+        objpath = Vector{Float64}(undef, nλ) 
+        niterspath = Vector{Int}(undef, nλ) 
+
+        # create solution path 
+        for iter in 1:nλ 
+            σ2, σ2int, objpath[iter], niterspath[iter], = 
+                vcselect(y, V, Vint; penfun=penfun, λ=λpath[iter], penwt=penwt, 
+                σ2=σ2, σ2int=σ2int, maxiter=maxiter, tol=tol)
+            σ2path[:, iter] = σ2
+            σ2intpath[:, iter] = σ2int
+        end 
+
+    else # if no penalty, no lambda grid 
+        σ2path, σ2intpath, objpath, niterspath, = vcselect(y, V, Vint; penfun=penfun, 
+            σ2=σ2, σ2int=σ2int, maxiter=maxiter, tol=tol)
+
+    end 
+
+    # output 
+    return σ2path, σ2intpath, λpath, objpath, niterspath
+
+
+end 
+
+
+"""
+
+"""
+function vcselectpath(
+    y            :: AbstractVector{T},
+    X            :: AbstractVecOrMat{T},
+    V            :: Vector{Matrix{T}},
+    Vint         :: Vector{Matrix{T}};
+    penfun       :: Penalty = NoPenalty(),
+    penwt        :: AbstractVector{T} = [ones(T, length(V)-1); zero(T)],
+    nλ           :: Int = 100, 
+    λpath        :: AbstractVector{T} = T[], 
+    σ2           :: AbstractVector{T} = ones(T, length(V)),
+    σ2int        :: AbstractVector{T} = ones(T, length(Vint)),
+    maxiter      :: Int = 1000,
+    tol          :: AbstractFloat = 1e-5,
+    standardize  :: Bool = true,
+    fixedeffects :: Bool = false 
+    ) where {T <: Real}
+
+    # project onto nullspace 
+    ynew, Vnew, Vintnew, = nullprojection(y, X, V, Vint)
+
+    # 
+    if !fixedeffects 
+        βpath = zeros(T, size(X, 2), 0)
+        σ2path, σ2intpath, objpath, λpath, niterspath = vcselectpath(ynew, Vnew, Vintnew; 
+                penfun=penfun, penwt=penwt, nλ=nλ, λpath=λpath, σ2=σ2, σ2int=σ2int, 
+                maxiter=maxiter, tol=tol, standardize=standardize)
+        return σ2path, σ2intpath, βpath, λpath, objpath, niterspath
+    else 
+        βpath = zeros(T, size(X, 2), length(λpath))
+        for iter in 1:length(λpath)
+            βpath[:, iter] .= betaestimate(y, X, V, Vint, view(σ2path, :, iter), 
+                    view(σ2intpath, :, iter))
+        end 
+        return σ2path, σ2intpath, βpath, λpath, objpath, niterspath
+    end 
+
+    
 end 
