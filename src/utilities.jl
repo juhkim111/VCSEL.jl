@@ -77,9 +77,9 @@ Project `y` to null space of `transpose(X)` and transform `V1` and `V2` accordin
 
 # Ouptut 
 - `ynew`: projected response vector
-- `Vnew1`: projected vector of covariance matrices, 
+- `V1new`: projected vector of covariance matrices, 
     frobenius norm of `V[i]` equals to 1 for all `i`
-- `Vnew2`: projected vector of covariance matrices, 
+- `V2new`: projected vector of covariance matrices, 
     frobenius norm of `V[i]` equals to 1 for all `i`
 - `B`: matrix whose columns are basis vectors of the null space of transpose(X) 
 """
@@ -111,16 +111,16 @@ function nullprojection(
     tmp = zeros(size(X, 1), s)
     for i in 1:(nvarcomps - 1)
         mul!(tmp, V1[i], B)
-        Vnew1[i] = BLAS.gemm('T', 'N', B, tmp)
+        V1new[i] = BLAS.gemm('T', 'N', B, tmp)
         mul!(tmp, V2[i], B)
-        Vnew2[i] = BLAS.gemm('T', 'N', B, tmp)
+        V2new[i] = BLAS.gemm('T', 'N', B, tmp)
         # divide by its frobenius norm  
-        Vnew1[i] ./= norm(Vnew1[i])
-        Vnew2[i] ./= norm(Vnew2[i])
+        V1new[i] ./= norm(V1new[i])
+        V2new[i] ./= norm(V2new[i])
     end 
 
     # output 
-    return ynew, Vnew1, Vnew2, B 
+    return ynew, V1new, V2new, B 
 
 end 
 
