@@ -658,7 +658,7 @@ function vcselectpath(
 
     if penfun != NoPenalty()
         # assign 
-        m = length(G) 
+        m = length(Vint) 
 
         # create a lambda grid if not specified
         if isempty(λpath)
