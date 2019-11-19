@@ -711,7 +711,7 @@ function vcselectpath(
     σ2           :: AbstractVector{T} = ones(T, length(V)),
     σ2int        :: AbstractVector{T} = ones(T, length(Vint)),
     maxiter      :: Int = 1000,
-    tol          :: AbstractFloat = 1e-5
+    tol          :: AbstractFloat = 1e-5,
     fixedeffects :: Bool = false 
     ) where {T <: Real}
 
