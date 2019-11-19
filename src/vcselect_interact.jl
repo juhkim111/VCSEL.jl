@@ -652,8 +652,7 @@ function vcselectpath(
     σ2          :: AbstractVector{T} = ones(T, length(V)),
     σ2int       :: AbstractVector{T} = ones(T, length(Vint)),
     maxiter     :: Int = 1000,
-    tol         :: AbstractFloat = 1e-5,
-    standardize :: Bool = true
+    tol         :: AbstractFloat = 1e-5
     ) where {T <: Real}
 
     if penfun != NoPenalty()
@@ -663,7 +662,7 @@ function vcselectpath(
         # create a lambda grid if not specified
         if isempty(λpath)
             maxλ = maxlambda(y, V, Vint; penfun=penfun, penwt=penwt, 
-                    maxiter=maxiter, tol=tol, standardize=standardize, B=B)
+                    maxiter=maxiter, tol=tol)
             λpath = range(0, stop=maxλ, length=nλ)
         else 
             nλ = length(λpath)
@@ -712,8 +711,7 @@ function vcselectpath(
     σ2           :: AbstractVector{T} = ones(T, length(V)),
     σ2int        :: AbstractVector{T} = ones(T, length(Vint)),
     maxiter      :: Int = 1000,
-    tol          :: AbstractFloat = 1e-5,
-    standardize  :: Bool = true,
+    tol          :: AbstractFloat = 1e-5
     fixedeffects :: Bool = false 
     ) where {T <: Real}
 
@@ -725,7 +723,7 @@ function vcselectpath(
         βpath = zeros(T, size(X, 2), 0)
         σ2path, σ2intpath, objpath, λpath, niterspath = vcselectpath(ynew, Vnew, Vintnew; 
                 penfun=penfun, penwt=penwt, nλ=nλ, λpath=λpath, σ2=σ2, σ2int=σ2int, 
-                maxiter=maxiter, tol=tol, standardize=standardize)
+                maxiter=maxiter, tol=tol)
         return σ2path, σ2intpath, βpath, λpath, objpath, niterspath
     else 
         βpath = zeros(T, size(X, 2), length(λpath))
