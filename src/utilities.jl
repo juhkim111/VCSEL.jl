@@ -105,10 +105,9 @@ function nullprojection(
     nvarcomps = length(V1) 
 
     # transformed covariance matrices 
-    Vnew1 = Vector{Matrix{Float64}}(undef, nvarcomps)
-    Vnew2 = Vector{Matrix{Float64}}(undef, nvarcomps)
-    Vnew1[end] = Matrix{eltype(B)}(I, s, s) ./ √s
-    Vnew2[end] = Matrix{eltype(B)}(I, s, s) ./ √s
+    V1new = Vector{Matrix{Float64}}(undef, length(V1))
+    V2new = Vector{Matrix{Float64}}(undef, length(V2))
+    V1new[end] = Matrix{eltype(B)}(I, s, s) ./ √s
     tmp = zeros(size(X, 1), s)
     for i in 1:(nvarcomps - 1)
         mul!(tmp, V1[i], B)
