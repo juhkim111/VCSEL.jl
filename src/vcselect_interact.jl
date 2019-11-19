@@ -217,6 +217,49 @@ function vcselect(
 
 end 
 
+"""
+
+"""
+function vcselect( 
+    y           :: AbstractVector{T},
+    X           :: AbstractVecOrMat{T},
+    V           :: Vector{Matrix{T}},
+    Vint        :: Vector{Matrix{T}};
+    penfun      :: Penalty = NoPenalty(),
+    λ           :: T = one(T), 
+    penwt       :: AbstractVector{T} = [ones(T, length(Vint)); zero(T)],
+    σ2          :: AbstractVector{T} = ones(T, length(V)),
+    σ2int       :: AbstractVector{T} = ones(T, length(Vint)),
+    Ω           :: AbstractMatrix{T} = zeros(T, size(V[1])), 
+    Ωinv        :: AbstractMatrix{T} = zeros(T, size(V[1])),
+    maxiter     :: Int = 1000,
+    tol         :: AbstractFloat = 1e-5,
+    verbose     :: Bool = false
+    ) where {T <: Real} 
+
+    # project onto nullspace 
+    ynew, Vnew, Vintnew, = nullprojection(y, X, V, Vint)
+
+    # 
+    if verbose 
+        σ2, σ2int, obj, niters, Ω, objvec = vcselect(ynew, Vnew, Vintnew; penfun=penfun,
+                λ=λ, penwt=penwt, σ2=σ2, σ2int=σ2int, Ω=Ω, Ωinv=Ωinv, maxiter=maxiter,
+                tol=tol, verbose=true)
+    else
+        σ2, σ2int, obj, niters, Ω = vcselect(ynew, Vnew, Vintnew; penfun=penfun,
+                λ=λ, penwt=penwt, σ2=σ2, σ2int=σ2int, Ω=Ω, Ωinv=Ωinv, maxiter=maxiter,
+                tol=tol)
+    end 
+
+    β = betaestimate(y, X, V, Vint, σ2, σ2int)
+
+    if verbose 
+        return σ2, σ2int, β, obj, niters, Ω, objvec;
+    else 
+        return σ2, σ2int, β, obj, niters, Ω;
+    end
+
+end
 
 """
     vcselect(y, G, trt; penfun, λ, penwt, σ2, maxiter, tol, verbose)
