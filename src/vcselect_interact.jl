@@ -230,8 +230,6 @@ function vcselect(
     penwt       :: AbstractVector{T} = [ones(T, length(Vint)); zero(T)],
     σ2          :: AbstractVector{T} = ones(T, length(V)),
     σ2int       :: AbstractVector{T} = ones(T, length(Vint)),
-    Ω           :: AbstractMatrix{T} = zeros(T, size(V[1])), 
-    Ωinv        :: AbstractMatrix{T} = zeros(T, size(V[1])),
     maxiter     :: Int = 1000,
     tol         :: AbstractFloat = 1e-5,
     verbose     :: Bool = false
@@ -243,11 +241,11 @@ function vcselect(
     # 
     if verbose 
         σ2, σ2int, obj, niters, Ω, objvec = vcselect(ynew, Vnew, Vintnew; penfun=penfun,
-                λ=λ, penwt=penwt, σ2=σ2, σ2int=σ2int, Ω=Ω, Ωinv=Ωinv, maxiter=maxiter,
+                λ=λ, penwt=penwt, σ2=σ2, σ2int=σ2int, maxiter=maxiter,
                 tol=tol, verbose=true)
     else
         σ2, σ2int, obj, niters, Ω = vcselect(ynew, Vnew, Vintnew; penfun=penfun,
-                λ=λ, penwt=penwt, σ2=σ2, σ2int=σ2int, Ω=Ω, Ωinv=Ωinv, maxiter=maxiter,
+                λ=λ, penwt=penwt, σ2=σ2, σ2int=σ2int, maxiter=maxiter,
                 tol=tol)
     end 
 
