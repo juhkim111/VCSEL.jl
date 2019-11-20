@@ -318,7 +318,37 @@ end
 
 
 """
+# Input 
+- `y`: response vector
+- `V`: vector of covariance matrices for main effect, (V[1],V[2],...,V[m],I)
+- `Vint`: vector of covariance matrices, (Vint[1],Vint[2],...,Vint[m])
+    note that each `V` has length m+1 while `Vint` has length m; 
+    V[end] should be identity matrix or identity matrix divided by √n if standardized 
 
+# Keyword arguments
+- `penfun`: penalty function (e.g. `NoPenalty()`, `L1Penalty()`), default is `NoPenalty()`
+- `penwt`: penalty weight, default is (1,1,...1,0). `penwt` is a vector of length m+1
+- `nλ`: the number of lambda values, default is 100
+- `λpath`: a user supplied lambda sequence. 
+    Typically the program computes its own lambda sequence based on `nλ`; 
+    supplying `λpath` overrides this
+- `σ2`: initial estimates for main effects, default is (1,...,1)
+    i-th element (i=1,...,m) of the vector indicates main effect for i-th gene 
+    while the last element (i=m+1 or `σ2[end]`) is residual variance
+- `σ2int`: initial estimates for interaction effects, default is (1,...,1) 
+    i-th element of the vector indicates interaction effect for i-th gene 
+- `maxiter`: maximum number of iterations, default is 1000
+- `tol`: convergence tolerance, default is `1e-6`
+- `fixedeffects`: logical flag indicating whether to return fixed effects estimates,
+    an empty array is returned if `fixedeffects=false`. Default is FALSE
+
+# Output 
+- `σ̂2path`: matrix of estimated variance components for genetic main effects 
+- `σ̂2intpath`: matrix of estimated variance components for interaction effects 
+- `β̂path`: matrix of fixed effects parameter estimates 
+- `objpath`: vector of objective value at `σ̂2` and `σ̂2int`
+- `λpath`: the actual sequence of `λ` values used
+- `niterspath`: vector of the number of iterations to convergence.
 """
 function vcselectpath(
     y            :: AbstractVector{T},
