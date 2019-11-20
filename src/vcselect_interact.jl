@@ -314,7 +314,6 @@ function vcselectpath(
     # output 
     return σ2path, σ2intpath, λpath, objpath, niterspath
 
-
 end 
 
 
@@ -340,22 +339,24 @@ function vcselectpath(
     # project onto nullspace 
     ynew, Vnew, Vintnew, = nullprojection(y, X, V, Vint)
 
-    # 
+    # get solution path 
+    σ2path, σ2intpath, λpath, objpath, niterspath = vcselectpath(ynew, Vnew, Vintnew; 
+        penfun=penfun, penwt=penwt, nλ=nλ, λpath=λpath, σ2=σ2, σ2int=σ2int, 
+        maxiter=maxiter, tol=tol)
+
+    # get βpath if requested by user 
     if !fixedeffects 
         βpath = zeros(T, size(X, 2), 0)
-        σ2path, σ2intpath, objpath, λpath, niterspath = vcselectpath(ynew, Vnew, Vintnew; 
-                penfun=penfun, penwt=penwt, nλ=nλ, λpath=λpath, σ2=σ2, σ2int=σ2int, 
-                maxiter=maxiter, tol=tol)
-        return σ2path, σ2intpath, βpath, λpath, objpath, niterspath
     else 
         βpath = zeros(T, size(X, 2), length(λpath))
         for iter in 1:length(λpath)
             βpath[:, iter] .= betaestimate(y, X, V, Vint, view(σ2path, :, iter), 
                     view(σ2intpath, :, iter))
         end 
-        return σ2path, σ2intpath, βpath, λpath, objpath, niterspath
     end 
 
+    # 
+    return σ2path, σ2intpath, βpath, λpath, objpath, niterspath
     
 end 
 
