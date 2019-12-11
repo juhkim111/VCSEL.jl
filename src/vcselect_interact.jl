@@ -73,7 +73,8 @@ function vcselectpath!(
         for iter in 1:nλ
             _, objpath[iter], niterspath[iter] = 
                     vcselect!(vcm; penfun=penfun, λ=λpath[iter], penwt=penwt, 
-                    maxiters=maxiters, tol=tol, verbose=false, checktype=false)
+                    maxiters=maxiters, tol=tol, verbose=false, checktype=false,
+                    standardize=standardize)
             Σ̂path[:, iter] .= vcm.Σ
             Σ̂intpath[:, iter] .= vcm.Σint
             β̂path[:, iter] .= vcm.β
@@ -83,7 +84,8 @@ function vcselectpath!(
 
     else # if no penalty, there is no lambda grid 
         _, objpath, niterspath = vcselect!(vcm; penfun=penfun, penwt=penwt, 
-            maxiters=maxiters, tol=tol, verbose=false, checktype=false)
+            maxiters=maxiters, tol=tol, verbose=false, checktype=false,
+            standardize=standardize)
 
         return vcm.Σ, vcm.Σint, vcm.β, zeros(1), objpath, niterspath 
     end 
