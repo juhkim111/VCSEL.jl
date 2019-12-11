@@ -73,7 +73,8 @@ function vcselectpath!(
             for iter in 1:nλ
                 _, objpath[iter], niterspath[iter], = 
                         vcselect!(vcm; penfun=penfun, λ=λpath[iter], penwt=penwt, 
-                        maxiters=maxiters, tol=tol, verbose=false, checktype=false)
+                        maxiters=maxiters, tol=tol, verbose=false, checktype=false,
+                        standardize=standardize)
                 Σ̂path[:, iter] = vcm.Σ 
                 β̂path[iter] .= vcm.β
             end
@@ -85,7 +86,8 @@ function vcselectpath!(
             for iter in 1:nλ
                 _, objpath[iter], niterspath[iter], = 
                         vcselect!(vcm; penfun=penfun, λ=λpath[iter], penwt=penwt, 
-                        maxiters=maxiters, tol=tol, verbose=false, checktype=false)
+                        maxiters=maxiters, tol=tol, verbose=false, checktype=false,
+                        standardize=standardize)
                 Σ̂path[:, iter] .= vcm.Σ
                 β̂path[:, iter] .= vcm.β
             end
@@ -174,14 +176,14 @@ end
 Update `Σ` using MM algorithm.
 """
 function mm_update_Σ!(
-    vcm       :: VCModel;
-    penfun    :: Penalty = NoPenalty(),
-    λ         :: Real = 1.0,
-    penwt     :: AbstractVector = [ones(nvarcomps(vcm)-1); 0.0],
+    vcm         :: VCModel;
+    penfun      :: Penalty = NoPenalty(),
+    λ           :: Real = 1.0,
+    penwt       :: AbstractVector = [ones(nvarcomps(vcm)-1); 0.0],
     standardize :: Bool = true, 
-    maxiters  :: Int = 1000, 
-    tol       :: Real = 1e-6,
-    verbose   :: Bool = false 
+    maxiters    :: Int = 1000, 
+    tol         :: Real = 1e-6,
+    verbose     :: Bool = false 
     ) 
 
     # initialize algorithm 
@@ -452,7 +454,8 @@ function vcselect(
 
     vcmtmp = VCModel(Y, V)
     _, obj, niters, objvec = vcselect!(vcmtmp; penfun=penfun, λ=λ, penwt=penwt, standardize=standardize,
-            maxiters=maxiters, tol=tol, verbose=verbose, checktype=checktype)
+            maxiters=maxiters, tol=tol, verbose=verbose, checktype=checktype,
+            standardize=standardize)
 
     return vcmtmp.Σ, obj, niters, objvec
 
