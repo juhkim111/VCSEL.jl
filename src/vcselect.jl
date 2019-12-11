@@ -453,9 +453,9 @@ function vcselect(
     ) where {T <: Real}
 
     vcmtmp = VCModel(Y, V)
-    _, obj, niters, objvec = vcselect!(vcmtmp; penfun=penfun, λ=λ, penwt=penwt, standardize=standardize,
-            maxiters=maxiters, tol=tol, verbose=verbose, checktype=checktype,
-            standardize=standardize)
+    _, obj, niters, objvec = vcselect!(vcmtmp; penfun=penfun, λ=λ, penwt=penwt, 
+            standardize=standardize, maxiters=maxiters, tol=tol, verbose=verbose, 
+            checktype=checktype)
 
     return vcmtmp.Σ, obj, niters, objvec
 
