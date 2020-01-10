@@ -1,8 +1,8 @@
 module vcselect_test
 
-#using Random, LinearAlgebra, VarianceComponentSelect, Test
-include("../src/VarianceComponentSelect.jl")
-using Random, LinearAlgebra, .VarianceComponentSelect, Test
+using Random, LinearAlgebra, VarianceComponentSelect, Test
+# include("../src/VarianceComponentSelect.jl")
+# using Random, LinearAlgebra, .VarianceComponentSelect, Test
 
 Random.seed!(123)
 
