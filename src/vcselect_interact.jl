@@ -133,9 +133,24 @@ function vcselect(
                             √(const2 / (const1 + pen))
                         σ2int[j] = σ2int[j] * 
                             √(const2int / (const1int + pen))
-                    end
+                    # MCP penalty 
+                    elseif isa(penfun, MCPPenalty) 
+                        if σ2[j] <= (penfun.γ * λ)^2
+                            σ2[j] = σ2[j] * 
+                                √(const2 / (const1 + pen - (1 / penfun.γ)))
+                        else
+                            σ2[j] = σ2[j] * 
+                                √(const2 / const1)
+                        end 
+                        if σ2int[j] <= (penfun.γ * λ)^2
+                            σ2int[j] = σ2int[j] * 
+                                √(const2int / (const1int + pen - (1 / penfun.γ)))
+                        else
+                            σ2int[j] = σ2int[j] * 
+                                √(const2int / const1int)
+                        end  
+                    end 
                 end 
-
                 
             # update under no penalty 
             else
@@ -206,8 +221,6 @@ function vcselect(
     if niters == 0
     niters = maxiter
     end
-
-   
 
     if verbose 
         return σ2, σ2int, obj, niters, Ω, objvec;
