@@ -123,7 +123,7 @@ function maxlambda(
     V       :: AbstractVector{Matrix{T}},
     Vint    :: AbstractVector{Matrix{T}};
     penfun  :: Penalty = NoPenalty(),
-    penwt   :: AbstractVector{T} = [ones(T, length(G)); zero(T)],
+    penwt   :: AbstractVector{T} = [ones(T, length(Vint)); zero(T)],
     maxiter :: Int = 500,
     tol     :: AbstractFloat = 1e-6
     ) where {T, S <: Real}
