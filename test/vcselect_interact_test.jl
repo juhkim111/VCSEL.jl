@@ -1,16 +1,16 @@
 module InteractTest
 
 # load packages 
-using Random, LinearAlgebra, Test, StatsBase, VarianceComponentSelect
-# include("../src/VarianceComponentSelect.jl")
-# using .VarianceComponentSelect
+using Random, LinearAlgebra, Test, StatsBase # VarianceComponentSelect
+include("../src/VarianceComponentSelect.jl")
+using .VarianceComponentSelect
 
 # set seed 
 Random.seed!(123)
 
 # generate data from an univariate response variance component model 
 n = 100   # no. observations
-m = 10    # no. variance components
+m = 7    # no. variance components
 p = 3     # no. covariates
 X = randn(n, p)
 β = ones(p)
@@ -32,8 +32,8 @@ V[end] = Matrix(I, n, n) ./ √n
 
 # truth 
 σ2, σ2int = zeros(m + 1), zeros(m)
-σ2[1] = σ2[4] = σ2[9] = 5.0
-σ2int[1] = σ2int[4] = σ2int[9] = 5.0
+σ2[1] = σ2[5] = 5.0
+σ2int[1] = σ2int[5] = 5.0
 σ2[end] = 1.0
 
 # form Ω
@@ -57,23 +57,7 @@ nlambda = 20
   end 
 end 
 
-σ̂2_1, σ̂2int_1, obj_1, niters_1, Ω_1, objvec_1 = vcselect(y, G, trt; verbose=true)
-@testset begin 
-  for i in 1:(length(objvec_1) - 1)
-    @test objvec_1[i] >= objvec_1[i+1]
-  end 
-end 
-
-@testset begin
-  @test σ̂2 == σ̂2_1
-  @test σ̂2int == σ̂2int_1
-  @test obj == obj_1
-  @test niters == niters_1
-  @test Ω == Ω_1
-  @test objvec == objvec_1
-end 
-
-σ̂2, σ̂2int, β̂, obj, niters, Ω, objvec = vcselect(y2, X, G, trt; verbose=true)
+σ̂2, σ̂2int, β̂, obj, niters, Ω, objvec = vcselect(y2, X, V, Vint; verbose=true)
 println("objvec=", objvec)
 @testset begin 
   for i in 1:(length(objvec) - 1)
@@ -81,7 +65,7 @@ println("objvec=", objvec)
   end 
 end 
 
-σ̂2, σ̂2int, obj, niters, Ω, objvec = vcselect(y, G, trt; verbose=true, λ=2.0, 
+σ̂2, σ̂2int, obj, niters, Ω, objvec = vcselect(y, V, Vint; verbose=true, λ=2.0, 
       penfun=L1Penalty())
 @testset begin 
   for i in 1:(length(objvec) - 1)
@@ -89,22 +73,59 @@ end
   end 
 end 
 
-σ̂2, σ̂2int, β̂, obj, niters, Ω, objvec = vcselect(y2, X, G, trtmat; verbose=true, λ=2.0, 
+σ̂2, σ̂2int, β̂, obj, niters, Ω, objvec = vcselect(y2, X, V, Vint; verbose=true, λ=3.0, 
       penfun=L1Penalty())
 @testset begin 
   for i in 1:(length(objvec) - 1)
     @test objvec[i] >= objvec[i+1]
+  end 
+end 
+
+σ̂2, σ̂2int, obj, niters, Ω, objvec = vcselect(y, V, Vint; verbose=true, λ=4.0, 
+      penfun=MCPPenalty())
+@testset begin 
+  for i in 1:(length(objvec) - 1)
+    @test objvec[i] >= objvec[i+1]
+  end 
+end 
+
+σ̂2, σ̂2int, obj, niters, Ω, objvec = vcselect(y, V, Vint; verbose=true, λ=1.5, 
+      penfun=MCPPenalty())
+@testset begin 
+  for i in 1:(length(objvec) - 1)
+    @test objvec[i] >= objvec[i+1]
+  end 
+end 
+
+y2new, Vnew, Vintnew, = nullprojection(y2, X, V, Vint)
+σ̂2_1, σ̂2int_1, obj, niters, Ω, objvec_1 = vcselect(y2new, Vnew, Vintnew; verbose=true, λ=2.5, 
+      penfun=MCPPenalty())
+
+σ̂2_2, σ̂2int_2, β̂, obj, niters, Ω, objvec_2 = vcselect(y2, X, V, Vint; verbose=true, λ=2.5, 
+      penfun=MCPPenalty())
+
+@testset begin
+  @test σ̂2_1 == σ̂2_2
+  @test σ̂2int_1 == σ̂2int_2
+  @test objvec_1 == objvec_2
+end 
+      
+@testset begin 
+  for i in 1:(length(objvec_1) - 1)
+    @test objvec_1[i] >= objvec_1[i+1]
+  end 
+end 
+
+@testset begin 
+  for i in 1:(length(objvec_2) - 1)
+    @test objvec_2[i] >= objvec_2[i+1]
   end 
 end 
 
 @info "test maxlambda function"
-maxλ, V_2, Vint_2 = maxlambda(y, G, trt; penfun=L1Penalty())
-@testset begin
-  @test V == V_2
-  @test Vint == Vint_2
-end 
+maxλ = maxlambda(y, V, Vint; penfun=L1Penalty())
 
-σ̂2, σ̂2int, obj, niters, Ω, objvec = vcselect(y, G, trt; verbose=true, λ=maxλ, 
+σ̂2, σ̂2int, obj, niters, Ω, objvec = vcselect(y, V, Vint; verbose=true, λ=maxλ, 
        penfun=L1Penalty())
 @testset begin
   @test isapprox(σ̂2[1:end-1], zeros(m); atol=1e-8)
@@ -112,11 +133,11 @@ end
 end 
 
 @info "test path function"
-σ2path_nopen, σ2intpath_nopen, objpath_nopen, λpath_nopen, niterspath_nopen = 
-      vcselectpath(y, G, trt)
+σ2path_nopen, σ2intpath_nopen, λpath_nopen, objpath_nopen, niterspath_nopen = 
+      vcselectpath(y, V, Vint)
 
 λpath = range(0, 4.0, length=5)
-σ2path, σ2intpath, objpath, λpath, niterspath = vcselectpath(y, G, trt; penfun=L1Penalty(), 
+σ2path, σ2intpath, λpath, objpath, niterspath = vcselectpath(y, V, Vint; penfun=L1Penalty(), 
       λpath=λpath)
 
 @testset begin 
@@ -128,10 +149,10 @@ end
 end 
 
 λpath = range(0, 4.0, length=5)
-σ2path, σ2intpath, βpath, objpath, λpath, niterspath = vcselectpath(y2, X, G, trt; 
+σ2path, σ2intpath, βpath, objpath, λpath, niterspath = vcselectpath(y2, X, V, Vint; 
       penfun=L1Penalty(), λpath=λpath)
 
-σ2path, σ2intpath, βpath, objpath, λpath, niterspath = vcselectpath(y2, X, G, trt; 
+σ2path, σ2intpath, βpath, objpath, λpath, niterspath = vcselectpath(y2, X, V, Vint; 
       penfun=L1Penalty(), nλ=10)
 
 end 
