@@ -20,7 +20,7 @@ git:
 
 after_script: 
   # push coverage results to Codecov and Coveralls
-  - julia -e 'using Pkg, VarianceComponentSelect; cd(joinpath(dirname(pathof(VarianceComponentSelect)), "..")); Pkg.add("Coverage"); using Coverage; Codecov.submit(process_folder()); Coveralls.submit(process_folder())'
+  - julia -e 'using Pkg, VCSEL; cd(joinpath(dirname(pathof(VCSEL)), "..")); Pkg.add("Coverage"); using Coverage; Codecov.submit(process_folder()); Coveralls.submit(process_folder())'
 
 jobs:
   include:
@@ -29,6 +29,6 @@ jobs:
       os: osx
       script:
         - julia -e 'using Pkg; Pkg.add("Documenter")'
-        - julia -e 'using VarianceComponentSelect; include(joinpath(dirname(pathof(VarianceComponentSelect)), "..", "docs", "make.jl"))'
+        - julia -e 'using VCSEL; include(joinpath(dirname(pathof(VCSEL)), "..", "docs", "make.jl"))'
       after_script: skip
       after_success: skip
