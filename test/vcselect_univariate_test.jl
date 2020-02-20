@@ -16,7 +16,6 @@ X = randn(n, p)
 V  = Array{Matrix{Float64}}(undef, m + 1)
 for i = 1:m
   Vi = randn(n, 50)
-  #V[i] = Vi * Vi'
   V[i] = Vi * Vi'
   V[i] = V[i] ./ norm(V[i])
 end
@@ -40,68 +39,59 @@ nlambda = 20
 
 vcm1 = VCModel(yreml, V, [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 1.0])
 vcm2 = VCModel(y, X, V, [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 1.0])
-vcm22 = VCModel(y, X, V, [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 1.0])
+
 
 @info "objective values are monotonically decreasing (no penalty)" 
-Σ̂1, β̂1, obj1, niters1, Ω̂1, objvec = vcselect!(vcm1; verbose=true)
+vcm11 = deepcopy(vcm1)
+_, _, _, objvec = vcselect!(vcm11; verbose=true)
 @testset begin 
   for i in 1:(length(objvec) - 1)
     @test objvec[i] >= objvec[i+1]
   end 
 end 
+temp1 = vcm11.Σ
 
-Σ̂2, β̂2, obj2, niters2, Ω̂2, objvec = vcselect!(vcm2; verbose=true)
+vcm21 = deepcopy(vcm2)
+_, _, _, objvec = vcselect!(vcm21; verbose=true)
 @testset begin 
   for i in 1:(length(objvec) - 1)
     @test objvec[i] >= objvec[i+1]
   end 
 end 
+temp2 = vcm21.Σ
 
 @info "objective values are monotonically decreasing (L1 Penalty)"
-Σ̂22, β̂22, obj22, niters22, _, objvec22 = vcselect!(vcm22; 
+vcm22 = deepcopy(vcm2)
+_, _, _, objvec = vcselect!(vcm22; 
       penfun=L1Penalty(), λ=2.0, verbose=true)
 @testset begin 
-  for i in 1:(length(objvec22) - 1)
-    @test objvec22[i] >= objvec22[i+1]
+  for i in 1:(length(objvec) - 1)
+    @test objvec[i] >= objvec[i+1]
   end 
 end 
 
-# reset and test if the same wth the previous 
-resetVCModel!(vcm2, [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 1.0])
-Σ̂_L1, β̂_L1, obj_L1, niters_L1, _, objvec_L1 = vcselect!(vcm2; 
-        penfun=L1Penalty(), λ=2.0, verbose=true)
+@info "check if objective values are monotonically decreasing (adaptive L1 Penalty)" 
+vcm12 = deepcopy(vcm1)
+penwt = zeros(m + 1)
+penwt[1:m] = 1 ./ sqrt.(temp1[1:m])
+_, _, _, objvec = vcselect!(vcm12; penwt=penwt, verbose=true, λ=5.0)
 @testset begin 
-  for i in 1:(length(objvec_L1) - 1)
-    @test objvec_L1[i] >= objvec_L1[i+1]
+  for i in 1:(length(objvec) - 1)
+    @test objvec[i] >= objvec[i+1]
   end 
 end 
 
-@info "check if resetVCModel! works"
+@info "check if objective values are monotonically decreasing (adaptive L1 penalty)" 
+vcm22 = deepcopy(vcm2)
+penwt = zeros(m + 1)
+penwt[1:m] = 1 ./ sqrt.(temp2[1:m])
+_, _, _, objvec = vcselect(y, V; penfun=L1Penalty(), λ=15.0, verbose=true,
+      penwt = penwt)
 @testset begin 
-  @test Σ̂22 == Σ̂_L1 
-  @test β̂22 == β̂_L1
-  @test obj22 == obj_L1
-  @test niters22 == niters_L1
+  for i in 1:(length(objvec) - 1)
+    @test objvec[i] >= objvec[i+1]
+  end 
 end 
-
-# @info "check if objective values are monotonically decreasing (no penalty)" 
-# temp, _, _, _, objvec = vcselect(y, V; verbose=true)
-# penwt = zeros(m + 1)
-# penwt[1:m] = 1 ./ sqrt.(temp[1:m])
-# @testset begin 
-#   for i in 1:(length(objvec) - 1)
-#     @test objvec[i] >= objvec[i+1]
-#   end 
-# end 
-
-# @info "check if objective values are monotonically decreasing (L1 penalty)" 
-# σ2, _, _, _, objvec = vcselect(y, V; penfun=L1Penalty(), λ=15.0, verbose=true,
-#       penwt = penwt)
-# @testset begin 
-#   for i in 1:(length(objvec) - 1)
-#     @test objvec[i] >= objvec[i+1]
-#   end 
-# end 
 
 # @info "check if objective values are monotonically decreasing (MCP penalty)" 
 # σ2, _, _, _, objvec = vcselect(y, V; penfun=MCPPenalty(), λ=22.0, verbose=true)
