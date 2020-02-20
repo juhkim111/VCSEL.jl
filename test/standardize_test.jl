@@ -2,8 +2,8 @@ module standardize_test
 
 
 #using Random, LinearAlgebra, VarianceComponentSelect, Test
-include("../src/VarianceComponentSelect.jl")
-using Random, LinearAlgebra, .VarianceComponentSelect, Test
+include("../src/VCSEL.jl")
+using Random, LinearAlgebra, .VCSEL, Test
 
 Random.seed!(123)
 

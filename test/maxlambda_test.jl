@@ -1,8 +1,8 @@
 module MaxLambdaTest
 
 #using Random, LinearAlgebra, VarianceComponentSelect, Test
-include("../src/VarianceComponentSelect.jl") #
-using .VarianceComponentSelect #
+include("../src/VCSEL.jl") #
+using .VCSEL #
 using Random, LinearAlgebra, Test, StatsBase #
 Random.seed!(123)
 tol = 1e-8

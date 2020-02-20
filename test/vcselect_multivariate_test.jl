@@ -1,8 +1,8 @@
 module MultivariateTest 
 
 #using Random, LinearAlgebra, Test, VarianceComponentSelect
-include("../src/VarianceComponentSelect.jl") #
-using .VarianceComponentSelect #
+include("../src/VCSEL.jl") #
+using .VCSEL #
 using Random, LinearAlgebra, Test, DelimitedFiles #
 
 Random.seed!(123)
