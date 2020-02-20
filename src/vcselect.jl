@@ -133,7 +133,7 @@ function vcselect!(
     penfun       :: Penalty = NoPenalty(),
     λ            :: Real = 1.0,
     penwt        :: AbstractVector = [ones(nvarcomps(vcm)-1); 0.0],
-    standardize  :: Bool = true, 
+    standardize  :: Bool = false, 
     maxiters     :: Int = 1000,
     tol          :: Real = 1e-6,
     verbose      :: Bool = false,
@@ -180,7 +180,7 @@ function mm_update_Σ!(
     penfun      :: Penalty = NoPenalty(),
     λ           :: Real = 1.0,
     penwt       :: AbstractVector = [ones(nvarcomps(vcm)-1); 0.0],
-    standardize :: Bool = true, 
+    standardize :: Bool = false, 
     maxiters    :: Int = 1000, 
     tol         :: Real = 1e-6,
     verbose     :: Bool = false 
@@ -315,7 +315,7 @@ function mm_update_σ2!(
     penfun      :: Penalty = NoPenalty(),
     λ           :: Real = 1.0,
     penwt       :: AbstractVector = [ones(nvarcomps(vcm)-1); 0.0],
-    standardize :: Bool = true, 
+    standardize :: Bool = false, 
     maxiters    :: Int = 1000,
     tol         :: Real = 1e-6,
     verbose     :: Bool = false 
