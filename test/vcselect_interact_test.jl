@@ -1,9 +1,9 @@
 module InteractTest
 
 # load packages 
-using Random, LinearAlgebra, Test, StatsBase # VarianceComponentSelect
-include("../src/VarianceComponentSelect.jl")
-using .VarianceComponentSelect
+using Random, LinearAlgebra, Test, StatsBase # VCSEL
+include("../src/VCSEL.jl")
+using .VCSEL
 
 # set seed 
 Random.seed!(123)

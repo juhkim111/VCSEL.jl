@@ -1,7 +1,7 @@
 module UnivariateTest
 
 # load packages 
-using Random, LinearAlgebra, VarianceComponentSelect, Test
+using Random, LinearAlgebra, VCSEL, Test
 
 # set seed 
 Random.seed!(123)

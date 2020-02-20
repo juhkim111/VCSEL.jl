@@ -1,7 +1,7 @@
 module UtilitiesTest
 
 # load packages
-using Random, LinearAlgebra, Test, VarianceComponentSelect
+using Random, LinearAlgebra, Test, VCSEL
 
 # set seed 
 Random.seed!(123)

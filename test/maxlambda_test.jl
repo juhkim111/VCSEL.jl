@@ -1,6 +1,6 @@
 module MaxLambdaTest
 
-using Random, LinearAlgebra, VarianceComponentSelect, Test
+using Random, LinearAlgebra, VCSEL, Test
 
 Random.seed!(123)
 
