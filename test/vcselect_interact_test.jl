@@ -1,7 +1,7 @@
 module vcselect_interact_test
 
-include("../src/VarianceComponentSelect.jl")
-using Random, LinearAlgebra, StatsBase, .VarianceComponentSelect, Test
+include("../src/VCSEL.jl")
+using Random, LinearAlgebra, StatsBase, .VCSEL, Test
 
 Random.seed!(123)
 

@@ -1,8 +1,8 @@
 module VCModel_test
 
 using Random, LinearAlgebra, Test
-include("../src/VarianceComponentSelect.jl")
-using .VarianceComponentSelect
+include("../src/VCSEL.jl")
+using .VCSEL
 
 Random.seed!(123)
 n, m, p = 100, 6, 3

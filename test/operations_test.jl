@@ -1,9 +1,9 @@
 module OperationsTest
 
-using Random, LinearAlgebra, Test  #, VarianceComponentSelect
+using Random, LinearAlgebra, Test  #, VCSEL
 
-include("../src/VarianceComponentSelect.jl")
-using .VarianceComponentSelect
+include("../src/VCSEL.jl")
+using .VCSEL
 
 Random.seed!(123)
 
