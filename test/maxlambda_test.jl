@@ -5,7 +5,7 @@ include("../src/VCSEL.jl") #
 using .VCSEL #
 using Random, LinearAlgebra, Test, StatsBase #
 Random.seed!(123)
-tol = 1e-8
+tol = 1e-5
 
 # generate data from an univariate response variance component model 
 @info "testing maxlambda for univariate model"
@@ -45,7 +45,7 @@ maxλ_mcp, = maxlambda(y, V; penfun=MCPPenalty())
 σ̂2_lasso, = vcselect(y, V; penfun=L1Penalty(), λ=maxλ_lasso) 
 σ̂2_mcp, = vcselect(y, V; penfun=MCPPenalty(), λ=maxλ_mcp) 
 
-tol = 1e-10
+tol = 1e-5
 @testset  begin 
     @test all(σ̂2_lasso[:, 1:end-1] .> tol)
     @test all(σ̂2_mcp[:, 1:end-1] .> tol)
@@ -124,11 +124,10 @@ for i = 1:m
   G[i] = randn(n, 50)
   V[i] = G[i] * G[i]'
   Vint[i] = trtmat * V[i] * trtmat 
-  W[i] = V[i] / norm(V[i])
-  Wint[i] = Vint[i] / norm(Vint[i])
+  V[i] = V[i] / norm(V[i])
+  Vint[i] = Vint[i] / norm(Vint[i])
 end
-V[end] = Matrix(I, n, n) #
-W[end] = Matrix(I, n, n) ./ √n
+V[end] = Matrix(I, n, n) ./ √n #
 
 # truth 
 σ2, σ2int = zeros(m + 1), zeros(m)
@@ -149,7 +148,7 @@ y = Ωchol.L * randn(n)
 
 # initialize VCModel 
 vcm = VCintModel(y, V, Vint)
-vcmW = VCintModel(y, W, Wint)
+
 
 # find max lambda 
 maxλ, iter = maxlambda(y, V, Vint; penfun=L1Penalty())
@@ -161,15 +160,5 @@ vcselect!(vcm; penfun=L1Penalty(), λ=maxλ)
     end 
 end 
 
-# find max lambda
-maxλ, iter = maxlambda(y, W, Wint; penfun=L1Penalty())
-print
-vcselect!(vcmW; penfun=L1Penalty(), λ=maxλ) 
 
-@testset begin 
-  for i in 1:m
-    @test isapprox(vcmW.Σ[i], 0.0; atol=tol)
-  end 
-end 
-
-end 
+end
