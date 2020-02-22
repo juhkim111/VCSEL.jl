@@ -1,4 +1,4 @@
-push!(LOAD_PATH,"../src/")
+#push!(LOAD_PATH,"../src/")
 using Documenter, VCSEL
 
 makedocs(
@@ -8,7 +8,7 @@ makedocs(
     pages = [
         "Home" => "index.md",
         #"Examples" => , 
-        "API" => "api.md",
+        "API" => "man/api.md",
     ]
 )
 
