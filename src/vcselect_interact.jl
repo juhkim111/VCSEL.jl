@@ -7,15 +7,16 @@ Generate solution path of variance components along varying lambda values.
 - `vcm`: VCintModel
 
 # Keyword 
-- `penfun`: penalty function (e.g. NoPenalty(), L1Penalty()), default is NoPenalty()
+- `penfun`: penalty function (e.g. `NoPenalty()`, `L1Penalty()`, `MCPPenalty()`), 
+            default is NoPenalty()
 - `penwt`: weights for penalty term, default is (1,1,...1,0)
 - `nλ`: number of tuning parameter values, default is 100
 - `λpath`: a user supplied `λ` sequence. Typically the program computes its own `λ` 
         sequence based on `nλ`; supplying `λpath` overrides this
 - `maxiter`: maximum number of iteration for MM loop, default is 1000
-- `standardize`: logical flag for covariance matrix standardization, default is `true`.
-    If true, `V[i]` and `Vint[i]` is standardized by its Frobenius norm
-- `tol`: convergence tolerance, default is `1e-6`
+- `standardize`: logical flag for covariance matrix standardization, default is `false`.
+    If true, `V[i]` and `Vint[i]` are standardized by its Frobenius norm
+- `tol`: convergence tolerance, default is `1e-5`
 - `verbose`: display switch, default is false 
 
 # Output 
@@ -37,12 +38,12 @@ function vcselectpath!(
     nλ           :: Int = 100, 
     λpath        :: AbstractArray = zeros(0), 
     maxiters     :: Int = 1000, 
-    standardize  :: Bool = true, 
-    tol          :: AbstractFloat = 1e-6
+    standardize  :: Bool = false, 
+    tol          :: AbstractFloat = 1e-5
     )
 
     # handle errors 
-    @assert penfun ∈ [NoPenalty(), L1Penalty()] "penfun must be either NoPenalty() or L1Penalty()!\n"
+    @assert penfun ∈ [NoPenalty(), L1Penalty(), MCPPenalty()] "penfun must be either NoPenalty() or L1Penalty()!\n"
     @assert size(penwt, 2) <= 1 "penwt mut be one-dimensional array!\n"
     @assert size(λpath, 2) <= 1 "λpath must be one-dimensional array!\n"
     @assert maxiters > 0 "maxiters should be a positive integer!\n"
@@ -99,14 +100,15 @@ end
 - `vcm`: VCintModel
 
 # Keyword 
-- `penfun`: penalty function (e.g. NoPenalty(), L1Penalty()), default is NoPenalty()
-- `λ`: tuning parameter, default is 1   
+- `penfun`: penalty function (e.g. `NoPenalty()`, `L1Penalty()`, `MCPPenalty()`), 
+            default is NoPenalty()
+- `λ`: tuning parameter, default is 1.0   
 - `penwt`: weights for penalty term, default is (1,1,...1,0)
 - `maxiters`: maximum number of iterations, default is 1000
-- `standardize`: logical flag for covariance matrix standardization, default is `true`.
+- `standardize`: logical flag for covariance matrix standardization, default is `false`.
     If true, `V[i]` and `Vint[i]` is standardized by its Frobenius norm, and parameter 
     estimates are returned on the original scale
-- `tol`: convergence tolerance, default is `1e-6`
+- `tol`: convergence tolerance, default is `1e-5`
 - `verbose`: display switch, default is false 
 - `checktype`: check argument type switch, default is true
 - `objvec`: vector of objvective values at each iteration 
@@ -122,16 +124,16 @@ function vcselect!(
     penfun       :: Penalty = NoPenalty(),
     λ            :: Real = 1.0,
     penwt        :: AbstractVector = [ones(ngroups(vcm)); 0.0],
-    standardize  :: Bool = true, 
+    standardize  :: Bool = false, 
     maxiters     :: Int = 1000,
-    tol          :: Real = 1e-6,
+    tol          :: Real = 1e-5,
     verbose      :: Bool = false,
     checktype    :: Bool = true 
     )
 
     # handle errors 
     if checktype 
-        @assert penfun ∈ [NoPenalty(), L1Penalty()] "penfun must be either NoPenalty() or L1Penalty()!\n"
+        @assert penfun ∈ [NoPenalty(), L1Penalty(), MCPPenalty()] "penfun must be either NoPenalty() or L1Penalty()!\n"
         @assert size(penwt, 2) <= 1 "penwt mut be one-dimensional array!\n"
         @assert maxiters > 0 "maxiters should be a positive integer!\n"
         # start point has to be strictly positive
@@ -163,9 +165,9 @@ function mm_update_σ2!(
     penfun      :: Penalty = NoPenalty(),
     λ           :: Real = 1.0,
     penwt       :: AbstractVector = [ones(nvarcomps(vcm)-1); 0.0],
-    standardize :: Bool = true, 
+    standardize :: Bool = false, 
     maxiters    :: Int = 1000,
-    tol         :: Real = 1e-6,
+    tol         :: Real = 1e-5,
     verbose     :: Bool = false 
     )
 
@@ -225,7 +227,24 @@ function mm_update_σ2!(
                         σ2tmp[j] = vcm.Σ[j] * √(const2 / (const1 + (pen / vcm.wt[j])))
                         σ2inttmp[j] = vcm.Σint[j] * 
                                 √(const2int / (const1int + (pen / vcm.wt_int[j])))
-                    end
+                    # MCP penalty 
+                    elseif isa(penfun, MCPPenalty)
+                        if σ2tmp[j] <= (penfun.γ * λ)^2
+                            σ2tmp[j] = vcm.Σ[j] * 
+                                √(const2 / (const1 + pen - (1 / penfun.γ)))
+                        else
+                            σ2tmp[j] = vcm.Σ[j] * 
+                                √(const2 / const1)
+                        end 
+                        if σ2inttmp[j] <= (penfun.γ * λ)^2
+                            σ2inttmp[j] = vcm.Σint[j] * 
+                                √(const2int / (const1int + pen - (1 / penfun.γ)))
+                        else
+                            σ2inttmp[j] = vcm.Σint[j] * 
+                                √(const2int / const1int)
+                        end  
+
+                    end 
                 end  
             # update under no penalty 
             else
@@ -254,6 +273,7 @@ function mm_update_σ2!(
         if verbose
             println("iter = ", iter)
             println("σ2   = ", vcm.Σ)
+            println("σ2int  = ", vcm.Σint)
             println("obj  = ", obj)
             objvec = [objvec; obj] 
         end
@@ -295,7 +315,7 @@ end
 
 """
     vcselect(Y, V, Vint; penfun=NoPenalty(), λ=1.0, penwt=[ones(length(V)-1); 0.0],
-            standardize=true, maxiters=1000, tol=1e-6, verbose=false, checktype=true)
+            standardize=true, maxiters=1000, tol=1e-5, verbose=false, checktype=true)
 
 """
 function vcselect(
@@ -305,9 +325,9 @@ function vcselect(
     penfun      :: Penalty = NoPenalty(),
     λ           :: Real = 1.0,
     penwt       :: AbstractVector = [ones(length(V)-1); 0.0],
-    standardize :: Bool = true, 
+    standardize :: Bool = false, 
     maxiters    :: Int = 1000,
-    tol         :: Real = 1e-6,
+    tol         :: Real = 1e-5,
     verbose     :: Bool = false,
     checktype   :: Bool = true 
     ) where {T <: Real}
