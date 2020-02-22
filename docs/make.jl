@@ -8,12 +8,12 @@ makedocs(
     pages = [
         "Home" => "index.md",
         #"Examples" => , 
-        "API" => "api.md"
+        "API" => "api.md",
     ]
 )
 
 deploydocs(
-    repo = "github.com/juhkim111/VCSEL.jl.git"
+    repo = "github.com/juhkim111/VCSEL.jl.git",
     target = "build",
     deps = nothing,
     make = nothing,
