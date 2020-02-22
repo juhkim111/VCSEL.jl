@@ -93,13 +93,14 @@ _, _, _, objvec = vcselect(y, V; penfun=L1Penalty(), λ=15.0, verbose=true,
   end 
 end 
 
-# @info "check if objective values are monotonically decreasing (MCP penalty)" 
-# σ2, _, _, _, objvec = vcselect(y, V; penfun=MCPPenalty(), λ=22.0, verbose=true)
-# @testset begin 
-#   for i in 1:(length(objvec) - 1)
-#     @test objvec[i] >= objvec[i+1]
-#   end 
-# end 
+@info "check if objective values are monotonically decreasing (MCP penalty)" 
+vcm12 = deepcopy(vcm1)
+_, _, _, objvec = vcselect!(vcm12; penfun=MCPPenalty(), λ=5.0, verbose=true)
+@testset begin 
+  for i in 1:(length(objvec) - 1)
+    @test objvec[i] >= objvec[i+1]
+  end 
+end 
 
 # ## variance component selection at specific lambda 
 # σ2_tmp, = vcselect(y, V)
