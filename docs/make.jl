@@ -1,15 +1,20 @@
 push!(LOAD_PATH,"../src/")
-using Documenter, VarianceComponentSelect
+using Documenter, VCSEL
 
 makedocs(
-    sitename = "VarianceComponentSelect.jl",
+    format = Documenter.HTML(),
+    sitename = "VCSEL.jl",
     authors = "Juhyun Kim",
     pages = [
-        "index.md",
-        "api.md"
+        "Home" => "index.md",
+        #"Examples" => , 
+        "API" => "api.md"
     ]
 )
 
 deploydocs(
-    repo = "github.com/juhkim111/VarianceComponentSelect.jl.git"
+    repo = "github.com/juhkim111/VCSEL.jl.git"
+    target = "build",
+    deps = nothing,
+    make = nothing,
 )
