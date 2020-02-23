@@ -1,4 +1,5 @@
 """
+<<<<<<< HEAD
     nullprojection(y, X, V)
 
 Project `y` to null space of `transpose(X)` and transform `V` accordingly.
@@ -121,49 +122,139 @@ function nullprojection(
 
     # output 
     return ynew, V1new, V2new, B 
+=======
+    rankvarcomps(Σpath; tol=1e-8)
 
+# Input
+- `Σpath`: solution path (in numeric matrix), each column should 
+    represent estimated variance components at specific λ 
+    as in output from `vcselect!`, `vcselectpath!`
+- `resvarcomp`: logical flag indicating the presence of residual variance component 
+    in `Σpath`. If `true`, last row of `Σpath` is ignored. Default is `true`
+
+# Keyword Argument 
+- `tol`: a variance component less than `tol` is considered zero, default is 1e-8 
+
+# Output 
+- `ranking`: rank of each variance component based on the order in which it enters 
+    solution path
+- `rest`: rest of the variance components that are estimated to be zero at all λ > 0
+"""
+function rankvarcomps(
+    Σpath      :: AbstractMatrix{T};
+    tol        :: Float64 = 1e-8,
+    resvarcomp :: Bool = true
+    ) where {T <: Real}
+
+    # size of solution path 
+    novarcomps, nlambda = size(Σpath)
+
+    # check if residual variance component is present in solution path 
+    if resvarcomp 
+        m = novarcomps - 1 
+    else 
+        m = novarcomps 
+    end 
+
+    # initialize array for ranking 
+    ranking = Int[]
+>>>>>>> 03d88815ca569114a4903b807fc6d669e3c38488
+
+    # go through solution path and find the order in which variance component enters
+    for col in nlambda:-1:2
+        idx = findall(x -> x > tol, view(Σpath, 1:m, col))
+        sortedidx = sortperm(Σpath[idx], rev=true)
+        for j in idx[sortedidx] 
+            if !(j in ranking)
+                push!(ranking, j)
+            end
+        end
+    end 
+    # rest of the variance components that are estimated to be zero at all λ > 0
+    rest = setdiff(1:m, ranking)
+    if resvarcomp
+        rest = [rest; novarcomps]
+    end 
+    
+    return ranking, rest 
 end 
 
 """
-    betaestimate(y, X, V, σ2)
-
-Estimate fixed effects using REML estimate of variance components.
-Estimate of beta is 
-        `beta = pinv(X'*Ωinv*X)(X'*Ωinv*y)`
-where `Ω` being `∑ σ2[i] * V[i]` where `σ2` is the REML estimate.
+    rankvarcomps(Σpath; tol=1e-8)
 
 # Input
+<<<<<<< HEAD
 - `y`: response vector
 - `X`: covariate vector or matrix 
 - `V`: vector of covariance matrices, (V[1],V[2],...,V[m],I)
         note that V[end] should be identity matrix
 - `σ2`: REML estimate of variance components 
+=======
+- `Σpath`: solution path (matrix of matrices), each column should 
+    contain estimated variance components at specific λ 
+    as in output from `vcselectpath!`
+- `resvarcomp`: logical flag indicating the presence of residual variance component 
+    in `Σpath`. If `true`, last row of `Σpath` is ignored. Default is `true`
+
+# Keyword Argument 
+- `tol`: a variance component whose `p`-norm is less than `tol` is considered zero, 
+    default is 1e-8 
+- `p`: `p` for determining which norm to use, default is 2. See [`norm(A, p::Real=2)`](@ref)
+>>>>>>> 03d88815ca569114a4903b807fc6d669e3c38488
 
 # Output 
-- `β`: fixed effects estimate
+- `ranking`: rank of each variance component based on the order in which it enters 
+    solution path
+- `rest`: rest of variance components that are estimated to be zero at all λ > 0
 """
+<<<<<<< HEAD
 function betaestimate( 
     y   :: AbstractVector{T},
     X   :: AbstractVecOrMat{T},
     V   :: AbstractVector{Matrix{T}},
     σ2  :: AbstractVector{T}
+=======
+function rankvarcomps(
+    Σpath      :: AbstractMatrix{Matrix{T}};
+    tol        :: Float64 = 1e-8,
+    p          :: Real = 2,
+    resvarcomp :: Bool = true
+>>>>>>> 03d88815ca569114a4903b807fc6d669e3c38488
     ) where {T <: Real}
 
-    # update Ω with estimated variance components 
-    Ω = zeros(T, size(V[1]))
-    for i in eachindex(σ2)
-        if iszero(σ2[i])
-            continue 
-        else 
-            axpy!(σ2[i], V[i], Ω) # Ω .+= σ2[i] * V[i]
-        end 
+    # size of solution path 
+    novarcomps, nlambda = size(Σpath)
+
+    # check if residual variance component is present in solution path 
+    if resvarcomp 
+        m = novarcomps - 1 
+    else 
+        m = novarcomps 
+    end
+
+    # initialize array for ranking 
+    ranking = Int[]
+
+    # go through solution path and find the order in which variance component enters
+    for col in nlambda:-1:2
+        idx = findall(x -> norm(x, p) > tol, view(Σpath, 1:m, col))
+        sortedidx = sortperm(norm.(Σpath[idx]), rev=true)
+        for j in idx[sortedidx] 
+            if !(j in ranking)
+                push!(ranking, j)
+            end
+        end
+    end 
+    
+    # rest of the variance components that are estimated to be zero at all λ > 0
+    rest = setdiff(1:m, ranking)
+    if resvarcomp 
+        rest = [rest; novarcomps]
     end 
 
-    β = betaestimate(y, X, Ω)
-
-    return β
-
+    return ranking, rest 
 end 
+<<<<<<< HEAD
 
 """
 
@@ -196,33 +287,67 @@ function betaestimate(
 end 
 """
     betaestimate(y, X, Ω)
+=======
+>>>>>>> 03d88815ca569114a4903b807fc6d669e3c38488
 
-Estimate fixed effects using REML estimate of variance components.
-Estimate of beta is 
-        `beta = pinv(X'*Ωinv*X)(X'*Ωinv*y)`
-where `Ω` being `∑ σ2[i] * V[i]` where `σ2` is the REML estimate.
+"""
+    rankvarcomps(Σpath, Σpath2; tol=1e-6, resvarcomp=true, resvarcomp2=true)
 
+Obtain rank of variance components from a paired solution paths, e.g. `Σpath` and `Σpath2`.   
+Ranks are calculated using norm of paired variance components. 
 # Input
+<<<<<<< HEAD
 - `y`: response vector
 - `X`: covariate vector or matrix 
 - `Ω`: overall covariance matrix constructed using REML estimate of variance components or
     cholesky factorization of the overall covariance matrix 
 
+=======
+- `Σpath`: solution path (in numeric matrix), each column should 
+    represent estimated variance components at specific λ 
+    as in output from `vcselect`, `vcselectpath`
+- `Σpath2`: solution path (in numeric matrix), each column should 
+    represent estimated variance components at specific λ 
+    as in output from `vcselect`, `vcselectpath`
+# Keyword 
+- `tol`: a variance component less than `tol` is considered zero, default is 1e-6 
+- `resvarcomp`: logical flag indicating there is residual variance component in `Σpath`, 
+    default is true. If true, the last variance component is not included in ranks
+- `resvarcomp2`: logical flag indicating there is residual variance component in `Σpath2`,
+   default is true. If true, the last variance component is not included in ranks
+>>>>>>> 03d88815ca569114a4903b807fc6d669e3c38488
 # Output 
-- `β`: fixed effects estimate Ω supplied is a Cholesky object, default is false
+- `ranks`: rank of each variance component based on the order in which it enters 
+    solution path
+- `rest`: rest of the variance components that are estimated to be zero at all λ > 0
 """
+<<<<<<< HEAD
 function betaestimate( 
     y   :: AbstractVector{T},
     X   :: AbstractVecOrMat{T},
     Ω   :: Union{AbstractMatrix{T}, Cholesky}
+=======
+function rankvarcomps(
+    Σpath      :: AbstractMatrix{T},
+    Σpath2     :: AbstractMatrix{T};
+    tol         :: Float64 = 1e-6,
+    resvarcomp  :: Bool = true,
+    resvarcomp2 :: Bool = false
+>>>>>>> 03d88815ca569114a4903b807fc6d669e3c38488
     ) where {T <: Real}
 
-    # if not cholesky factorized, perform cholesky 
-    if typeof(Ω) <: Cholesky
-        Ωchol = Ω
-    else
-        Ωchol = cholesky(Symmetric(Ω))
+    @assert size(Σpath, 2) == size(Σpath2, 2) "both solution path should have the same number of tuning parameters!\n"
+
+    # size of solution path 
+    nvarcomps, nlambda = size(Σpath)
+    nvarcomps2, nlambda2 = size(Σpath2)
+
+    if resvarcomp 
+        m = nvarcomps - 1 
+    else 
+        m = nvarcomps 
     end 
+<<<<<<< HEAD
   
     # estimate fixed effects: pinv(X'*Ωinv*X)(X'*Ωinv*y)
     if typeof(X) <: Vector 
@@ -232,27 +357,145 @@ function betaestimate(
         β = BLAS.gemv('T', X, Ωchol \ y) # overwriting Ωinv with X'*Ωinv
         β = pinv(XtΩinvX) * β
     end 
+=======
+>>>>>>> 03d88815ca569114a4903b807fc6d669e3c38488
 
-    return β
+    if resvarcomp2 
+        m2 = nvarcomps2 - 1 
+    else 
+        m2 = nvarcomps2
+    end 
 
-end 
-"""
-    checkfrobnorm!(V)
+    @assert m == m2 "solution paths need to have the same number of variance components!\n"
 
-Check if frobenius norm of Vi in V equals to 1. If not, divide by its norm. 
-"""
-function checkfrobnorm!(
-    V :: AbstractVector{Matrix{T}}
-) where {T <: Real}
+    # initialize array for ranks
+    ranks = Int[]
+    normpath = similar(Σpath)
 
-    frobnorm = 0
-    for Vi in V
-        frobnorm = norm(Vi) 
-        if frobnorm != 1
-            Vi ./= frobnorm
+    # go through solution path and find the order in which variance component enters
+    for col in nlambda:-1:2
+        bothpath = [view(Σpath, 1:m, col) view(Σpath2, 1:m2, col)]
+        normpath[1:m, col] = mapslices(norm, bothpath; dims=2) #mapslices(x -> norm(x, p), bothpath; dims=2)
+        idx = findall(x -> x > tol, view(normpath, 1:m, col))
+        sortedidx = sortperm(normpath[idx, col], rev=true)
+        for j in idx[sortedidx]
+            if !(j in ranks)
+                push!(ranks, j)
+            end
         end
     end 
+    normpath[1:m, 1] = mapslices(norm, [view(Σpath, 1:m, 1) view(Σpath2, 1:m2, 1)]; dims=2)
+    normpath[end, :] .= Σpath[end, :]
+
+    # rest of the variance components that are estimated to be zero at all λ > 0
+    rest = setdiff(1:m, ranks)
+    if resvarcomp 
+        rest = [rest; nvarcomps]
+    end 
+
+    return ranks, rest, normpath 
 end 
+
+"""
+    plotsolpath(Σpath, λpath; title="Solution Path", xlab="λ", ylab="σ2", 
+            xmin=minimum(λpath), xmax=minimum(λpath), tol=1e-6)
+
+Output plot of solution path at varying λ values. Use backend such as `gr()`.
+
+# Input
+- `Σpath`: solution path (in numeric matrix) to be plotted, each column should 
+        represent variance components at specific λ as in output from `vcselectpath!`. 
+	The last row of `Σpath` should be for residual variance component. Otherwise set `resvarcomp=false` to indicate the absence. 
+- `λpath`: vector of tuning parameter λ values.
+
+# Keyword 
+- `title`: title of the figure. Default is "Solution Path".
+- `xlab`: x-axis label. Default is "lambda".
+- `ylab`: y-axis label. Default is "sigma_i^2".
+- `xmin`: lower limit for x-axis. default is minimum of `λpath`.
+- `xmax`: upper limit for x-axis. default is maximum of `λpath`.
+- `linewidth`: line width. Default is 1.0.
+- `nranks`: no. of ranks to displayed on legend. Default is total number of variance components.
+- `legend`: logical flag for including legend. Default is true.
+- `legendout`: logical flag for moving the legend outside the plot. Default is true. 
+- `legendtitle`: legend title. Default is "Ranking". 
+- `resvarcomp`: logical flag for indicating residual variance component in `Σpath`. 	   
+      Default is true. 
+
+# Output 
+- plot of solution path. 
+"""
+function plotsolpath(
+    Σpath     :: AbstractMatrix{T},
+    λpath      :: AbstractVector{T};
+    title      :: AbstractString = "Solution Path",
+    xlab       :: AbstractString = "\\lambda",
+    ylab       :: AbstractString = "\\sigma^2",
+    xmin       :: AbstractFloat = minimum(λpath),
+    xmax       :: AbstractFloat = maximum(λpath),
+    linewidth  :: AbstractFloat = 1.0,
+    nranks     :: Int = size(Σpath, 1),
+    legend     :: Bool = true,
+    legendout  :: Bool = true, 
+    legendtitle :: AbstractString = "Ranking",
+    resvarcomp :: Bool = true
+    ) where {T <: Real}
+
+    # size of solution path 
+    novarcomps, nlambda = size(Σpath)
+
+    # get ranking of variance components
+    ranking, rest = rankvarcomps(Σpath; resvarcomp=resvarcomp)
+
+    # transpose solpath s.t. each row is estimates at particular lambda
+    tr_Σpath = Σpath'
+
+   if legend && nranks > 0 
+        legendlabel = "\\sigma^{2}[$(ranking[1])]"
+        if nranks == novarcomps # display all non-zero variance components 
+            
+            for i in ranking[2:end]
+                legendlabel = hcat(legendlabel, "\\sigma^{2}[$i]")
+            end
+            nranks = length(ranking)
+           
+        elseif nranks > 1 # display the first non-zero variance component to enter the path  
+            for i in ranking[2:nranks]
+                legendlabel = hcat(legendlabel, "\\sigma^{2}[$i]")
+            end
+
+        end 
+
+        for i in 1:(novarcomps - nranks)
+            legendlabel = hcat(legendlabel, "")
+        end 
+
+        # plot permuted solution path (decreasing order)
+
+        if !legendout
+            plot(λpath, tr_Σpath[:, [ranking; rest]], label=legendlabel, 
+            xaxis=(xlab, (xmin, xmax)), yaxis=(ylab), width=linewidth, legendtitle=legendtitle)
+            title!(title) 
+        else 
+            pt1 = plot(λpath, tr_Σpath[:, [ranking; rest]],  legend=false,
+                xaxis=(xlab, (xmin, xmax)), yaxis=(ylab), width=linewidth, 
+                legendtitle=legendtitle)
+            title!(title)
+            pt2 = plot(λpath, tr_Σpath[:, [ranking; rest]], label=legendlabel, grid=false, 
+                        showaxis=false, xlims=(20,3), legendtitle=legendtitle) 
+            l = @layout [b c{0.13w}]
+            plot(pt1, pt2, layout=l)
+        end 
+       
+    # no legend 
+    else 
+        plot(λpath, tr_Σpath[:, [ranking; rest]], legend=false, 
+        xaxis=(xlab, (xmin, xmax)), yaxis=(ylab), width=linewidth)
+        title!(title)     
+    end 
+   
+end 
+<<<<<<< HEAD
  
 """
     rankvarcomps(σ2path; tol=1e-6, resvarcomp=true)
@@ -344,11 +587,59 @@ function rankvarcomps(
     tol         :: Float64 = 1e-6,
     resvarcomp  :: Bool = true,
     resvarcomp2 :: Bool = false
+=======
+
+"""
+    plotsolpath(Σpath, λpath; title="Solution Path", xlab="λ", ylab="σ2", 
+            xmin=minimum(λpath), xmax=minimum(λpath), tol=1e-6)
+
+Output plot of solution path at varying λ values. Use backend such as `gr()`.
+
+# Input
+- `Σpath`: solution path (in numeric matrix) to be plotted, each column should 
+        represent variance components at specific λ as in output from `vcselectpath!`. 
+        The last row of `Σpath` should be for residual variance component. 
+        Otherwise set `resvarcomp=false` to indicate the absence. 
+- `λpath`: vector of tuning parameter λ values.
+
+# Keyword 
+- `title`: title of the figure. Default is "Solution Path".
+- `xlab`: x-axis label. Default is "lambda".
+- `ylab`: y-axis label. Default is "sigma_i^2".
+- `xmin`: lower limit for x-axis. default is minimum of `λpath`.
+- `xmax`: upper limit for x-axis. default is maximum of `λpath`.
+- `linewidth`: line width. Default is 1.0.
+- `nranks`: no. of ranks to displayed on legend. Default is total number of variance components.
+- `legend`: logical flag for including legend. Default is true.
+- `legendout`: logical flag for moving the legend outside the plot. Default is true. 
+- `legendtitle`: legend title. Default is "Ranking". 
+- `resvarcomp`: logical flag for indicating residual variance component in `Σpath`. 	   
+      Default is true. 
+
+# Output 
+- plot of solution path.
+"""
+function plotsolpath(
+    Σpath      :: AbstractMatrix{Matrix{T}},
+    λpath      :: AbstractVector{T};
+    title      :: AbstractString = "Solution Path",
+    xlab       :: AbstractString = "\\lambda",
+    ylab       :: AbstractString = "||\\Sigma||_2",
+    xmin       :: AbstractFloat = minimum(λpath),
+    xmax       :: AbstractFloat = maximum(λpath),
+    linewidth  :: AbstractFloat = 1.0,
+    nranks     :: Int = size(Σpath, 1),
+    legend     :: Bool = true,
+    legendout  :: Bool = true, 
+    legendtitle :: AbstractString = "Ranking",
+    resvarcomp :: Bool = true
+>>>>>>> 03d88815ca569114a4903b807fc6d669e3c38488
     ) where {T <: Real}
 
     @assert size(σ2path, 2) == size(σ2path2, 2) "both solution path should have the same number of tuning parameters!\n"
 
     # size of solution path 
+<<<<<<< HEAD
     nvarcomps, nlambda = size(σ2path)
     nvarcomps2, nlambda2 = size(σ2path2)
 
@@ -379,9 +670,60 @@ function rankvarcomps(
         for j in idx[sortedidx]
             if !(j in ranks)
                 push!(ranks, j)
+=======
+    novarcomps, nlambda = size(Σpath)
+
+    # get ranking of variance components
+    ranking, rest = rankvarcomps(Σpath; resvarcomp=resvarcomp)
+
+    # transpose solpath s.t. each row is estimates at particular lambda
+    tr_Σpath = norm.(Σpath)'
+
+   if legend && nranks > 0 
+        legendlabel = "\\Sigma[$(ranking[1])]"
+        if nranks == novarcomps # display all non-zero variance components 
+            
+            for i in ranking[2:end]
+                legendlabel = hcat(legendlabel, "\\Sigma[$i]")
+>>>>>>> 03d88815ca569114a4903b807fc6d669e3c38488
             end
-        end
+            nranks = length(ranking)
+           
+        elseif nranks > 1 # display the first non-zero variance component to enter the path  
+            for i in ranking[2:nranks]
+                legendlabel = hcat(legendlabel, "\\Sigma[$i]")
+            end
+
+        end 
+
+        for i in 1:(novarcomps - nranks)
+            legendlabel = hcat(legendlabel, "")
+        end 
+
+        # plot permuted solution path (decreasing order)
+
+        if !legendout
+            plot(λpath, tr_Σpath[:, [ranking; rest]], label=legendlabel, 
+            xaxis=(xlab, (xmin, xmax)), yaxis=(ylab), width=linewidth, legendtitle=legendtitle)
+            title!(title) 
+        else 
+            pt1 = plot(λpath, tr_Σpath[:, [ranking; rest]],  legend=false,
+                xaxis=(xlab, (xmin, xmax)), yaxis=(ylab), width=linewidth, 
+                legendtitle=legendtitle)
+            title!(title)
+            pt2 = plot(λpath, tr_Σpath[:, [ranking; rest]], label=legendlabel, grid=false, 
+                        showaxis=false, xlims=(20,3), legendtitle=legendtitle) 
+            l = @layout [b c{0.13w}]
+            plot(pt1, pt2, layout=l)
+        end 
+       
+    # no legend 
+    else 
+        plot(λpath, tr_Σpath[:, [ranking; rest]], legend=false, 
+        xaxis=(xlab, (xmin, xmax)), yaxis=(ylab), width=linewidth)
+        title!(title)     
     end 
+<<<<<<< HEAD
     normpath[1:m, 1] = mapslices(norm, [view(σ2path, 1:m, 1) view(σ2path2, 1:m2, 1)]; dims=2)
     normpath[end, :] .= σ2path[end, :]
 
@@ -392,21 +734,27 @@ function rankvarcomps(
     end 
 
     return ranks, rest, normpath 
+=======
+
+>>>>>>> 03d88815ca569114a4903b807fc6d669e3c38488
 end 
 
 """
-    plotsolpath(σ2path, λpath; title="Solution Path", xlab="λ", ylab="σ2", 
+    plotsolpath(Σpath, Σpath2, λpath; title="Solution Path", xlab="λ", ylab="σ2", 
             xmin=minimum(λpath), xmax=minimum(λpath), tol=1e-6)
-
-Output plot of solution path at varying λ values. Use backend such as `gr()`.
+Output plot of a paired solution path at varying λ values. Use backend such as `gr()`.
 
 # Input
-- `σ2path`: solution path (in numeric matrix) to be plotted, each column should 
-        represent variance components at specific λ 
-        as in output from `vcselect`, `vcselectpath`
+- `Σpath`: solution path (in numeric matrix) to be plotted, each column should 
+    represent variance components at specific λ 
+    as in output from `vcselect`, `vcselectpath`
+- `Σpath2`: solution path (in numeric matrix) to be plotted, each column should 
+    represent variance components at specific λ 
+    as in output from `vcselect`, `vcselectpath`
 - `λpath`: vector of tuning parameter λ values 
 
 # Keyword 
+<<<<<<< HEAD
 - `title`: title of the figure, default is "Solution Path"
 - `xlab`: x-axis label, default is minimum of λpath
 - `ylab`: y-axis label, default is maximum of λpath
@@ -414,11 +762,26 @@ Output plot of solution path at varying λ values. Use backend such as `gr()`.
 - `linewidth`: line width, default is 1.0
 - `legend`: indicator to include legend or not, default is true 
 - `legendout`: indicator to move legend outside the plot, default is true 
+=======
+- `title`: title of the figure. Default is "Solution Path".
+- `xlab`: x-axis label. Default is "lambda".
+- `ylab`: y-axis label. Default is "sigma_i^2".
+- `xmin`: lower limit for x-axis. default is minimum of `λpath`.
+- `xmax`: upper limit for x-axis. default is maximum of `λpath`.
+- `linewidth`: line width. Default is 1.0.
+- `nranks`: no. of ranks to displayed on legend. Default is total number of variance components.
+- `legend`: logical flag for including legend. Default is true.
+- `legendout`: logical flag for moving the legend outside the plot. Default is true. 
+- `legendtitle`: legend title. Default is "Ranking". 
+- `resvarcomp`: logical flag for indicating residual variance component in `Σpath`. 	   
+      Default is true. 
+>>>>>>> 03d88815ca569114a4903b807fc6d669e3c38488
 
 # Output 
 - plot of solution path 
 """
 function plotsolpath(
+<<<<<<< HEAD
     σ2path    :: AbstractMatrix{T},
     λpath     :: AbstractVector{T};
     title     :: AbstractString = "Solution Path",
@@ -430,17 +793,57 @@ function plotsolpath(
     linewidth :: AbstractFloat = 1.0, 
     legend    :: Bool = true,
     legendout :: Bool = false
+=======
+    Σpath       :: AbstractMatrix{T},
+    Σpath2      :: AbstractMatrix{T},
+    λpath       :: AbstractVector{T};
+    title       :: AbstractString = "Solution Path",
+    xlab        :: AbstractString = "\$\\lambda\$",
+    xmin        :: AbstractFloat = minimum(λpath),
+    xmax        :: AbstractFloat = maximum(λpath),
+    ylab        :: AbstractString = "\$||(\\sigma_{i1}^2, \\sigma_{i2}^2)||_2\$",
+    nranks      :: Int = size(Σpath, 1),
+    linewidth   :: AbstractFloat = 1.0, 
+    legend      :: Bool = true,
+    legendout   :: Bool = false,
+    legendtitle :: AbstractString = "Ranking",
+    resvarcomp  :: Bool = true,
+    resvarcomp2 :: Bool = false
+>>>>>>> 03d88815ca569114a4903b807fc6d669e3c38488
 ) where {T <: Real}
 
+    # error handling 
+    @assert size(Σpath, 2) == size(Σpath2, 2) "both solution paths must have the same number of lambdas!\n"
+
     # size of solution path 
+<<<<<<< HEAD
     nvarcomps, nlambda = size(σ2path)
+=======
+    m, nlambda = size(Σpath2)
+>>>>>>> 03d88815ca569114a4903b807fc6d669e3c38488
 
     # get ranking of variance components
-    ranking, rest = rankvarcomps(σ2path)
+    ranking, rest, normpath = rankvarcomps(Σpath, Σpath2; 
+            resvarcomp=resvarcomp, resvarcomp2=resvarcomp2)
 
     # transpose solpath s.t. each row is estimates at particular lambda
-    tr_σ2path = σ2path'
+    trnormpath = normpath'
 
+    if legend && nranks > 0 
+        legendlabel = "\\sigma^{2}[$(ranking[1])]"
+        if nranks == m+1 # display all non-zero variance components 
+            
+            for i in ranking[2:end]
+                legendlabel = hcat(legendlabel, "\\sigma^{2}[$i]")
+            end
+            nranks = length(ranking)
+           
+        elseif nranks > 1 # display the first non-zero variance component to enter the path  
+            for i in ranking[2:nranks]
+                legendlabel = hcat(legendlabel, "\\sigma^{2}[$i]")
+            end
+
+<<<<<<< HEAD
     if legend && nranks > 0 
         legendlabel = "\\sigma^{2}[$(ranking[1])]"
         if nranks == nvarcomps # display all non-zero variance components 
@@ -458,10 +861,16 @@ function plotsolpath(
         end 
 
         for i in 1:(nvarcomps - nranks)
+=======
+        end 
+
+        for i in 1:(m + 1 - nranks)
+>>>>>>> 03d88815ca569114a4903b807fc6d669e3c38488
             legendlabel = hcat(legendlabel, "")
         end 
 
         # plot permuted solution path (decreasing order)
+<<<<<<< HEAD
 
         if !legendout
             plot(λpath, tr_σ2path[:, [ranking; rest]], label=legendlabel, 
@@ -474,19 +883,37 @@ function plotsolpath(
             title!(title)
             pt2 = plot(λpath, tr_σ2path[:, [ranking; rest]], label=legendlabel, grid=false, 
                         showaxis=false, xlims=(20,3), legendtitle="ranking") 
+=======
+        if !legendout
+            plot(λpath, trnormpath[:, [ranking; rest]], label=legendlabel, 
+            xaxis=(xlab, (xmin, xmax)), yaxis=(ylab), width=linewidth, legendtitle=legendtitle)
+            title!(title) 
+        else 
+            pt1 = plot(λpath, trnormpath[:, [ranking; rest]],  legend=false,
+                xaxis=(xlab, (xmin, xmax)), yaxis=(ylab), width=linewidth, 
+                legendtitle=legendtitle)
+            title!(title)
+            pt2 = plot(λpath, trnormpath[:, [ranking; rest]], label=legendlabel, grid=false, 
+                        showaxis=false, xlims=(20,3), legendtitle=legendtitle) 
+>>>>>>> 03d88815ca569114a4903b807fc6d669e3c38488
             l = @layout [b c{0.13w}]
             plot(pt1, pt2, layout=l)
         end 
        
     # no legend 
     else 
+<<<<<<< HEAD
         plot(λpath, tr_σ2path[:, [ranking; rest]], legend=false, 
+=======
+        plot(λpath, trnormpath[:, [ranking; rest]], legend=false, 
+>>>>>>> 03d88815ca569114a4903b807fc6d669e3c38488
         xaxis=(xlab, (xmin, xmax)), yaxis=(ylab), width=linewidth)
         title!(title)     
     end 
 
 end 
 
+<<<<<<< HEAD
 """
     plotsolpath(σ2path, σ2intpath, λpath; title="Solution Path", xlab="λ", ylab="σ2", 
             xmin=minimum(λpath), xmax=minimum(λpath), tol=1e-6)
@@ -586,5 +1013,7 @@ function plotsolpath(
         xaxis=(xlab, (xmin, xmax)), yaxis=(ylab), width=linewidth)
         title!(title)     
     end 
+=======
 
-end 
+>>>>>>> 03d88815ca569114a4903b807fc6d669e3c38488
+
