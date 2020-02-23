@@ -433,7 +433,7 @@ function plotsolpath(
     xlab        :: AbstractString = "\$\\lambda\$",
     xmin        :: AbstractFloat = minimum(λpath),
     xmax        :: AbstractFloat = maximum(λpath),
-    ylab        :: AbstractString = "\$||(\\sigma_{i1}^2, \\sigma_{i2}^2)||_2\$",
+    ylab        :: AbstractString = "\$||(\\sigma_{1}^2, \\sigma_{2}^2)||_2\$",
     nranks      :: Int = size(Σpath, 1),
     linewidth   :: AbstractFloat = 1.0, 
     legend      :: Bool = true,
