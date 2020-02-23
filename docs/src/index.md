@@ -1,6 +1,6 @@
 # Home 
 
-**VarianceComponentSelect** is a Julia package for implementing MM algorithm that selects variance components associated with response via penalization method. Variance component model takes the form 
+**VCSEL** is a Julia package for implementing MM algorithm that selects variance components associated with response via penalization method. Variance component model takes the form 
 
 \begin{eqnarray}
 \text{vec}(Y) \sim \text{Normal}(XB, \Sigma_1 \otimes V_1 + \cdots + \Sigma_m \otimes V_m + \Sigma_0 \otimes I_n )  \hspace{8em} (1)
@@ -32,7 +32,7 @@ The package has not yet been registered and must be installed using the reposito
 Start julia and use the `]` key to switch to the package manager REPL
 
 ```julia
-(v1.1) pkg> add https://github.com/juhkim111/VarianceComponentSelect.jl
+(v1.3) pkg> add https://github.com/juhkim111/VCSEL.jl
 ```
 
 Use the backspace key to return to the Julia REPL.
