@@ -1,14 +1,9 @@
 module MaxLambdaTest
 
-<<<<<<< HEAD
-using Random, LinearAlgebra, VCSEL, Test
-
-=======
 #using Random, LinearAlgebra, VarianceComponentSelect, Test
 include("../src/VCSEL.jl") #
 using .VCSEL #
 using Random, LinearAlgebra, Test, StatsBase #
->>>>>>> 03d88815ca569114a4903b807fc6d669e3c38488
 Random.seed!(123)
 tol = 1e-5
 

@@ -1,17 +1,10 @@
 module UtilitiesTest
 
-<<<<<<< HEAD
-# load packages
-using Random, LinearAlgebra, Test, VCSEL
-
-# set seed 
-=======
 #using Random, LinearAlgebra, Test, VCSEL
 using Random, LinearAlgebra, Test
 include("../src/VCSEL.jl")
 using .VCSEL
 
->>>>>>> 03d88815ca569114a4903b807fc6d669e3c38488
 Random.seed!(123)
 
 # # generate data from an univariate response variance component model 
