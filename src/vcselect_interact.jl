@@ -315,7 +315,7 @@ end
 
 """
     vcselect(Y, V, Vint; penfun=NoPenalty(), λ=1.0, penwt=[ones(length(V)-1); 0.0],
-            standardize=true, maxiters=1000, tol=1e-5, verbose=false, checktype=true)
+            standardize=false, maxiters=1000, tol=1e-5, verbose=false, checktype=true)
 
 """
 function vcselect(
