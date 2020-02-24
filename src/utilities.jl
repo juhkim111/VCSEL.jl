@@ -38,7 +38,7 @@ function rankvarcomps(
     # go through solution path and find the order in which variance component enters
     for col in nlambda:-1:2
         idx = findall(x -> x > tol, view(Σpath, 1:m, col))
-        sortedidx = sortperm(Σpath[idx], rev=true)
+        sortedidx = sortperm(Σpath[idx, col], rev=true)
         for j in idx[sortedidx] 
             if !(j in ranking)
                 push!(ranking, j)
@@ -95,9 +95,10 @@ function rankvarcomps(
     ranking = Int[]
 
     # go through solution path and find the order in which variance component enters
+    traceΣpath = tr.(Σpath)
     for col in nlambda:-1:2
-        idx = findall(x -> norm(x, p) > tol, view(Σpath, 1:m, col))
-        sortedidx = sortperm(norm.(Σpath[idx]), rev=true)
+        idx = findall(x -> x > tol, view(traceΣpath, 1:m, col))
+        sortedidx = sortperm(traceΣpath[idx, col], rev=true)
         for j in idx[sortedidx] 
             if !(j in ranking)
                 push!(ranking, j)
