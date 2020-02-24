@@ -329,7 +329,7 @@ function plotsolpath(
     λpath      :: AbstractVector{T};
     title      :: AbstractString = "Solution Path",
     xlab       :: AbstractString = "\\lambda",
-    ylab       :: AbstractString = "||\\Sigma||_2",
+    ylab       :: AbstractString = "tr(\\Sigma)",
     xmin       :: AbstractFloat = minimum(λpath),
     xmax       :: AbstractFloat = maximum(λpath),
     linewidth  :: AbstractFloat = 1.0,
@@ -347,7 +347,7 @@ function plotsolpath(
     ranking, rest = rankvarcomps(Σpath; resvarcomp=resvarcomp)
 
     # transpose solpath s.t. each row is estimates at particular lambda
-    tr_Σpath = norm.(Σpath)'
+    tr_Σpath = tr.(Σpath)'
 
    if legend && nranks > 0 
         legendlabel = "\\Sigma[$(ranking[1])]"
