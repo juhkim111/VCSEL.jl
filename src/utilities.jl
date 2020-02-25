@@ -329,7 +329,7 @@ function plotsolpath(
     λpath      :: AbstractVector{T};
     title      :: AbstractString = "Solution Path",
     xlab       :: AbstractString = "\\lambda",
-    ylab       :: AbstractString = "tr(\\Sigma)",
+    ylab       :: AbstractString = "trace\\Sigma",
     xmin       :: AbstractFloat = minimum(λpath),
     xmax       :: AbstractFloat = maximum(λpath),
     linewidth  :: AbstractFloat = 1.0,
