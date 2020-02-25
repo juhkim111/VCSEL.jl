@@ -8,14 +8,14 @@ Generate solution path of variance components along varying lambda values.
 - `vcm`: [`VCModel`](@ref).
 
 # Keyword 
-- `penfun`: penalty function (e.g. `NoPenalty()``, `L1Penalty()``, `MCPPenalty()`). 
+- `penfun`: penalty function (e.g. `NoPenalty()`, `L1Penalty()`, `MCPPenalty()`). 
         Default is `NoPenalty()`.
 - `penwt`: weights for penalty term. Default is (1,1,...1,0).
 - `nλ`: number of tuning parameter values. Default is 100.
 - `λpath`: a user supplied `λ` sequence in ascending order. Typically the program computes its own `λ` 
         sequence based on `nλ`; supplying `λpath` overrides this.
 - `maxiter`: maximum number of iteration for MM loop. Default is 1000.
-- `standardize`: logical flag for covariance matrix standardization. Default is `true`.
+- `standardize`: logical flag for covariance matrix standardization. Default is `false`.
     If true, `V[i]` is standardized by its Frobenius norm.
 - `tol`: convergence tolerance. Default is `1e-6`.
 
@@ -34,7 +34,7 @@ function vcselectpath!(
     nλ           :: Int = 100, 
     λpath        :: AbstractArray = zeros(0), 
     maxiters     :: Int = 1000, 
-    standardize  :: Bool = true, 
+    standardize  :: Bool = false, 
     tol          :: AbstractFloat = 1e-6
     ) 
 
