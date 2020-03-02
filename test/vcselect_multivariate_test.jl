@@ -27,7 +27,7 @@ V  = Array{Matrix{Float64}}(undef, m + 1)
 for i = 1:m
   Vi = randn(n, 50)
   V[i] = Vi * Vi'
-  V[i] = 
+  V[i] ./ norm(V[i])
 end
 V[end] = Matrix(1.0*I, n, n) / sqrt(n)
 
@@ -47,14 +47,21 @@ vcm1 = VCModel(Y, X, V, [Matrix(1.0*I, d, d) for i in 1:(m + 1)])
 
 vcm2 = VCModel(Y2, V)
 
-_, obj, niters, objvec = vcselect!(vcm; standardize=true)
-_, obj1, niters1, objvec1 = vcselect!(vcm1; standardize=true)
+_, obj, niters, objvec = vcselect!(vcm; verbose=true)
+_, obj1, niters1, objvec1 = vcselect!(vcm1; verbose=true)
 
 @testset begin 
   @test obj == obj1 
   @test niters == niters1 
   @test vcm.Σ == vcm1.Σ
   @test vcm.β == vcm1.β
+end 
+
+@info "objective values are monotonically decreasing (no penalty)" 
+@testset begin 
+  for i in 1:(length(objvec) - 1)
+    @test objvec[i] >= objvec[i+1]
+  end 
 end 
 
 resetModel!(vcm)
@@ -65,14 +72,21 @@ resetModel!(vcm1)
   @test vcm1.Σ == [Matrix(1.0*I, d, d) for i in 1:(m+1)]
 end 
 
-_, obj, niters, objvec = vcselect!(vcm; penfun=L1Penalty(), λ=2.5)
-_, obj1, niters1, objvec1 = vcselect!(vcm1; penfun=L1Penalty(), λ=2.5)
+_, obj, niters, objvec = vcselect!(vcm; penfun=L1Penalty(), λ=2.5, verbose=true)
+_, obj1, niters1, objvec1 = vcselect!(vcm1; penfun=L1Penalty(), λ=2.5, verbose=true)
 
 @testset begin 
   @test obj == obj1 
   @test niters == niters1 
   @test vcm.Σ == vcm1.Σ
   @test vcm.β == vcm1.β
+end 
+
+@info "objective values are monotonically decreasing (L1 penalty)" 
+@testset begin 
+  for i in 1:(length(objvec) - 1)
+    @test objvec[i] >= objvec[i+1]
+  end 
 end 
 
 # path given lambda grid 
@@ -101,4 +115,4 @@ resetModel!(vcm1)
 
 
 
-end 
+end # end of module 
