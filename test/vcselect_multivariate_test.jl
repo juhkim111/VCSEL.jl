@@ -1,8 +1,6 @@
 module MultivariateTest 
 
-#using Random, LinearAlgebra, Test, VarianceComponentSelect
-include("../src/VCSEL.jl") #
-using .VCSEL #
+using VCSEL #
 using Random, LinearAlgebra, Test, DelimitedFiles #
 
 
@@ -86,6 +84,28 @@ end
 @testset begin 
   for i in 1:(length(objvec) - 1)
     @test objvec[i] >= objvec[i+1]
+  end 
+end 
+
+# reset 
+resetModel!(vcm)
+resetModel!(vcm1)
+
+_, obj, niters, objvec = vcselect!(vcm; penfun=MCPPenalty(), λ=2.5, verbose=true)
+_, obj1, niters1, objvec1 = vcselect!(vcm1; penfun=MCPPenalty(), λ=5.0, verbose=true)
+
+
+@info "objective values are monotonically decreasing (MCP penalty)" 
+@testset begin 
+  for i in 1:(length(objvec) - 1)
+    @test objvec[i] >= objvec[i+1]
+  end 
+end 
+
+@info "objective values are monotonically decreasing (MCP penalty)" 
+@testset begin 
+  for i in 1:(length(objvec1) - 1)
+    @test objvec1[i] >= objvec1[i+1]
   end 
 end 
 
