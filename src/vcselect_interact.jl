@@ -71,7 +71,7 @@ function vcselectpath!(
         β̂path = zeros(T, ncovariates(vcm), nλ)
 
         # solution path 
-        for iter in 1:nλ
+        for iter in nλ:-1:1
             _, objpath[iter], niterspath[iter] = 
                     vcselect!(vcm; penfun=penfun, λ=λpath[iter], penwt=penwt, 
                     maxiters=maxiters, tol=tol, verbose=false, checktype=false,
