@@ -70,7 +70,7 @@ function vcselectpath!(
             Σ̂path = Array{Matrix{T}}(undef, nvarcomps(vcm), nλ)
             β̂path = [zeros(T, p, d) for i in 1:nλ]
             # solution path 
-            for iter in 1:nλ
+            for iter in nλ:-1:1
                 _, objpath[iter], niterspath[iter], = 
                         vcselect!(vcm; penfun=penfun, λ=λpath[iter], penwt=penwt, 
                         maxiters=maxiters, tol=tol, verbose=false, checktype=false,
@@ -83,7 +83,7 @@ function vcselectpath!(
             Σ̂path = zeros(T, nvarcomps(vcm), nλ)
             β̂path = zeros(T, p, nλ)
             # solution path 
-            for iter in 1:nλ
+            for iter in nλ:-1:1
                 _, objpath[iter], niterspath[iter], = 
                         vcselect!(vcm; penfun=penfun, λ=λpath[iter], penwt=penwt, 
                         maxiters=maxiters, tol=tol, verbose=false, checktype=false,
