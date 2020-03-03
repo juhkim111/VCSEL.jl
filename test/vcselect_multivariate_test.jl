@@ -1,7 +1,7 @@
 module MultivariateTest 
 
 using VCSEL #
-using Random, LinearAlgebra, Test, DelimitedFiles #
+using Random, LinearAlgebra, Test
 
 
 ## generate data from a 3-variate response variance component model
