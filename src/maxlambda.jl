@@ -179,7 +179,7 @@ function maxlambda(
       # Step 1: obtain sigmas at tempλ
       Σ, = vcselect(Y, V; penfun=penfun, λ=tempλ, penwt=penwt, standardize=standardize)
       # Step 2: if all sigmas are zero, break the loop and move to Step 3.
-      maximum(norm.(view(Σ, 1:m))) < tol && break;
+      maximum(tr.(view(Σ, 1:m))) < tol && break;
       # Step 2: else, multiply lambda by 1.5 and go to Step 1.
       tempλ = 1.5 * tempλ
     end
@@ -200,14 +200,14 @@ function maxlambda(
       Σ_b, = vcselect(Y, V; penfun=penfun, λ=b, penwt=penwt, standardize=standardize)
       Σ_c, = vcselect(Y, V, penfun=penfun, λ=c, penwt=penwt, standardize=standardize)
 
-      if maximum(norm.(view(Σ_a, 1:m))) < tol 
+      if maximum(tr.(view(Σ_a, 1:m))) < tol 
         b = a
         a = b / 2
       # given that at least one σ2 at a is non-zero, if difference between
       #   σ2 at a and b are really small, break the loop
-      elseif maximum(abs, norm.(view(Σ_b, 1:m)) - norm.(view(Σ_a, 1:m))) < tol || (b-a) < 0.01
+      elseif maximum(abs, tr.(view(Σ_b, 1:m)) - tr.(view(Σ_a, 1:m))) < tol || (b-a) < 0.01
         break
-      elseif maximum(norm.(view(Σ_c, 1:m))) > tol 
+      elseif maximum(tr.(view(Σ_c, 1:m))) > tol 
         a = c
       else
         b = c
