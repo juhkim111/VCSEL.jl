@@ -21,7 +21,7 @@ penalty terms.
 function objvalue(
     vcm    :: VCModel;
     penfun :: Penalty = NoPenalty(),
-    λ      :: T = one(T),
+    λ      :: Real = 1.0,
     penwt  :: AbstractVector{T} = [ones(T, nvarcomps(vcm)-1); zero(T)]
     ) where {T <: Real}
    
@@ -60,7 +60,7 @@ plus penalty terms.
 function objvalue(
     vcm    :: VCintModel;
     penfun :: Penalty = NoPenalty(),
-    λ      :: T = one(T),
+    λ      :: Real = 1.0,
     penwt  :: AbstractVector{T} = [ones(T, ngroups(vcm)); zero(T)]
     ) where {T <: Real}
 
