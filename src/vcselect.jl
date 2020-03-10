@@ -35,7 +35,7 @@ function vcselectpath!(
     λpath        :: AbstractArray = zeros(0), 
     maxiters     :: Int = 1000, 
     standardize  :: Bool = false, 
-    tol          :: AbstractFloat = 1e-6
+    tol          :: AbstractFloat = 1e-5
     ) 
 
     # handle errors 
@@ -77,6 +77,28 @@ function vcselectpath!(
                         standardize=standardize)
                 Σ̂path[:, iter] = vcm.Σ 
                 β̂path[iter] .= vcm.β
+
+                # ################
+                # println("iter = $iter, λpath[iter] = $(λpath[iter])")
+                #     _, objpath[iter], niterspath[iter], objvec = 
+                #     vcselect!(vcm; penfun=penfun, λ=λpath[iter], penwt=penwt, 
+                #     maxiters=maxiters, tol=tol, verbose=true, checktype=false,
+                #     standardize=standardize)
+                #     println("objvec=$objvec")
+                #     @testset begin 
+                #         for i in 1:(length(objvec) - 1)
+                #             @test objvec[i] >= objvec[i+1]
+                #         end 
+                #     end 
+                # Σ̂path[:, iter] = vcm.Σ 
+                # β̂path[iter] .= vcm.β
+                # ################
+
+                # change the initial estimate to identity matrix if norm equals to zero 
+                for i in findall(x -> x==0, tr.(vcm.Σ[1:(end-1)]) .> 1e-8)
+                    vcm.Σ[i] = Matrix(1.0I, d, d)
+                end
+                
             end
         else
             # initialize arrays
@@ -90,6 +112,11 @@ function vcselectpath!(
                         standardize=standardize)
                 Σ̂path[:, iter] .= vcm.Σ
                 β̂path[:, iter] .= vcm.β
+
+                # change the initial estimate to one if estimate equals to zero 
+                for i in findall(x -> x < 1e-8, tmp)
+                    tmp[i] = 1.0
+                end
             end
         end 
 
@@ -135,7 +162,7 @@ function vcselect!(
     penwt        :: AbstractVector = [ones(nvarcomps(vcm)-1); 0.0],
     standardize  :: Bool = false, 
     maxiters     :: Int = 1000,
-    tol          :: Real = 1e-6,
+    tol          :: Real = 1e-5,
     verbose      :: Bool = false,
     checktype    :: Bool = true 
     ) 
@@ -146,7 +173,7 @@ function vcselect!(
         @assert size(penwt, 2) <= 1 "penwt mut be one-dimensional array!\n"
         @assert maxiters > 0 "maxiters should be a positive integer!\n"
         # start point has to be strictly positive
-        @assert all(norm.(vcm.Σ) .> 0) "starting Σ should be strictly positive or non-zero matrices"
+        @assert all(tr.(vcm.Σ) .> 0) "starting Σ should be strictly positive or non-zero matrices"
     end 
 
     # update weight with reciprocal of frobenius norm 
@@ -182,7 +209,7 @@ function mm_update_Σ!(
     penwt       :: AbstractVector = [ones(nvarcomps(vcm)-1); 0.0],
     standardize :: Bool = false, 
     maxiters    :: Int = 1000, 
-    tol         :: Real = 1e-6,
+    tol         :: Real = 1e-5,
     verbose     :: Bool = false 
     ) 
 
@@ -212,7 +239,7 @@ function mm_update_Σ!(
     for iter in 1:maxiters
         for i in eachindex(vcm.Σ)
             # if previous iterate is zero, move on to the next component
-            if iszero(norm(vcm.Σ[i])) 
+            if iszero(tr(vcm.Σ[i])) 
                 continue 
             end 
 
@@ -227,7 +254,8 @@ function mm_update_Σ!(
                     vcm.Mdxd[j, j] += penconst  
                 end             
             elseif isa(penfun, MCPPenalty) && (i < nvarcomps(vcm)) && (√tr(vcm.Σ[i]) <= penfun.γ * λ)
-                penconst = λ * penwt[i] / √tr(vcm.Σ[i]) - 1 / penfun.γ
+                # penconst = λ * penwt[i] / √tr(vcm.Σ[i]) - 1 / penfun.γ
+                penconst = λ / √tr(vcm.Σ[i]) - 1 / penfun.γ
                 for j in 1:d
                     vcm.Mdxd[j, j] += penconst  
                 end
@@ -317,10 +345,10 @@ function mm_update_σ2!(
     penwt       :: AbstractVector = [ones(nvarcomps(vcm)-1); 0.0],
     standardize :: Bool = false, 
     maxiters    :: Int = 1000,
-    tol         :: Real = 1e-6,
+    tol         :: Real = 1e-5,
     verbose     :: Bool = false 
     )
-
+    
     # initialize algorithm 
     n = size(vcm)[1]
     m = nvarcomps(vcm) - 1
@@ -367,7 +395,7 @@ function mm_update_σ2!(
                     elseif isa(penfun, MCPPenalty) 
                         if vcm.Σ[j] <= (penfun.γ * λ)^2
                             σ2tmp[j] = vcm.Σ[j] * √(const2 / (const1 + 
-                                (λ / sqrt(vcm.Σ[j]) - 1 / penfun.γ) * (1 / vcm.wt[j])))
+                                (λ / sqrt(vcm.Σ[j]) - 1 / penfun.γ)))
                         else 
                             σ2tmp[j] = vcm.Σ[j] * √(const2 / const1)  
                         end 
@@ -447,7 +475,7 @@ function vcselect(
     penwt       :: AbstractVector = [ones(length(V)-1); 0.0],
     standardize :: Bool = true, 
     maxiters    :: Int = 1000,
-    tol         :: Real = 1e-6,
+    tol         :: Real = 1e-5,
     verbose     :: Bool = false,
     checktype   :: Bool = true 
     ) where {T <: Real}
