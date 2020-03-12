@@ -100,7 +100,7 @@ function vcselectpath!(
                 β̂path[:, iter] .= vcm.β
 
                 # change initial estimates to greater than 0 if estimate approx zero 
-                for i in findall(x -> x < 1e-8, vcm.Σ)
+                for i in findall(x -> x < 1e-8, vcm.Σ[1:(end-1)])
                     vcm.Σ[i] = 1e-3
                 end
             end
