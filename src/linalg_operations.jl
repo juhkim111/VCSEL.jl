@@ -91,7 +91,7 @@ function objvalue(
         # L1Penalty
         if isa(penfun, L1Penalty)
             # add penalty term 
-            for j in 1:(nvarcomps(vcm) - 1)
+            for j in 1:ngroups(vcm)
                 pen += penwt[j] * √(vcm.Σ[j] + vcm.Σint[j])
             end 
             obj += λ * pen
@@ -100,7 +100,7 @@ function objvalue(
             const1 = penfun.γ * λ
             const2 = (1/2) * const1 * λ
             # add penalty term 
-            for j in 1:(nvarcomps(vcm) - 1)
+            for j in 1:ngroups(vcm)
                 if √(vcm.Σ[j] + vcm.Σint[j]) < const1
                     pen += λ * √(vcm.Σ[j] + vcm.Σint[j]) - 
                         (vcm.Σ[j] + vcm.Σint[j]) / (2*penfun.γ)
