@@ -70,26 +70,14 @@ function vcselectpath!(
         Σ̂intpath = zeros(T, ngroups(vcm), nλ)
         β̂path = zeros(T, ncovariates(vcm), nλ)
 
-        # solution path 
+        # solution path from largest to smallest lambda  
         for iter in nλ:-1:1
-
+            # call vcselect! function 
             _, objpath[iter], niterspath[iter], = 
                     vcselect!(vcm; penfun=penfun, λ=λpath[iter], penwt=penwt, 
                     maxiters=maxiters, tol=tol, verbose=false, checktype=false,
                     standardize=standardize)
-            # #### testing purpose #### 
-            # _, objpath[iter], niterspath[iter], objvec = 
-            #         vcselect!(vcm; penfun=penfun, λ=λpath[iter], penwt=penwt, 
-            #         maxiters=maxiters, tol=tol, verbose=true, checktype=false,
-            #         standardize=standardize)
-
-            # @testset begin 
-            #     for i in 1:(length(objvec) - 1)
-            #         @test objvec[i] >= objvec[i+1]
-            #     end 
-            # end 
-            # ####
-
+            
             Σ̂path[:, iter] .= vcm.Σ
             Σ̂intpath[:, iter] .= vcm.Σint
             β̂path[:, iter] .= vcm.β
@@ -100,11 +88,6 @@ function vcselectpath!(
                 vcm.Σint[i] = 1e-3
             end
 
-            # #### testing purpose ####
-            # println("λ=$(λpath[iter])")
-            # println("vcm.Σ=$(vcm.Σ)")
-            # println("vcm.Σint=$(vcm.Σint)")
-            # ####
         end # end of for loop 
        
 
