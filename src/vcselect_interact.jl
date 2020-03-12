@@ -39,7 +39,7 @@ function vcselectpath!(
     λpath        :: AbstractArray = zeros(0), 
     maxiters     :: Int = 1000, 
     standardize  :: Bool = false, 
-    tol          :: AbstractFloat = 1e-5
+    tol          :: AbstractFloat = 1e-6
     )
 
     # handle errors 
@@ -71,15 +71,42 @@ function vcselectpath!(
         β̂path = zeros(T, ncovariates(vcm), nλ)
 
         # solution path 
-        for iter in 1:nλ
-            _, objpath[iter], niterspath[iter] = 
+        for iter in nλ:-1:1
+
+            _, objpath[iter], niterspath[iter], = 
                     vcselect!(vcm; penfun=penfun, λ=λpath[iter], penwt=penwt, 
                     maxiters=maxiters, tol=tol, verbose=false, checktype=false,
                     standardize=standardize)
+            # #### testing purpose #### 
+            # _, objpath[iter], niterspath[iter], objvec = 
+            #         vcselect!(vcm; penfun=penfun, λ=λpath[iter], penwt=penwt, 
+            #         maxiters=maxiters, tol=tol, verbose=true, checktype=false,
+            #         standardize=standardize)
+
+            # @testset begin 
+            #     for i in 1:(length(objvec) - 1)
+            #         @test objvec[i] >= objvec[i+1]
+            #     end 
+            # end 
+            # ####
+
             Σ̂path[:, iter] .= vcm.Σ
             Σ̂intpath[:, iter] .= vcm.Σint
             β̂path[:, iter] .= vcm.β
-        end
+
+            # change initial estimates to greater than 0 if estimate approx zero 
+            for i in findall(x -> x < 1e-8, vcm.Σ[1:(end-1)] + vcm.Σint)
+                vcm.Σ[i] = 1e-3
+                vcm.Σint[i] = 1e-3
+            end
+
+            # #### testing purpose ####
+            # println("λ=$(λpath[iter])")
+            # println("vcm.Σ=$(vcm.Σ)")
+            # println("vcm.Σint=$(vcm.Σint)")
+            # ####
+        end # end of for loop 
+       
 
         return Σ̂path, Σ̂intpath, β̂path, λpath, objpath, niterspath
 
@@ -126,7 +153,7 @@ function vcselect!(
     penwt        :: AbstractVector = [ones(ngroups(vcm)); 0.0],
     standardize  :: Bool = false, 
     maxiters     :: Int = 1000,
-    tol          :: Real = 1e-5,
+    tol          :: Real = 1e-6,
     verbose      :: Bool = false,
     checktype    :: Bool = true 
     )
@@ -167,7 +194,7 @@ function mm_update_σ2!(
     penwt       :: AbstractVector = [ones(nvarcomps(vcm)-1); 0.0],
     standardize :: Bool = false, 
     maxiters    :: Int = 1000,
-    tol         :: Real = 1e-5,
+    tol         :: Real = 1e-6,
     verbose     :: Bool = false 
     )
 
@@ -182,10 +209,10 @@ function mm_update_σ2!(
 
     # display 
     if verbose
-        println("iter  = 0")
-        println("σ2    = ", vcm.Σ)
-        println("σ2int = ", vcm.Σint)
-        println("obj   = ", obj)
+        # println("iter  = 0")
+        # println("σ2    = ", vcm.Σ)
+        # println("σ2int = ", vcm.Σint)
+        # println("obj   = ", obj)
         objvec = obj 
     end    
 
@@ -215,7 +242,7 @@ function mm_update_σ2!(
             const2int = dot(vcm.Mnxd, vcm.ΩinvY) # const2 = y' * Ωinv * Vint[j] * Ωinv * y
 
             # update variance component under specified penalty 
-            if !isa(penfun, NoPenalty) && !iszero(λ) && !iszero(penwt[j])
+            if !isa(penfun, NoPenalty) && !iszero(λ) && !iszero(penwt[j]) 
                 if isinf(penwt[j])
                     σ2tmp[j] = 0
                     σ2inttmp[j] = 0
@@ -267,10 +294,10 @@ function mm_update_σ2!(
 
         # display current iterate if specified 
         if verbose
-            println("iter = ", iter)
-            println("σ2   = ", vcm.Σ)
-            println("σ2int  = ", vcm.Σint)
-            println("obj  = ", obj)
+            # println("iter = ", iter)
+            # println("σ2   = ", vcm.Σ)
+            # println("σ2int  = ", vcm.Σint)
+            # println("obj  = ", obj)
             objvec = [objvec; obj] 
         end
 
@@ -323,7 +350,7 @@ function vcselect(
     penwt       :: AbstractVector = [ones(length(V)-1); 0.0],
     standardize :: Bool = false, 
     maxiters    :: Int = 1000,
-    tol         :: Real = 1e-5,
+    tol         :: Real = 1e-6,
     verbose     :: Bool = false,
     checktype   :: Bool = true 
     ) where {T <: Real}
