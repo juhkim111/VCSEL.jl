@@ -31,10 +31,27 @@ function objvalue(
     # add penalty term 
     if !isa(penfun, NoPenalty)
         pen = 0.0
-        for j in 1:(nvarcomps(vcm) - 1)
-            pen += penwt[j] * value(penfun, √tr(vcm.Σ[j]))
+        # L1Penalty
+        if isa(penfun, L1Penalty)
+            # add penalty term 
+            for j in 1:(nvarcomps(vcm) - 1)
+                pen += penwt[j] * √tr(vcm.Σ[j])
+            end 
+            obj += λ * pen
+        # MCP penalty 
+        elseif isa(penfun, MCPPenalty)
+            const1 = penfun.γ * λ
+            const2 = (1/2) * const1 * λ
+            # add penalty term 
+            for j in 1:(nvarcomps(vcm) - 1)
+                if √tr(vcm.Σ[j]) < const1
+                    pen += λ * √tr(vcm.Σ[j]) - tr(vcm.Σ[j]) / (2*penfun.γ)
+                else
+                    pen += const2
+                end 
+            end 
+            obj += pen 
         end 
-        obj += λ * pen
     end 
 
     return obj 
@@ -50,7 +67,8 @@ plus penalty terms.
 - `vcm`: VCintModel
 
 # Keyword Argument 
-- `penfun`: penalty function (e.g. NoPenalty(), L1Penalty()), default is NoPenalty()
+- `penfun`: penalty function (e.g. NoPenalty(), L1Penalty(), MCPPenalty()), 
+        default is NoPenalty()
 - `λ`: tuning parameter, default is 1
 - `penwt`: penalty weight, default is (1,...1,0)
 
@@ -69,15 +87,29 @@ function objvalue(
 
     # add penalty term 
     if !isa(penfun, NoPenalty)
-        pen = 0.0 
-        for j in 1:ngroups(vcm)
-            if iszero(vcm.Σ[j]) && iszero(vcm.Σint[j])
-                continue 
-            else 
-                pen += penwt[j] * value(penfun, √(vcm.Σ[j] + vcm.Σint[j]))
+        pen = 0.0
+        # L1Penalty
+        if isa(penfun, L1Penalty)
+            # add penalty term 
+            for j in 1:(nvarcomps(vcm) - 1)
+                pen += penwt[j] * √(vcm.Σ[j] + vcm.Σint[j])
             end 
+            obj += λ * pen
+        # MCP penalty 
+        elseif isa(penfun, MCPPenalty)
+            const1 = penfun.γ * λ
+            const2 = (1/2) * const1 * λ
+            # add penalty term 
+            for j in 1:(nvarcomps(vcm) - 1)
+                if √(vcm.Σ[j] + vcm.Σint[j]) < const1
+                    pen += λ * √(vcm.Σ[j] + vcm.Σint[j]) - 
+                        (vcm.Σ[j] + vcm.Σint[j]) / (2*penfun.γ)
+                else
+                    pen += const2
+                end 
+            end 
+            obj += pen 
         end 
-        obj += λ * pen
     end 
 
     return obj 
