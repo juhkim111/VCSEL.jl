@@ -35,7 +35,7 @@ function vcselectpath!(
     λpath        :: AbstractArray = zeros(0), 
     maxiters     :: Int = 1000, 
     standardize  :: Bool = false, 
-    tol          :: AbstractFloat = 1e-5
+    tol          :: AbstractFloat = 1e-6
     ) 
 
     # handle errors 
@@ -71,6 +71,7 @@ function vcselectpath!(
             β̂path = [zeros(T, p, d) for i in 1:nλ]
             # solution path 
             for iter in nλ:-1:1
+                # call vcselect! function 
                 _, objpath[iter], niterspath[iter], = 
                         vcselect!(vcm; penfun=penfun, λ=λpath[iter], penwt=penwt, 
                         maxiters=maxiters, tol=tol, verbose=false, checktype=false,
@@ -78,25 +79,9 @@ function vcselectpath!(
                 Σ̂path[:, iter] = vcm.Σ 
                 β̂path[iter] .= vcm.β
 
-                # ################
-                # println("iter = $iter, λpath[iter] = $(λpath[iter])")
-                #     _, objpath[iter], niterspath[iter], objvec = 
-                #     vcselect!(vcm; penfun=penfun, λ=λpath[iter], penwt=penwt, 
-                #     maxiters=maxiters, tol=tol, verbose=true, checktype=false,
-                #     standardize=standardize)
-                #     println("objvec=$objvec")
-                #     @testset begin 
-                #         for i in 1:(length(objvec) - 1)
-                #             @test objvec[i] >= objvec[i+1]
-                #         end 
-                #     end 
-                # Σ̂path[:, iter] = vcm.Σ 
-                # β̂path[iter] .= vcm.β
-                # ################
-
                 # change the initial estimate to identity matrix if norm equals to zero 
                 for i in findall(x -> x==0, tr.(vcm.Σ[1:(end-1)]) .> 1e-8)
-                    vcm.Σ[i] = Matrix(1.0I, d, d)
+                    vcm.Σ[i] = Matrix(1e-3I, d, d)
                 end
                 
             end
@@ -106,7 +91,8 @@ function vcselectpath!(
             β̂path = zeros(T, p, nλ)
             # solution path 
             for iter in nλ:-1:1
-                _, objpath[iter], niterspath[iter], = 
+                # call vcselect! function 
+                _, objpath[iter], niterspath[iter],  = 
                         vcselect!(vcm; penfun=penfun, λ=λpath[iter], penwt=penwt, 
                         maxiters=maxiters, tol=tol, verbose=false, checktype=false,
                         standardize=standardize)
@@ -114,8 +100,8 @@ function vcselectpath!(
                 β̂path[:, iter] .= vcm.β
 
                 # change the initial estimate to one if estimate equals to zero 
-                for i in findall(x -> x < 1e-8, tmp)
-                    tmp[i] = 1.0
+                for i in findall(x -> x < 1e-8, vcm.Σ)
+                    vcm.Σ[i] = 1e-3
                 end
             end
         end 
@@ -162,7 +148,7 @@ function vcselect!(
     penwt        :: AbstractVector = [ones(nvarcomps(vcm)-1); 0.0],
     standardize  :: Bool = false, 
     maxiters     :: Int = 1000,
-    tol          :: Real = 1e-5,
+    tol          :: Real = 1e-6,
     verbose      :: Bool = false,
     checktype    :: Bool = true 
     ) 
@@ -209,7 +195,7 @@ function mm_update_Σ!(
     penwt       :: AbstractVector = [ones(nvarcomps(vcm)-1); 0.0],
     standardize :: Bool = false, 
     maxiters    :: Int = 1000, 
-    tol         :: Real = 1e-5,
+    tol         :: Real = 1e-6,
     verbose     :: Bool = false 
     ) 
 
@@ -345,10 +331,10 @@ function mm_update_σ2!(
     penwt       :: AbstractVector = [ones(nvarcomps(vcm)-1); 0.0],
     standardize :: Bool = false, 
     maxiters    :: Int = 1000,
-    tol         :: Real = 1e-5,
+    tol         :: Real = 1e-6,
     verbose     :: Bool = false 
     )
-    
+
     # initialize algorithm 
     n = size(vcm)[1]
     m = nvarcomps(vcm) - 1
@@ -475,7 +461,7 @@ function vcselect(
     penwt       :: AbstractVector = [ones(length(V)-1); 0.0],
     standardize :: Bool = true, 
     maxiters    :: Int = 1000,
-    tol         :: Real = 1e-5,
+    tol         :: Real = 1e-6,
     verbose     :: Bool = false,
     checktype   :: Bool = true 
     ) where {T <: Real}
