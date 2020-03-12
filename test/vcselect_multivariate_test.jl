@@ -1,6 +1,6 @@
 module MultivariateTest 
-
-using VCSEL #
+include("../src/VCSEL.jl")
+using .VCSEL #
 using Random, LinearAlgebra, Test
 
 
@@ -81,58 +81,68 @@ _, obj1, niters1, objvec1 = vcselect!(vcm1; penfun=L1Penalty(), λ=2.5, verbose=
 end 
 
 @info "objective values are monotonically decreasing (L1 penalty)" 
-@testset begin 
-  for i in 1:(length(objvec) - 1)
-    @test objvec[i] >= objvec[i+1]
+for lambda in range(70,0,length=10)
+  vcm = VCModel(Y, X, V)
+  _, obj, niters, objvec = vcselect!(vcm; verbose=true, penfun=L1Penalty(), λ=lambda)
+  @testset begin 
+      for i in 1:(length(objvec) - 1)
+          @test objvec[i] >= objvec[i+1]
+      end 
   end 
-end 
-
-# reset 
-resetModel!(vcm)
-resetModel!(vcm1)
-
-_, obj, niters, objvec = vcselect!(vcm; penfun=MCPPenalty(), λ=2.5, verbose=true)
-_, obj1, niters1, objvec1 = vcselect!(vcm1; penfun=MCPPenalty(), λ=5.0, verbose=true)
+end
 
 
 @info "objective values are monotonically decreasing (MCP penalty)" 
-@testset begin 
-  for i in 1:(length(objvec) - 1)
-    @test objvec[i] >= objvec[i+1]
+for lambda in range(70,0,length=10)
+  vcm = VCModel(Y, X, V)
+  _, obj, niters, objvec = vcselect!(vcm; verbose=true, penfun=MCPPenalty(), λ=lambda)
+  @testset begin 
+    for i in 1:(length(objvec) - 1)
+        @test objvec[i] >= objvec[i+1]
+    end 
   end 
-end 
+end
 
-@info "objective values are monotonically decreasing (MCP penalty)" 
-@testset begin 
-  for i in 1:(length(objvec1) - 1)
-    @test objvec1[i] >= objvec1[i+1]
+
+# # path given lambda grid 
+# resetModel!(vcm)
+# resetModel!(vcm1)
+
+# Σ̂path, β̂path, λpath, objpath, niterspath = vcselectpath!(vcm; 
+#       penfun=NoPenalty(), λpath=range(1,10,length=20))
+
+# Σ̂path, β̂path, λpath, objpath, niterspath = vcselectpath!(vcm1; penfun=L1Penalty(), 
+#       λpath=range(1,10,length=20))
+
+# ranking, = rankvarcomps(Σ̂path)
+
+# # path not given lambda grid 
+# resetModel!(vcm)
+# resetModel!(vcm1)
+
+# Σ̂path, β̂path, λpath, objpath, niterspath = vcselectpath!(vcm; 
+#       penfun=L1Penalty(), nλ=20)
+
+# Σ̂path, β̂path, λpath, objpath, niterspath = vcselectpath!(vcm1; penfun=L1Penalty(), 
+#       nλ=10)
+
+# weights for adaptive lasso penalty 
+vcm0 = deepcopy(vcm)
+vcselect!(vcm0; penfun=NoPenalty())
+penwt = 1 ./ sqrt.(tr.(vcm0.Σ))
+penwt[end] = 0.0
+
+@info "objective values are monotonically decreasing (adaptive L1 penalty)" 
+for lambda in range(70,0,length=10)
+  vcm = VCModel(Y, X, V)
+  _, obj, niters, objvec = vcselect!(vcm; verbose=true, penfun=L1Penalty(), 
+          λ=lambda, penwt=penwt)
+  @testset begin 
+    for i in 1:(length(objvec) - 1)
+        @test objvec[i] >= objvec[i+1]
+    end 
   end 
-end 
-
-# path given lambda grid 
-resetModel!(vcm)
-resetModel!(vcm1)
-
-Σ̂path, β̂path, λpath, objpath, niterspath = vcselectpath!(vcm; 
-      penfun=NoPenalty(), λpath=range(1,10,length=20))
-
-Σ̂path, β̂path, λpath, objpath, niterspath = vcselectpath!(vcm1; penfun=L1Penalty(), 
-      λpath=range(1,10,length=20))
-
-ranking, = rankvarcomps(Σ̂path)
-
-# path not given lambda grid 
-resetModel!(vcm)
-resetModel!(vcm1)
-
-Σ̂path, β̂path, λpath, objpath, niterspath = vcselectpath!(vcm; 
-      penfun=L1Penalty(), nλ=20)
-
-Σ̂path, β̂path, λpath, objpath, niterspath = vcselectpath!(vcm1; penfun=L1Penalty(), 
-      nλ=10)
-
-
-
+end
 
 
 end # end of module 
