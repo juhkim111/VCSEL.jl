@@ -71,65 +71,80 @@ end
 
 # vcselect with L1Penalty
 @info "check if objective values are monotonically decreasing (L1 penalty)"
-vcmint1 = deepcopy(vcmint)
-_, obj, niters, objvec = vcselect!(vcmint1; penfun=L1Penalty(), λ=2.0, verbose=true)
-@testset begin 
-  for i in 1:(length(objvec) - 1)
-    @test objvec[i] >= objvec[i+1]
-  end 
-end 
-
-@info "check if objective values are monotonically decreasing (L1 penalty)"
-vcmintX1 = deepcopy(vcmintX)
-_, obj, niters, objvec = vcselect!(vcmintX1; penfun=L1Penalty(), λ=1.5, verbose=true)
-@testset begin 
-  for i in 1:(length(objvec) - 1)
-    @test objvec[i] >= objvec[i+1]
+for lambda in range(0, 4.0, length=10)
+  vcmint1 = deepcopy(vcmint)
+  _, obj, niters, objvec = vcselect!(vcmint1; penfun=L1Penalty(), λ=lambda, verbose=true)
+  @testset begin 
+      for i in 1:(length(objvec) - 1)
+          @test objvec[i] >= objvec[i+1]
+      end 
   end 
 end
 
+@info "check if objective values are monotonically decreasing (L1 penalty)"
+for lambda in range(0, 3.0, length=10)
+  vcmintX1 = deepcopy(vcmintX)
+  _, obj, niters, objvec = vcselect!(vcmintX1; penfun=L1Penalty(), λ=lambda, verbose=true)
+  @testset begin 
+      for i in 1:(length(objvec) - 1)
+          @test objvec[i] >= objvec[i+1]
+      end 
+  end 
+end
 
 # vcselect with MCPPenalty 
 @info "check if objective values are monotonically decreasing (MCP penalty)"
-vcmint1 = deepcopy(vcmint)
-_, obj, niters, objvec = vcselect!(vcmint1; penfun=MCPPenalty(), λ=4.0, verbose=true)
-@testset begin 
-  for i in 1:(length(objvec) - 1)
-    @test objvec[i] >= objvec[i+1]
-  end 
-end 
-
-@info "check if objective values are monotonically decreasing (MCP penalty)"
-vcmintX1 = deepcopy(vcmintX)
-_, obj, niters, objvec = vcselect!(vcmintX1; penfun=MCPPenalty(), λ=3.5, verbose=true)
-@testset begin 
-  for i in 1:(length(objvec) - 1)
-    @test objvec[i] >= objvec[i+1]
+for lambda in range(0, 5.0, length=10)
+  vcmint1 = deepcopy(vcmint)
+  _, obj, niters, objvec = vcselect!(vcmint1; penfun=MCPPenalty(), λ=lambda, verbose=true)
+  @testset begin 
+      for i in 1:(length(objvec) - 1)
+          @test objvec[i] >= objvec[i+1]
+      end 
   end 
 end
 
-# # obtain solution path (no penalty)
-# Σ̂path, Σ̂intpath, β̂path, λpath, objpath, niterspath = vcselectpath!(vcmX; 
-#       penfun=NoPenalty())
-# resetModel!(vcmX)
-# Σ̂path2, Σ̂intpath2, β̂path2, λpath2, objpath2, niterspath2 = vcselectpath!(vcmX)
+@info "check if objective values are monotonically decreasing (MCP penalty)"
+for lambda in range(0, 3.6, length=10)
+  vcmintX1 = deepcopy(vcmintX)
+  _, obj, niters, objvec = vcselect!(vcmintX1; penfun=MCPPenalty(), λ=lambda, verbose=true)
+  @testset begin 
+      for i in 1:(length(objvec) - 1)
+          @test objvec[i] >= objvec[i+1]
+      end 
+  end 
+end
 
-# @testset begin
-#   @test vcmXΣ == Σ̂path
-#   @test vcmXΣint == Σ̂intpath
-#   @test vcmXβ == β̂path
-#   @test Σ̂path == Σ̂path2
-#   @test Σ̂intpath == Σ̂intpath2
-#   @test β̂path == β̂path2
-#   @test λpath == λpath2
-#   @test objpath == objpath2
-#   @test niterspath == niterspath2 
-# end 
+# obtain solution path (no penalty)
+Σ̂path, Σ̂intpath, β̂path, λpath, objpath, niterspath = vcselectpath!(vcmX; 
+      penfun=NoPenalty())
+resetModel!(vcmX)
+Σ̂path2, Σ̂intpath2, β̂path2, λpath2, objpath2, niterspath2 = vcselectpath!(vcmX)
+
+@testset begin
+  @test vcmXΣ == Σ̂path
+  @test vcmXΣint == Σ̂intpath
+  @test vcmXβ == β̂path
+  @test Σ̂path == Σ̂path2
+  @test Σ̂intpath == Σ̂intpath2
+  @test β̂path == β̂path2
+  @test λpath == λpath2
+  @test objpath == objpath2
+  @test niterspath == niterspath2 
+end 
 
 # # reset model 
-# resetModel!(vcm)
-# resetModel!(vcmX)
+# resetModel!(vcmint)
+# resetModel!(vcmintX)
 
+# # vcselectpath! 
+# #Σ̂path, Σ̂intpath, = vcselectpath!(vcmint, penfun=L1Penalty(), nλ=30)
+# #Σ̂path, Σ̂intpath, = vcselectpath!(vcmint, penfun=L1Penalty(), λpath=range(0, 0.5, length=10))
+# Σ̂path, Σ̂intpath, = vcselectpath!(vcmintX, penfun=L1Penalty(), λpath=range(0, 0.25, length=10))
+
+
+# println("Σ̂path=$(Σ̂path)")
+# println("Σ̂intpath=$(Σ̂intpath)")
 # # obtain solution path, not given lambda grid 
 # Σ̂path, Σ̂intpath, β̂path, λpath, objpath, niterspath = vcselectpath!(vcm; 
 #       penfun=L1Penalty(), nλ=20)
