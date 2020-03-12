@@ -229,20 +229,16 @@ function mm_update_σ2!(
                                 √(const2int / (const1int + (pen / vcm.wt_int[j])))
                     # MCP penalty 
                     elseif isa(penfun, MCPPenalty)
-                        if σ2tmp[j] <= (penfun.γ * λ)^2
+
+                        if σ2tmp[j]+σ2inttmp[j] <= (penfun.γ * λ)^2
                             σ2tmp[j] = vcm.Σ[j] * 
                                 √(const2 / (const1 + pen - (1 / penfun.γ)))
-                        else
-                            σ2tmp[j] = vcm.Σ[j] * 
-                                √(const2 / const1)
-                        end 
-                        if σ2inttmp[j] <= (penfun.γ * λ)^2
                             σ2inttmp[j] = vcm.Σint[j] * 
                                 √(const2int / (const1int + pen - (1 / penfun.γ)))
                         else
-                            σ2inttmp[j] = vcm.Σint[j] * 
-                                √(const2int / const1int)
-                        end  
+                            σ2tmp[j] = vcm.Σ[j] * √(const2 / const1)
+                            σ2inttmp[j] = vcm.Σint[j] * √(const2int / const1int)
+                        end 
 
                     end 
                 end  
