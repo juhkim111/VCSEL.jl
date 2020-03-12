@@ -79,7 +79,7 @@ function vcselectpath!(
                 Σ̂path[:, iter] = vcm.Σ 
                 β̂path[iter] .= vcm.β
 
-                # change the initial estimate to identity matrix if norm equals to zero 
+                # change initial estimates to small identity matrix if estimate approx zero 
                 for i in findall(x -> x==0, tr.(vcm.Σ[1:(end-1)]) .> 1e-8)
                     vcm.Σ[i] = Matrix(1e-3I, d, d)
                 end
@@ -99,7 +99,7 @@ function vcselectpath!(
                 Σ̂path[:, iter] .= vcm.Σ
                 β̂path[:, iter] .= vcm.β
 
-                # change the initial estimate to one if estimate equals to zero 
+                # change initial estimates to greater than 0 if estimate approx zero 
                 for i in findall(x -> x < 1e-8, vcm.Σ)
                     vcm.Σ[i] = 1e-3
                 end
