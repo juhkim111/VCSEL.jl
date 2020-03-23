@@ -118,20 +118,20 @@ end
 # obtain solution path (no penalty)
 Σ̂path, Σ̂intpath, β̂path, λpath, objpath, niterspath = vcselectpath!(vcmX; 
       penfun=NoPenalty())
-resetModel!(vcmX)
-Σ̂path2, Σ̂intpath2, β̂path2, λpath2, objpath2, niterspath2 = vcselectpath!(vcmX)
+resetModel!(vcmintX)
+Σ̂path2, Σ̂intpath2, β̂path2, λpath2, objpath2, niterspath2 = vcselectpath!(vcmintX)
 
-@testset begin
-  @test vcmXΣ == Σ̂path
-  @test vcmXΣint == Σ̂intpath
-  @test vcmXβ == β̂path
-  @test Σ̂path == Σ̂path2
-  @test Σ̂intpath == Σ̂intpath2
-  @test β̂path == β̂path2
-  @test λpath == λpath2
-  @test objpath == objpath2
-  @test niterspath == niterspath2 
-end 
+# @testset begin
+#   @test vcmXΣ == Σ̂path
+#   @test vcmXΣint == Σ̂intpath
+#   @test vcmXβ == β̂path
+#   @test Σ̂path == Σ̂path2
+#   @test Σ̂intpath == Σ̂intpath2
+#   @test β̂path == β̂path2
+#   @test λpath == λpath2
+#   @test objpath == objpath2
+#   @test niterspath == niterspath2 
+# end 
 
 # # reset model 
 # resetModel!(vcmint)
