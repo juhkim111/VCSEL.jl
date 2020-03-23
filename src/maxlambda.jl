@@ -3,7 +3,7 @@ export maxlambda
 """
 
     maxlambda(y, V; penfun=NoPenalty(), penwt=[ones(length(V)-1); 0.0], maxiters=500, 
-              standardize=true, tol=1e-8)
+              standardize=false, tol=1e-8)
 
 Find the value of λ where all σ turns 0. At any value greater than λ, all σ's are 0.
 
@@ -15,7 +15,7 @@ Find the value of λ where all σ turns 0. At any value greater than λ, all σ'
 - `penfun`: penalty function, possible options are `L1Penalty()` (default), `MCPPenalty()`, 
     and `NoPenalty()`. If `penfun=NoPenalty()`, 0 is returned
 - `penwt`: vector of penalty weights, default is (1,1,...1,0)
-- `standardize`: logical flag for covariance matrix standardization, default is `true`.
+- `standardize`: logical flag for covariance matrix standardization, default is `false`.
     If true, `V[i]` and `Vint[i]` is standardized by its Frobenius norm, and parameter 
     estimates are returned on the original scale
 - `maxiters`: maximum number of iterations, default is 500
@@ -29,7 +29,7 @@ function maxlambda(
     V           :: AbstractVector{Matrix{T}};
     penfun      :: Penalty = NoPenalty(),
     penwt       :: AbstractVector{T} = [ones(T, length(V)-1); zero(T)],
-    standardize :: Bool = true, 
+    standardize :: Bool = false, 
     maxiters    :: Int = 500,
     tol         :: AbstractFloat = 1e-8
     ) where {T <: Real}
@@ -107,7 +107,7 @@ function maxlambda(
 end
 
 """
-    maxlambda(Y, V; penfun=NoPenalty(), penwt=[ones(length(V)-1); 0.0], standardize=true,
+    maxlambda(Y, V; penfun=NoPenalty(), penwt=[ones(length(V)-1); 0.0], standardize=false,
               maxiters=500, tol=1e-8)
 
 Find the value of λ where all σ turns 0. At any value greater than λ, all σ's are 0.
@@ -120,7 +120,7 @@ Find the value of λ where all σ turns 0. At any value greater than λ, all σ'
 - `penfun`: penalty function, possible options are `L1Penalty()` (default), `MCPPenalty()`, 
     and `NoPenalty()`. If `penfun=NoPenalty()`, 0 is returned
 - `penwt`: vector of penalty weights, default is (1,1,...1,0)
-- `standardize`: logical flag for covariance matrix standardization, default is `true`.
+- `standardize`: logical flag for covariance matrix standardization, default is `false`.
     If true, `V[i]` and `Vint[i]` is standardized by its Frobenius norm, and parameter 
     estimates are returned on the original scale
 - `maxiters`: maximum number of iterations, default is 500
@@ -134,7 +134,7 @@ function maxlambda(
     V       :: AbstractVector{Matrix{T}};
     penfun  :: Penalty = NoPenalty(),
     penwt   :: AbstractVector{T} = [ones(T, length(V)-1); zero(T)],
-    standardize :: Bool = true, 
+    standardize :: Bool = false, 
     maxiters :: Int = 500,
     tol     :: AbstractFloat = 1e-8,
     tempλ   :: AbstractFloat = 50.0
@@ -236,7 +236,7 @@ Find the value of λ where all σ turns 0. At any value greater than λ, all σ'
 - `penfun`: penalty function, possible options are `L1Penalty()` (default), `MCPPenalty()`, 
     and `NoPenalty()`. If `penfun=NoPenalty()`, 0 is returned
 - `penwt`: vector of penalty weights, default is (1,1,...1,0)
-- `standardize`: logical flag for covariance matrix standardization, default is `true`.
+- `standardize`: logical flag for covariance matrix standardization, default is `false`.
     If true, `V[i]` and `Vint[i]` is standardized by its Frobenius norm, and parameter 
     estimates are returned on the original scale
 - `maxiters`: maximum number of iterations, default is 500
@@ -251,7 +251,7 @@ function maxlambda(
     Vint        :: AbstractVector{Matrix{T}};
     penfun      :: Penalty = NoPenalty(),
     penwt       :: AbstractVector{T} = [ones(T, length(Vint)); zero(T)],
-    standardize :: Bool = true, 
+    standardize :: Bool = false, 
     maxiters    :: Int = 500,
     tol         :: AbstractFloat = 1e-8
     ) where {T <: Real}
