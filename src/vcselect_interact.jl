@@ -135,20 +135,15 @@ function vcselect(
                             √(const2int / (const1int + pen))
                     # MCP penalty 
                     elseif isa(penfun, MCPPenalty) 
-                        if σ2[j] <= (penfun.γ * λ)^2
+                        if σ2[j] + σ2int[j] <= (penfun.γ * λ)^2
                             σ2[j] = σ2[j] * 
                                 √(const2 / (const1 + pen - (1 / penfun.γ)))
-                        else
-                            σ2[j] = σ2[j] * 
-                                √(const2 / const1)
-                        end 
-                        if σ2int[j] <= (penfun.γ * λ)^2
                             σ2int[j] = σ2int[j] * 
                                 √(const2int / (const1int + pen - (1 / penfun.γ)))
                         else
-                            σ2int[j] = σ2int[j] * 
-                                √(const2int / const1int)
-                        end  
+                            σ2[j] = σ2[j] * √(const2 / const1)
+                            σ2int[j] = σ2int[j] * √(const2int / const1int)
+                        end 
                     end 
                 end 
                 
