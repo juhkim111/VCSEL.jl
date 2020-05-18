@@ -70,8 +70,8 @@ function vcselectpath!(
         Σ̂intpath = zeros(T, ngroups(vcm), nλ)
         β̂path = zeros(T, ncovariates(vcm), nλ)
 
-        # solution path from largest to smallest lambda  
-        for iter in nλ:-1:1
+        # solution path from smallest to largest lambda  
+        for iter in 1:nλ
             # call vcselect! function 
             _, objpath[iter], niterspath[iter], = 
                     vcselect!(vcm; penfun=penfun, λ=λpath[iter], penwt=penwt, 
@@ -81,12 +81,6 @@ function vcselectpath!(
             Σ̂path[:, iter] .= vcm.Σ
             Σ̂intpath[:, iter] .= vcm.Σint
             β̂path[:, iter] .= vcm.β
-
-            # change initial estimates to greater than 0 if estimate approx zero 
-            for i in findall(x -> x < 1e-8, vcm.Σ[1:(end-1)] + vcm.Σint)
-                vcm.Σ[i] = 1e-3
-                vcm.Σint[i] = 1e-3
-            end
 
         end # end of for loop 
        
