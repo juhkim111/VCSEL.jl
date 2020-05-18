@@ -234,7 +234,7 @@ function plotsolpath(
     linewidth  :: AbstractFloat = 1.0,
     nranks     :: Int = size(Σpath, 1),
     legend     :: Bool = true,
-    legendout  :: Bool = true, 
+    legendout  :: Bool = false, 
     legendtitle :: AbstractString = "Ranking",
     resvarcomp :: Bool = true
     ) where {T <: Real}
@@ -335,7 +335,7 @@ function plotsolpath(
     linewidth  :: AbstractFloat = 1.0,
     nranks     :: Int = size(Σpath, 1),
     legend     :: Bool = true,
-    legendout  :: Bool = true, 
+    legendout  :: Bool = false, 
     legendtitle :: AbstractString = "Ranking",
     resvarcomp :: Bool = true
     ) where {T <: Real}
