@@ -79,22 +79,6 @@ function vcselectpath!(
                 Σ̂path[:, iter] = vcm.Σ 
                 β̂path[iter] .= vcm.β                
             end
-            ## solution path from largest to smallest lambda 
-            # for iter in nλ:-1:1
-            #     # call vcselect! function 
-            #     _, objpath[iter], niterspath[iter], = 
-            #             vcselect!(vcm; penfun=penfun, λ=λpath[iter], penwt=penwt, 
-            #             maxiters=maxiters, tol=tol, verbose=false, checktype=false,
-            #             standardize=standardize)
-            #     Σ̂path[:, iter] = vcm.Σ 
-            #     β̂path[iter] .= vcm.β
-            # 
-            #     # change initial estimates to small identity matrix if estimate approx zero 
-            #     for i in findall(x -> x==0, tr.(vcm.Σ[1:(end-1)]) .> 1e-8)
-            #         vcm.Σ[i] = Matrix(1e-3I, d, d)
-            #     end
-                
-            # end
         else
             # initialize arrays
             Σ̂path = zeros(T, nvarcomps(vcm), nλ)
@@ -109,21 +93,6 @@ function vcselectpath!(
                 Σ̂path[:, iter] .= vcm.Σ
                 β̂path[:, iter] .= vcm.β
             end
-            # # solution path from largest to smallest lambda
-            # for iter in nλ:-1:1
-            #     # call vcselect! function 
-            #     _, objpath[iter], niterspath[iter],  = 
-            #             vcselect!(vcm; penfun=penfun, λ=λpath[iter], penwt=penwt, 
-            #             maxiters=maxiters, tol=tol, verbose=false, checktype=false,
-            #             standardize=standardize)
-            #     Σ̂path[:, iter] .= vcm.Σ
-            #     β̂path[:, iter] .= vcm.β
-            #
-            #     # change initial estimates to greater than 0 if estimate approx zero 
-            #     for i in findall(x -> x < 1e-8, vcm.Σ[1:(end-1)])
-            #         vcm.Σ[i] = 1e-3
-            #     end
-            # end
         end 
 
         return Σ̂path, β̂path, λpath, objpath, niterspath
