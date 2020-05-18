@@ -1,6 +1,6 @@
 __precompile__()
 
-module VarianceComponentSelect
+module VCSEL
 
 using PenaltyFunctions, LinearAlgebra, StatsBase, Distributions, Reexport, Plots
 @reexport using PenaltyFunctions
