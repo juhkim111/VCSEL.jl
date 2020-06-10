@@ -15,7 +15,7 @@ using lasso, adaptive lasso, or MCP penalty.
 
 ## Installation 
 
-This package requires Julia v0.7.0 or later, which can be obtained from
+This package requires Julia v1.1.0 or later, which can be obtained from
 [https://julialang.org/downloads/](https://julialang.org/downloads/) or by building Julia from the sources in the
 [https://github.com/JuliaLang/julia](https://github.com/JuliaLang/julia) repository.
 
