@@ -28,4 +28,6 @@ Start julia and use the `]` key to switch to the package manager mode and type t
 
 Use the backspace key to return to the Julia REPL.
 
+## Citation 
+
 
