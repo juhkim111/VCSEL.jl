@@ -40,7 +40,7 @@ function vcselectpath!(
 
     # handle errors 
     @assert penfun ∈ [NoPenalty(), L1Penalty(), MCPPenalty()] "penfun must be either NoPenalty(), L1Penalty(), or MCPPenalty()!\n"
-    @assert size(penwt, 2) <= 1 "penwt mut be one-dimensional array!\n"
+    @assert size(penwt, 2) <= 1 "penwt must be one-dimensional array!\n"
     @assert size(λpath, 2) <= 1 "λpath must be one-dimensional array!\n"
     @assert maxiters > 0 "maxiters should be a positive integer!\n"
 
@@ -203,9 +203,11 @@ function mm_update_Σ!(
     if verbose 
         println("iter = 0")
         println("Σ    = ", vcm.Σ)
-        println("obj  = ", obj)
-        objvec = obj 
+        println("obj  = ", obj) 
     end  
+
+    # update objective value 
+    objvec = obj
 
     Σtmp = deepcopy(vcm.Σ)
 
@@ -274,8 +276,10 @@ function mm_update_Σ!(
             println("iter = ", iter)
             println("Σ    = ", vcm.Σ)
             println("obj  = ", obj)
-            objvec = [objvec; obj]
         end
+
+        # update objective value 
+        objvec = [objvec; obj]
 
         # check convergence 
         if abs(obj - objold) < tol * (abs(obj) + 1)
@@ -301,11 +305,7 @@ function mm_update_Σ!(
         niters = maxiters
     end 
  
-    if verbose 
-        return vcm, obj, niters, objvec
-    else
-        return vcm, obj, niters, zeros(0)
-    end 
+    return vcm, obj, niters, objvec
 end 
 
 """
@@ -338,102 +338,102 @@ function mm_update_σ2!(
         println("iter = 0")
         println("σ2   = ", vcm.Σ)
         println("obj  = ", obj)
-        objvec = obj 
     end    
+
+    # update objective value 
+    objvec = obj 
 
     σ2tmp = zeros(m + 1)
   
     # MM loop 
     niters = 0
     for iter in 1:maxiters
-          # update variance components
-          for j in 1:m
-              # move onto the next variance component if previous iterate is 0
-              if iszero(vcm.Σ[j]) 
-                  σ2tmp[j] = 0 
-                  continue 
-              end 
+        # update variance components
+        for j in 1:m
+            # move onto the next variance component if previous iterate is 0
+            if iszero(vcm.Σ[j]) 
+                σ2tmp[j] = 0 
+                continue 
+            end 
   
-              # compute constants  
-              const1 = dot(vcm.Ωinv, vcm.V[j]) # const1 = tr(Ωinv * V[j])
-              mul!(vcm.Mnxd, vcm.V[j], vcm.ΩinvY)
-              const2 = dot(vcm.Mnxd, vcm.ΩinvY) # const2 = y' * Ωinv * V[j] * Ωinv * y
-  
-              # update variance component under specified penalty 
-              if !isa(penfun, NoPenalty) 
-                    penstrength = λ * penwt[j]
-                    # L1 penalty 
-                    if isa(penfun, L1Penalty)  
+            # compute constants  
+            const1 = dot(vcm.Ωinv, vcm.V[j]) # const1 = tr(Ωinv * V[j])
+            mul!(vcm.Mnxd, vcm.V[j], vcm.ΩinvY)
+            const2 = dot(vcm.Mnxd, vcm.ΩinvY) # const2 = y' * Ωinv * V[j] * Ωinv * y
+
+            # update variance component under specified penalty 
+            if !isa(penfun, NoPenalty) 
+                penstrength = λ * penwt[j]
+                # L1 penalty 
+                if isa(penfun, L1Penalty)  
+                    σ2tmp[j] = vcm.Σ[j] * √(const2 / (const1 + 
+                            penstrength / (vcm.wt[j] * sqrt(vcm.Σ[j]))))
+                # MCP penalty 
+                elseif isa(penfun, MCPPenalty) 
+                    if vcm.Σ[j] <= (penfun.γ * λ)^2
                         σ2tmp[j] = vcm.Σ[j] * √(const2 / (const1 + 
-                                penstrength / (vcm.wt[j] * sqrt(vcm.Σ[j]))))
-                    # MCP penalty 
-                    elseif isa(penfun, MCPPenalty) 
-                        if vcm.Σ[j] <= (penfun.γ * λ)^2
-                            σ2tmp[j] = vcm.Σ[j] * √(const2 / (const1 + 
-                                (λ / sqrt(vcm.Σ[j]) - 1 / penfun.γ)))
-                        else 
-                            σ2tmp[j] = vcm.Σ[j] * √(const2 / const1)  
-                        end 
+                            (λ / sqrt(vcm.Σ[j]) - 1 / penfun.γ)))
+                    else 
+                        σ2tmp[j] = vcm.Σ[j] * √(const2 / const1)  
                     end 
-              # update variance component under no penalty 
-              elseif isa(penfun, NoPenalty)
-                σ2tmp[j] = vcm.Σ[j] * √(const2 / const1)  
-              end
+                end 
+            # update variance component under no penalty 
+            elseif isa(penfun, NoPenalty)
+            σ2tmp[j] = vcm.Σ[j] * √(const2 / const1)  
+            end
   
-          end # end of for loop over j
+        end # end of for loop over j
 
-          # update last variance component and Ω
-          σ2tmp[end] = vcm.Σ[end] *  √(dot(vcm.ΩinvY, vcm.ΩinvY) / tr(vcm.Ωinv))
-          σ2tmp[end] = clamp(σ2tmp[end], tol, Inf)
+        # update last variance component and Ω
+        σ2tmp[end] = vcm.Σ[end] *  √(dot(vcm.ΩinvY, vcm.ΩinvY) / tr(vcm.Ωinv))
+        σ2tmp[end] = clamp(σ2tmp[end], tol, Inf)
 
-          vcm.Σ .= σ2tmp
+        vcm.Σ .= σ2tmp
 
-          # update working arrays 
-          updateΩ!(vcm)
-          update_arrays!(vcm)
-  
-          # update objective value 
-          objold = obj
-          obj = objvalue(vcm; penfun=penfun, λ=λ, penwt=penwt)
-  
-          # display current iterate if specified 
-          if verbose
-              println("iter = ", iter)
-              println("σ2   = ", vcm.Σ)
-              println("obj  = ", obj)
-              objvec = [objvec; obj] 
-          end
-  
-          # check convergence
-          if abs(obj - objold) < tol * (abs(obj) + 1)
-              niters = iter
-              break
-          end
-  
-      end # end of iteration 
+        # update working arrays 
+        updateΩ!(vcm)
+        update_arrays!(vcm)
 
-      # back to original scale  
-      if standardize 
-            vcm.Σ .*= vcm.wt
-            vcm.wt .= ones(m + 1)
-      end 
+        # update objective value 
+        objold = obj
+        obj = objvalue(vcm; penfun=penfun, λ=λ, penwt=penwt)
+
+        # display current iterate if specified 
+        if verbose
+            println("iter = ", iter)
+            println("σ2   = ", vcm.Σ)
+            println("obj  = ", obj)
+        end
+
+        # update objective value 
+        objvec = [objvec; obj] 
+
+        # check convergence
+        if abs(obj - objold) < tol * (abs(obj) + 1)
+            niters = iter
+            break
+        end
   
-      # construct Ω matrix 
-      updateΩ!(vcm)
-      updateΩest!(vcm)
-      updateβ!(vcm)
+    end # end of iteration 
+
+    # back to original scale  
+    if standardize 
+        vcm.Σ .*= vcm.wt
+        vcm.wt .= ones(m + 1)
+    end 
   
-      # output
-      if niters == 0
-        niters = maxiters
-      end
+    # construct Ω matrix 
+    updateΩ!(vcm)
+    updateΩest!(vcm)
+    updateβ!(vcm)
+  
+    # output
+    if niters == 0
+    niters = maxiters
+    end
    
-      # 
-      if verbose 
-        return vcm, obj, niters, objvec
-      else
-        return vcm, obj, niters, zeros(0)
-      end 
+    # 
+    return vcm, obj, niters, objvec 
 
 end 
 

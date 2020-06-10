@@ -186,12 +186,14 @@ function mm_update_σ2!(
 
     # display 
     if verbose
-        # println("iter  = 0")
-        # println("σ2    = ", vcm.Σ)
-        # println("σ2int = ", vcm.Σint)
-        # println("obj   = ", obj)
-        objvec = obj 
+        println("iter  = 0")
+        println("σ2    = ", vcm.Σ)
+        println("σ2int = ", vcm.Σint)
+        println("obj   = ", obj) 
     end    
+
+    # update objective value 
+    objvec = obj 
 
     σ2tmp = zeros(m + 1)
     σ2inttmp = zeros(m)
@@ -270,12 +272,14 @@ function mm_update_σ2!(
 
         # display current iterate if specified 
         if verbose
-            # println("iter = ", iter)
-            # println("σ2   = ", vcm.Σ)
-            # println("σ2int  = ", vcm.Σint)
-            # println("obj  = ", obj)
-            objvec = [objvec; obj] 
+            println("iter = ", iter)
+            println("σ2   = ", vcm.Σ)
+            println("σ2int  = ", vcm.Σint)
+            println("obj  = ", obj)
         end
+
+        # update objective value 
+        objvec = [objvec; obj] 
 
         # check convergence
         if abs(obj - objold) < tol * (abs(obj) + 1)
@@ -303,12 +307,8 @@ function mm_update_σ2!(
         niters = maxiters
     end
 
-    # 
-    if verbose 
-        return vcm, obj, niters, objvec
-    else 
-        return vcm, obj, niters, zeros(0)
-    end 
+    #
+    return vcm, obj, niters, objvec
 
 end
 
