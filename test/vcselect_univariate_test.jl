@@ -1,6 +1,5 @@
 module UnivariateTest
 
-#using Random, LinearAlgebra, VarianceComponentSelect, Test
 include("../src/VCSEL.jl")
 using Random, LinearAlgebra, .VCSEL, Test
 
@@ -40,67 +39,6 @@ nlambda = 20
 vcm1 = VCModel(yreml, V, [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 1.0])
 vcm2 = VCModel(y, X, V, [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 1.0])
 
-
-@info "objective values are monotonically decreasing (no penalty)" 
-vcm11 = deepcopy(vcm1)
-_, _, _, objvec = vcselect!(vcm11; verbose=true)
-@testset begin 
-  for i in 1:(length(objvec) - 1)
-    @test objvec[i] >= objvec[i+1]
-  end 
-end 
-temp1 = vcm11.Σ
-
-vcm21 = deepcopy(vcm2)
-_, _, _, objvec = vcselect!(vcm21; verbose=true)
-@testset begin 
-  for i in 1:(length(objvec) - 1)
-    @test objvec[i] >= objvec[i+1]
-  end 
-end 
-temp2 = vcm21.Σ
-
-@info "objective values are monotonically decreasing (L1 Penalty)"
-vcm22 = deepcopy(vcm2)
-_, _, _, objvec = vcselect!(vcm22; 
-      penfun=L1Penalty(), λ=2.0, verbose=true)
-@testset begin 
-  for i in 1:(length(objvec) - 1)
-    @test objvec[i] >= objvec[i+1]
-  end 
-end 
-
-@info "check if objective values are monotonically decreasing (adaptive L1 Penalty)" 
-vcm12 = deepcopy(vcm1)
-penwt = zeros(m + 1)
-penwt[1:m] = 1 ./ sqrt.(temp1[1:m])
-_, _, _, objvec = vcselect!(vcm12; penwt=penwt, verbose=true, λ=5.0)
-@testset begin 
-  for i in 1:(length(objvec) - 1)
-    @test objvec[i] >= objvec[i+1]
-  end 
-end 
-
-@info "check if objective values are monotonically decreasing (adaptive L1 penalty)" 
-vcm22 = deepcopy(vcm2)
-penwt = zeros(m + 1)
-penwt[1:m] = 1 ./ sqrt.(temp2[1:m])
-_, _, _, objvec = vcselect(y, V; penfun=L1Penalty(), λ=15.0, verbose=true,
-      penwt = penwt)
-@testset begin 
-  for i in 1:(length(objvec) - 1)
-    @test objvec[i] >= objvec[i+1]
-  end 
-end 
-
-@info "check if objective values are monotonically decreasing (MCP penalty)" 
-vcm12 = deepcopy(vcm1)
-_, _, _, objvec = vcselect!(vcm12; penfun=MCPPenalty(), λ=5.0, verbose=true)
-@testset begin 
-  for i in 1:(length(objvec) - 1)
-    @test objvec[i] >= objvec[i+1]
-  end 
-end 
 
 # ## variance component selection at specific lambda 
 # σ2_tmp, = vcselect(y, V)
@@ -158,7 +96,68 @@ end
 #         penfun=MCPPenalty(), penwt=penwt, nlambda=nlambda) 
 #     @test all(σ2path .>= 0)
 
-# end 
+
+
+
+@info "objective values are monotonically decreasing (no penalty)" 
+vcm11 = deepcopy(vcm1)
+_, _, _, objvec = vcselect!(vcm11)
+@testset begin 
+  for i in 1:(length(objvec) - 1)
+    @test objvec[i] >= objvec[i+1]
+  end 
+end 
+temp1 = vcm11.Σ
+
+vcm21 = deepcopy(vcm2)
+_, _, _, objvec = vcselect!(vcm21)
+@testset begin 
+  for i in 1:(length(objvec) - 1)
+    @test objvec[i] >= objvec[i+1]
+  end 
+end 
+temp2 = vcm21.Σ
+
+@info "objective values are monotonically decreasing (L1 Penalty)"
+vcm22 = deepcopy(vcm2)
+_, _, _, objvec = vcselect!(vcm22; 
+      penfun=L1Penalty(), λ=2.0)
+@testset begin 
+  for i in 1:(length(objvec) - 1)
+    @test objvec[i] >= objvec[i+1]
+  end 
+end 
+
+@info "check if objective values are monotonically decreasing (adaptive L1 Penalty)" 
+vcm12 = deepcopy(vcm1)
+penwt = zeros(m + 1)
+penwt[1:m] = 1 ./ sqrt.(temp1[1:m])
+_, _, _, objvec = vcselect!(vcm12; penwt=penwt, λ=5.0)
+@testset begin 
+  for i in 1:(length(objvec) - 1)
+    @test objvec[i] >= objvec[i+1]
+  end 
+end 
+
+@info "check if objective values are monotonically decreasing (adaptive L1 penalty)" 
+vcm22 = deepcopy(vcm2)
+penwt = zeros(m + 1)
+penwt[1:m] = 1 ./ sqrt.(temp2[1:m])
+_, _, _, objvec = vcselect(y, V; penfun=L1Penalty(), λ=15.0, penwt = penwt)
+@testset begin 
+  for i in 1:(length(objvec) - 1)
+    @test objvec[i] >= objvec[i+1]
+  end 
+end 
+
+@info "check if objective values are monotonically decreasing (MCP penalty)" 
+vcm12 = deepcopy(vcm1)
+_, _, _, objvec = vcselect!(vcm12; penfun=MCPPenalty(), λ=5.0)
+@testset begin 
+  for i in 1:(length(objvec) - 1)
+    @test objvec[i] >= objvec[i+1]
+  end 
+end 
 
 
 end 

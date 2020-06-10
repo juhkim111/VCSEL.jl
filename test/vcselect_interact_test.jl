@@ -52,7 +52,7 @@ vcmintX = VCintModel(y, X, V, Vint)
 # vcselect with no penalty 
 @info "check if objective values are monotonically decreasing (no penalty)"
 vcmint1 = deepcopy(vcmint)
-_, obj, niters, objvec = vcselect!(vcmint1; verbose=true)
+_, obj, niters, objvec = vcselect!(vcmint1)
 @testset begin 
   for i in 1:(length(objvec) - 1)
     @test objvec[i] >= objvec[i+1]
@@ -61,7 +61,7 @@ end
 
 @info "check if objective values are monotonically decreasing (no penalty)"
 vcmintX1 = deepcopy(vcmintX)
-_, obj, niters, objvec = vcselect!(vcmintX1; verbose=true)
+_, obj, niters, objvec = vcselect!(vcmintX1)
 @testset begin 
   for i in 1:(length(objvec) - 1)
     @test objvec[i] >= objvec[i+1]
@@ -73,7 +73,7 @@ end
 @info "check if objective values are monotonically decreasing (L1 penalty)"
 for lambda in range(0, 4.0, length=10)
   vcmint1 = deepcopy(vcmint)
-  _, obj, niters, objvec = vcselect!(vcmint1; penfun=L1Penalty(), λ=lambda, verbose=true)
+  _, obj, niters, objvec = vcselect!(vcmint1; penfun=L1Penalty(), λ=lambda)
   @testset begin 
       for i in 1:(length(objvec) - 1)
           @test objvec[i] >= objvec[i+1]
@@ -84,7 +84,7 @@ end
 @info "check if objective values are monotonically decreasing (L1 penalty)"
 for lambda in range(0, 3.0, length=10)
   vcmintX1 = deepcopy(vcmintX)
-  _, obj, niters, objvec = vcselect!(vcmintX1; penfun=L1Penalty(), λ=lambda, verbose=true)
+  _, obj, niters, objvec = vcselect!(vcmintX1; penfun=L1Penalty(), λ=lambda)
   @testset begin 
       for i in 1:(length(objvec) - 1)
           @test objvec[i] >= objvec[i+1]
@@ -96,7 +96,7 @@ end
 @info "check if objective values are monotonically decreasing (MCP penalty)"
 for lambda in range(0, 5.0, length=10)
   vcmint1 = deepcopy(vcmint)
-  _, obj, niters, objvec = vcselect!(vcmint1; penfun=MCPPenalty(), λ=lambda, verbose=true)
+  _, obj, niters, objvec = vcselect!(vcmint1; penfun=MCPPenalty(), λ=lambda)
   @testset begin 
       for i in 1:(length(objvec) - 1)
           @test objvec[i] >= objvec[i+1]
@@ -107,7 +107,7 @@ end
 @info "check if objective values are monotonically decreasing (MCP penalty)"
 for lambda in range(0, 3.6, length=10)
   vcmintX1 = deepcopy(vcmintX)
-  _, obj, niters, objvec = vcselect!(vcmintX1; penfun=MCPPenalty(), λ=lambda, verbose=true)
+  _, obj, niters, objvec = vcselect!(vcmintX1; penfun=MCPPenalty(), λ=lambda)
   @testset begin 
       for i in 1:(length(objvec) - 1)
           @test objvec[i] >= objvec[i+1]
