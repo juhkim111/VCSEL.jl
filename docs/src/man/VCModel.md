@@ -63,17 +63,25 @@ Construct an instance of `VCModel`, which requires users to supply
 * `Y`: `n x d` response matrix 
 * `X`: `n x p` covariate matrix (if exists)
 * `V = [V1,...,Vm,V0]`: a vector of `m+1` `n x n` covariance matrices. 
+
+```julia
 # initialize VCModel instance
 vcm1 = VCModel(Y, X, V)
 vcm2 = VCModel(Y, V) # if there's no covariate matrix 
+```
+
 `VCModel` also has the following fields for its parameters: 
 
 * `B`: `p \times d` mean regression coefficients 
 * `$\Sigma = [\Sigma_[1],...,\Sigma_[m],\Sigma_[0]]$`: variance component parameters.
 
 By default, the vector of varaince component parameters are initialized to be a vector of identity matrices (e.g. `[Matrix(1.0*I, d, d) for i in 1:(m+1)]`). Users can set initial values of variance component parameters in this step if they wish to. 
+
+```julia 
 vcm3 = VCModel(Y, X, V, Σ)
 vcm4 = VCModel(Y, V, Σ)
+```
+
 ### Step 2: Fit model
 
 Call optimization routine `vcselect!` to select variance components at a given tuning parameter $\lambda$ with some penalty (options: `NoPenalty()`, `L1Penalty()`, `MCPPenalty()`).
