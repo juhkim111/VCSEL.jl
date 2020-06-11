@@ -1,5 +1,3 @@
-module MultivariateTest 
-
 ## generate data from a 3-variate response variance component model
 Random.seed!(123)
 n = 100         # no. observations
@@ -162,5 +160,3 @@ end
 #   @test tr.(Σ̂path) == tr.(Σ̂path2)
 #   @test β̂path == β̂path2
 # end 
-
-end # end of module 
