@@ -11,14 +11,14 @@ where $\text{vec}(\cdot)$ stacks up columns of the given matrix on top of one an
 
 In the equation (1), 
 
-* $Y$: $n\times d$ response matrix 
-* $X$: $n\times p$ covariate matrix 
-* $V = (V_1,...,V_m,V_0)$: a vector of $m+1$ $n \times n$ covariance matrices
+* ``Y``: ``n\times d`` response matrix 
+* ``X``: ``n\times p`` covariate matrix 
+* ``V = [V_1,...,V_m,V_0]``: a vector of ``m+1`` ``n \times n`` covariance matrices
 
 form the data and 
 
-* $B$: $p \times d$ mean parameter matrix that explains the effect of covariates $X$ on response $Y$
-* $\Sigma = (\Sigma_1,...,\Sigma_m,\Sigma_0)$: a vector of $m+1$ $d \times d$ variance components matrices 
+* ``B``: ``p \times d`` mean parameter matrix that explains the effect of covariates ``X`` on response ``Y``
+* ``\Sigma = [\Sigma_1,...,\Sigma_m,\Sigma_0]``: a vector of ``m+1`` ``d \times d`` variance components matrices 
 
 are parameters. 
 
@@ -33,8 +33,8 @@ Y \sim \text{Normal}(XB, \Sigma_1 V_1 + \cdots + \Sigma_m V_m + \Sigma_0 V_0),
 
 where 
 
-* $B$: $p \times 1$ mean parameter vector 
-* $\Sigma_i, i=1,\ldots, m$ represent non-negative scalar variance components. 
+* ``B``: ``p \times 1`` mean parameter vector 
+* ``\Sigma_i, i=1,\ldots, m`` represent non-negative scalar variance components. 
 
 
 
@@ -51,7 +51,11 @@ To find the estimates of parameters $(B, \Sigma_1, \ldots, \Sigma_m, \Sigma_0),$
 ## Steps 
 
 ### Step 0: Load the package
+
+```julia
 using VCSEL
+```
+
 ### Step 1: Construct a model with data
 
 Construct an instance of `VCModel`, which requires users to supply
@@ -94,17 +98,28 @@ Keyword arguments for `vcselect!` are:
 - `checktype`: check argument type switch. Default is true.
 
 Examples:
+
+```julia 
 vcselect!(vcm1; penfun=L1Penalty(), λ=1.5)
 vcselect!(vcm2; penfun=MCPPenalty(), λ=5.5)
+```
 If penalty function is given but tuning parameter $\lambda$ is not given, $\lambda$ is set to 1.0. 
+
+```julia 
 # following commands are equivalent 
 vcselect!(vcm3; penfun=L1Penalty()) 
 vcselect!(vcm3; penfun=L1Penalty(), λ=1.0) 
+```
+
+
 If no penalty function is given, it fits model without any penalty, which is same as `penfun=NoPenalty()` or `λ=0`.
+
+```julia
 # following commands are equivalent 
 vcselect!(vcm4)
 vcselect!(vcm4; penfun=NoPenalty())
 vcselect!(vcm4; λ=0)
+```
 ### Step 2 Alternative: Get solution path
 
 If you want to fit a model over a grid of tuning parameter $\lambda$ values (i.e. obtain solution path), use `vcselectpath!`:
@@ -124,13 +139,19 @@ If we only supply `VCModel` instance when calling `vcselectpath!`, it returns th
 - `tol`: convergence tolerance. Default is `1e-6`.
 
 Example: 
-vcm = VCModel(Y, X, V)
 
+```julia
+vcm = VCModel(Y, X, V)
+```
 
 Here we call `vcselectpath!` with `penfun=L1Penalty()`. Since we do not provide `nλ` or `λpath`, a grid of 100 $λ$ values is generated internally. 
+
+```julia
 vcm1 = deepcopy(vcm)
 Σ̂path, β̂path, λpath, objpath, niterspath = vcselectpath!(vcm1; 
     penfun=L1Penalty());
+```
+
 ### Summarise/visualize results
 
 
