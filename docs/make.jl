@@ -9,7 +9,7 @@ makedocs(
     clean = true, 
     pages = [
         "Home" => "index.md",
-        "What is VCSEL?" => "VCSEL.md",
+        "What is VCSEL?" => "man/VCSEL.md",
         "Manual" => Any[
             "man/VCModel.md",
             "man/VCintModel.md"
