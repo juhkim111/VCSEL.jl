@@ -102,7 +102,7 @@ Y = X * β + reshape(Ωchol.L * randn(n*d), n, d)
 
 Σinit = [ones(d, d) for i in 1:nvarcomps]
 Σinit[end] = Matrix(I, d, d)
-vcm = VCModel(Y, X, V, Σinit)
+vcm = VCModel(Y, X, V, Σinit);
 nlambda = 10
 Σ̂path, betapath, lambdapath, objpath,  = vcselectpath!(vcm; penfun=L1Penalty(), 
    nλ=nlambda)
@@ -111,7 +111,16 @@ ranking, rest = rankvarcomps(Σ̂path)
 
 @testset "rankvarcomps test" begin
 for i in ranking 
-   tmp = findall(x -> norm(x) > 1e-6, view(Σ̂path, i, 2:nlambda))
+   tmp = findall(x -> norm(x) > 1e-8, view(Σ̂path, i, 2:nlambda))
+   @test !isempty(tmp)
+end 
+end 
+
+ranking, rest = rankvarcomps(tr.(Σ̂path))
+
+@testset "rankvarcomps test" begin
+for i in ranking 
+   tmp = findall(x -> x .> 1e-8, view(tr.(Σ̂path), i, 2:nlambda))
    @test !isempty(tmp)
 end 
 end 
