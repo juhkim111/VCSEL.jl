@@ -116,7 +116,7 @@ end
 - `penfun`: penalty function. Default is `NoPenalty()`.
 - `λ`: tuning parameter. Default is 1.    
 - `penwt`: penalty weights. Default is (1,...1,0).
-- `standardize`: logical flag for covariance matrix standardization. Default is `true`.
+- `standardize`: logical flag for covariance matrix standardization. Default is `false`.
     If true, `V[i]` is standardized by its Frobenius norm, and parameter estimates are 
     returned on the original scale.
 - `maxiters`: maximum number of iterations. Default is 1000.
