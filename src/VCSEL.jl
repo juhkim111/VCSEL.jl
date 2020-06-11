@@ -12,14 +12,12 @@ export
     VCModel, VCintModel, 
 # operations 
     clamp_diagonal!,
-    fixedeffects,
     kronaxpy!,
     nullprojection,  
     objvalue,  
 # maximum lambda 
     maxlambda, 
 # utilities function 
-    matarray2mat,
     ncovariates, nvarcomps, nmeanparams, 
     plotsolpath, resetModel!, 
     rankvarcomps,   
