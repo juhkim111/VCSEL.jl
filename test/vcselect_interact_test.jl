@@ -1,8 +1,5 @@
 module vcselect_interact_test
 
-include("../src/VCSEL.jl")
-using Random, LinearAlgebra, StatsBase, .VCSEL, Test
-
 Random.seed!(123)
 
 # generate data from an univariate response variance component model 

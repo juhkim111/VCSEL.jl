@@ -1,10 +1,5 @@
 module standardize_test
 
-
-#using Random, LinearAlgebra, VarianceComponentSelect, Test
-include("../src/VCSEL.jl")
-using Random, LinearAlgebra, .VCSEL, Test
-
 Random.seed!(123)
 
 # generate data from an univariate response variance component model 

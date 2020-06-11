@@ -1,8 +1,6 @@
 module vcselect_test
 
 using Random, LinearAlgebra, VCSEL, Test
-# include("../src/VarianceComponentSelect.jl")
-# using Random, LinearAlgebra, .VarianceComponentSelect, Test
 
 Random.seed!(123)
 

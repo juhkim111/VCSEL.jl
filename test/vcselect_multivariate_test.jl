@@ -1,8 +1,4 @@
 module MultivariateTest 
-include("../src/VCSEL.jl")
-using .VCSEL #
-using Random, LinearAlgebra, Test
-
 
 ## generate data from a 3-variate response variance component model
 Random.seed!(123)
