@@ -1,4 +1,3 @@
-push!(LOAD_PATH, "../src/")
 using Documenter, VCSEL
 
 makedocs(
@@ -8,15 +7,11 @@ makedocs(
     authors = "Juhyun Kim",
     clean = true, 
     pages = [
-        "Home" => "index.md",
+        "Home"           => "index.md",
         "What is VCSEL?" => "man/VCSEL.md",
-        "Manual" => Any[
-            "man/VCModel.md",
-            "man/VCintModel.md"
-        ],
-        # "Example: VCModel" => "man/VCModel_example.md",
-        # "Example: VCintModel" => "man/VCintModel_example.md"
-        "Examples" => Any[
+        "VCModel"        => "man/VCModel.md",
+        "VCintModel"     => "man/VCintModel.md",
+        "Examples"       => Any[
             "man/VCModel_example.md",
             "man/VCintModel_example.md"
         ],
