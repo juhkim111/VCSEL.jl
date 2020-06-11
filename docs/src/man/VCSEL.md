@@ -70,21 +70,25 @@ Under the hood, VCSEL algorithm minimizes the negative log-likelihood of the mod
 	```math 
 	Y \sim \text{Normal}(X\beta, \sigma_1^2 V_1 + \cdots + \sigma_m^2 V_m + \sigma_{\epsilon}^2 I_n)
 	```
-	where $Y$ is an $n\times 1$ vector and $V_i ,i=1,\ldots, m$ are covariance matrices corresponding to each random effects vector (e.g. $V_i = Z_i Z_i^T$ in the notation above). 
+	+ ``Y``: $n\times 1$ response vector 
+	+ ``V_i ,i=1,\ldots, m``: covariance matrices corresponding to each random effects vector 
+		- e.g. ``V_i = Z_i Z_i^T``
 
 * multivariate response model 
-
+	
 	```math 
 	Y \sim \text{Normal}(X\beta, \Sigma_1 \otimes V_1 + \cdots + \Sigma_m \otimes V_m + \Sigma_{\epsilon} \otimes I_n)
 	```
-	
-	where $Y$ is an $n\times d$ matrix, $\Sigma_i, i=1,\ldots, m$ are $d\times d$ variance component matrices, and $\otimes$ is a [Kronecker matrix](https://en.wikipedia.org/wiki/Kronecker_product).  
+	+ ``Y``: ``n\times d`` response matrix
+	+ ``\Sigma_i, i=1,\ldots, m``: $d\times d$ variance component matrices
+	+  ``otimes``: [Kronecker product](https://en.wikipedia.org/wiki/Kronecker_product).  
 
 * univariate response model with interaction terms 
 
 	```math 
 	Y \sim \text{Normal}(X \beta, \sigma_{11}^2 V_{11} + \sigma_{12}^2 V_{12} + \cdots +  \sigma_{m1}^2 V_{m1} + \sigma_{m2}^2 V_{m2} + \sigma_{\epsilon}^2 I_n)
 	```
-	
-	where $Y$ is an $n \times 1$ vector and $\sigma_{i1}^2$ and $\sigma_{i2}^2$ are a pair of variance components that are selected/unselected together ($i=1,\ldots, m$). $\sigma_{i1}^2$ represents variance component for main effects while $\sigma_{i2}^2$ represents variance component for interaction effects. 
+	+ ``Y``: $n \times 1`` response vector 
+	+ ``\sigma_{i1}^2`` and ``\sigma_{i2}^2``: pair of variance components that are selected/unselected together (``i=1,\ldots, m``)	
+		- ``\sigma_{i1}^2`` represents variance component for main effects while ``\sigma_{i2}^2`` represents variance component for interaction effects. 
 
