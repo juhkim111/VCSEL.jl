@@ -1,5 +1,3 @@
-module vcselect_interact_test
-
 Random.seed!(123)
 
 # generate data from an univariate response variance component model 
@@ -127,6 +125,20 @@ resetModel!(vcmintX)
   @test niterspath == niterspath2 
 end 
 
+# obtain solution path (L1 penalty)
+resetModel!(vcmintX)
+Σ̂path, Σ̂intpath, = vcselectpath!(vcmintX; nλ=10, penfun=L1Penalty())
+
+
+ranks1, rest1, normpath = rankvarcomps(Σ̂path, Σ̂intpath)
+
+ranks2, rest2 = rankvarcomps(normpath)
+
+@testset "rankvarcomps test" begin
+  @test ranks1 == ranks2
+  @test rest1 == rest2 
+end 
+
 # # reset model 
 # resetModel!(vcmint)
 # resetModel!(vcmintX)
@@ -156,5 +168,3 @@ end
 # println("β̂path=", β̂path)
 # println("λpath=", λpath)
 # println("objpath=", objpath)
-
-end # end of module 

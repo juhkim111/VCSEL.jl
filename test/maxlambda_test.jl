@@ -1,5 +1,3 @@
-module MaxLambdaTest
-
 Random.seed!(123)
 tol = 1e-5
 
@@ -155,6 +153,3 @@ vcselect!(vcm; penfun=L1Penalty(), λ=maxλ)
       @test isapprox(vcm.Σ[i], 0.0; atol=tol)
     end 
 end 
-
-
-end

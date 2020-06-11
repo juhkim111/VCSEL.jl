@@ -1,10 +1,3 @@
-module UtilitiesTest
-
-#using Random, LinearAlgebra, Test, VCSEL
-using Random, LinearAlgebra, Test
-include("../src/VCSEL.jl")
-using .VCSEL
-
 Random.seed!(123)
 
 # # generate data from an univariate response variance component model 
@@ -124,5 +117,3 @@ for i in ranking
    @test !isempty(tmp)
 end 
 end 
-
-end # end of module 

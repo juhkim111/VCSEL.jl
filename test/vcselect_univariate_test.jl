@@ -1,5 +1,3 @@
-module UnivariateTest
-
 Random.seed!(123)
 
 # generate data from an univariate response variance component model 
@@ -156,5 +154,3 @@ _, _, _, objvec = vcselect!(vcm12; penfun=MCPPenalty(), λ=5.0)
   end 
 end 
 
-
-end 
