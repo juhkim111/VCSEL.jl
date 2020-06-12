@@ -20,19 +20,19 @@ Y = X\beta + Z\gamma + \epsilon
 Equivalently, we can write 
 
 ```math 
-Y \sim \text{Normal}(X\beta, \sigma_{\gamma}^2 Z Z^T + \sigma_{\epsilon}^2)
+Y \sim \text{Normal}(X\beta, \sigma_{\gamma}^2 Z Z^T + \sigma_{\epsilon}^2 I_n)
 ```
-which means variance of the dependent variable $Y$ (aka $\text{Var}(Y)$) equals to $\sigma_{\gamma}^2 Z Z^T + \sigma_{\epsilon}^2$. 
+which means variance of the dependent variable $Y$ (aka $\text{Var}(Y)$) equals to $\sigma_{\gamma}^2 Z Z^T + \sigma_{\epsilon}^2 I_n$. 
 
 Because $\sigma_{\gamma}^2$ and $\sigma_{\epsilon}^2$ contribute to the variance of the dependent variable $Y$, they are called variance components. 
 
 ## Testing for zero variance component
 
-Suppose one wants to test whether the random effects is significant. Then we can set up the null hypothesis $H_0: \gamma = 0$, which indicates that $Z$ has no effect on the mean of $Y$. 
+Suppose one wants to test whether the random effects is significant. Then we can set up the null hypothesis ``H_0: \gamma = 0``, which indicates that $Z$ has no effect on the mean of $Y$. 
 
 If $q$ (the number of elements in $\gamma$) is large, however, we have too many parameters to estimate, running into limited power issue. 
 
-Instead, we can test if the variance component is zero
+Instead, we can test if the variance component is zero by setting the null hypothesis as 
 
 $$H_0: \sigma_{\gamma}^2 = 0,$$
 
@@ -70,6 +70,7 @@ Under the hood, VCSEL algorithm minimizes the negative log-likelihood of the mod
 	```math 
 	Y \sim \text{Normal}(X\beta, \sigma_1^2 V_1 + \cdots + \sigma_m^2 V_m + \sigma_{\epsilon}^2 I_n)
 	```
+
 	+ ``Y``: $n\times 1$ response vector 
 	+ ``V_i ,i=1,\ldots, m``: covariance matrices corresponding to each random effects vector 
 		- e.g. ``V_i = Z_i Z_i^T``
@@ -79,6 +80,7 @@ Under the hood, VCSEL algorithm minimizes the negative log-likelihood of the mod
 	```math 
 	Y \sim \text{Normal}(X\beta, \Sigma_1 \otimes V_1 + \cdots + \Sigma_m \otimes V_m + \Sigma_{\epsilon} \otimes I_n)
 	```
+	
 	+ ``Y``: ``n\times d`` response matrix
 	+ ``\Sigma_i, i=1,\ldots, m``: $d\times d$ variance component matrices
 	+  ``otimes``: [Kronecker product](https://en.wikipedia.org/wiki/Kronecker_product).  
@@ -88,6 +90,7 @@ Under the hood, VCSEL algorithm minimizes the negative log-likelihood of the mod
 	```math 
 	Y \sim \text{Normal}(X \beta, \sigma_{11}^2 V_{11} + \sigma_{12}^2 V_{12} + \cdots +  \sigma_{m1}^2 V_{m1} + \sigma_{m2}^2 V_{m2} + \sigma_{\epsilon}^2 I_n)
 	```
+	
 	+ ``Y``: $n \times 1`` response vector 
 	+ ``\sigma_{i1}^2`` and ``\sigma_{i2}^2``: pair of variance components that are selected/unselected together (``i=1,\ldots, m``)	
 		- ``\sigma_{i1}^2`` represents variance component for main effects while ``\sigma_{i2}^2`` represents variance component for interaction effects. 
