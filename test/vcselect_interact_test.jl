@@ -139,32 +139,21 @@ ranks2, rest2 = rankvarcomps(normpath)
   @test rest1 == rest2 
 end 
 
-# # reset model 
-# resetModel!(vcmint)
-# resetModel!(vcmintX)
+@info "check if vcselect! and vcselectpath! are equivalent"
+resetModel!(vcmint)
+nλ = 10
+Σ̂path, Σ̂intpath, _, λpath, = vcselectpath!(vcmint; penfun=L1Penalty(), nλ = nλ)
 
-# # vcselectpath! 
-# #Σ̂path, Σ̂intpath, = vcselectpath!(vcmint, penfun=L1Penalty(), nλ=30)
-# #Σ̂path, Σ̂intpath, = vcselectpath!(vcmint, penfun=L1Penalty(), λpath=range(0, 0.5, length=10))
-# Σ̂path, Σ̂intpath, = vcselectpath!(vcmintX, penfun=L1Penalty(), λpath=range(0, 0.25, length=10))
+resetModel!(vcmint)
+Σ̂path2 = Array{Float64}(undef, m+1, nλ)
+Σ̂intpath2 = Array{Float64}(undef, m, nλ)
+for iter in 1:nλ
+    vcselect!(vcmint; penfun=L1Penalty(), λ=λpath[iter], checktype=false)
+    Σ̂path2[:, iter] .= vcmint.Σ
+    Σ̂intpath2[:, iter] .= vcmint.Σint
+end
 
-
-# println("Σ̂path=$(Σ̂path)")
-# println("Σ̂intpath=$(Σ̂intpath)")
-# # obtain solution path, not given lambda grid 
-# Σ̂path, Σ̂intpath, β̂path, λpath, objpath, niterspath = vcselectpath!(vcm; 
-#       penfun=L1Penalty(), nλ=20)
-# println("Σ̂path=", Σ̂path)
-# println("Σ̂intpath=", Σ̂intpath)
-# println("β̂path=", β̂path)
-# println("λpath=", λpath)
-# println("objpath=", objpath)
-
-# # obtain solution path, given lambda grid
-# Σ̂path, Σ̂intpath, β̂path, λpath, objpath, niterspath = vcselectpath!(vcmX; 
-#       penfun=L1Penalty(), λpath=range(0, 2, length=5))
-# println("Σ̂path=", Σ̂path)
-# println("Σ̂intpath=", Σ̂intpath)
-# println("β̂path=", β̂path)
-# println("λpath=", λpath)
-# println("objpath=", objpath)
+@testset begin 
+  @test Σ̂path == Σ̂path2
+  @test Σ̂intpath == Σ̂intpath2
+end 
