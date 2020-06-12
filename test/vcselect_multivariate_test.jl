@@ -139,24 +139,24 @@ for lambda in range(70,0,length=10)
 end
 
 
-# # check if vcselect! and vcselectpath! are equivalent 
-# vcm = VCModel(Y, X, V)
-# nλ = 10
-# Σ̂path = Array{Matrix{Float64}}(undef, m+1, nλ)
-# β̂path = [zeros(Float64, p, d) for i in 1:nλ]
-# λpath = range(70, 0, length=nλ)
-# for iter in nλ:-1:1
-#     vcselect!(vcm; penfun=L1Penalty(), λ=λpath[iter])
-#     Σ̂path[:, iter] = vcm.Σ
-#     β̂path[iter] .= vcm.β
-#     for i in findall(x -> x==0, tr.(vcm.Σ[1:(end-1)]) .> 1e-8)
-#       vcm.Σ[i] = Matrix(1e-3I, d, d)
-#     end
-# end
+# check if vcselect! and vcselectpath! are equivalent 
+resetModel!(vcm)
+nλ = 10
+Σ̂path = Array{Matrix{Float64}}(undef, m+1, nλ)
+β̂path = [zeros(Float64, p, d) for i in 1:nλ]
+λpath = range(70, 0, length=nλ)
+for iter in nλ:-1:1
+    vcselect!(vcm; penfun=L1Penalty(), λ=λpath[iter])
+    Σ̂path[:, iter] = vcm.Σ
+    β̂path[iter] .= vcm.β
+    for i in findall(x -> x==0, tr.(vcm.Σ[1:(end-1)]) .> 1e-8)
+      vcm.Σ[i] = Matrix(1e-3I, d, d)
+    end
+end
 
-# vcm = VCModel(Y, X, V)
-# Σ̂path2, β̂path2, = vcselectpath!(vcm; penfun=L1Penalty(), λpath = range(70, 0, length=nλ))
-# @testset begin 
-#   @test tr.(Σ̂path) == tr.(Σ̂path2)
-#   @test β̂path == β̂path2
-# end 
+vcm = VCModel(Y, X, V)
+Σ̂path2, β̂path2, = vcselectpath!(vcm; penfun=L1Penalty(), λpath = range(70, 0, length=nλ))
+@testset begin 
+  @test tr.(Σ̂path) == tr.(Σ̂path2)
+  @test β̂path == β̂path2
+end 
