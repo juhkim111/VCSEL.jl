@@ -46,7 +46,7 @@ which is equivalent to testing $H_0: \gamma = 0$.
 Suppose that you have multiple random effects vector and that you want to find which random effects are associated with the response variable. Then you can jointly model all random effects:
 
 ```math
-Y = X\beta + Z_1\gamma_1 + \cdot + Z_m \gamma_m + \epsilon 
+Y = X\beta + Z_1\gamma_1 + \cdots + Z_m \gamma_m + \epsilon 
 ```
 
 where 
@@ -70,6 +70,7 @@ Under the hood, VCSEL algorithm minimizes the negative log-likelihood of the mod
 	```math 
 	Y \sim \text{Normal}(X\beta, \sigma_1^2 V_1 + \cdots + \sigma_m^2 V_m + \sigma_{\epsilon}^2 I_n)
 	```
+	where 
 
 	+ ``Y``: $n\times 1$ response vector 
 	+ ``V_i ,i=1,\ldots, m``: covariance matrices corresponding to each random effects vector 
@@ -80,6 +81,7 @@ Under the hood, VCSEL algorithm minimizes the negative log-likelihood of the mod
 	```math 
 	Y \sim \text{Normal}(X\beta, \Sigma_1 \otimes V_1 + \cdots + \Sigma_m \otimes V_m + \Sigma_{\epsilon} \otimes I_n)
 	```
+	where 
 	
 	+ ``Y``: ``n\times d`` response matrix
 	+ ``\Sigma_i, i=1,\ldots, m``: $d\times d$ variance component matrices
@@ -90,6 +92,7 @@ Under the hood, VCSEL algorithm minimizes the negative log-likelihood of the mod
 	```math 
 	Y \sim \text{Normal}(X \beta, \sigma_{11}^2 V_{11} + \sigma_{12}^2 V_{12} + \cdots +  \sigma_{m1}^2 V_{m1} + \sigma_{m2}^2 V_{m2} + \sigma_{\epsilon}^2 I_n)
 	```
+	where 
 	
 	+ ``Y``: $n \times 1`` response vector 
 	+ ``\sigma_{i1}^2`` and ``\sigma_{i2}^2``: pair of variance components that are selected/unselected together (``i=1,\ldots, m``)	
