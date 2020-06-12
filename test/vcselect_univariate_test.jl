@@ -34,66 +34,6 @@ nlambda = 20
 vcm1 = VCModel(yreml, V, [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 1.0])
 vcm2 = VCModel(y, X, V, [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 1.0])
 
-
-# ## variance component selection at specific lambda 
-# σ2_tmp, = vcselect(y, V)
-
-# @info "solution path with no penalty (REML)"
-# σ2path, = vcselectpath(y, V)
-# @testset begin
-#   @test σ2_tmp == σ2path
-# end 
-
-# @info "solution path with no penalty"
-# temp, = vcselectpath(y, X, V)
-# @test all(temp .>= 0)
-
-# @info "lasso penalty at λ = 2.0 "
-# σ2, obj, = vcselect(y, X, V; penfun=L1Penalty(), λ=2.0)
-# @test all(σ2 .>= 0)
-
-# @info "adaptive lasso penalty at λ = 2.0"
-# penwt = zeros(m + 1)
-# penwt[1:m] = 1 ./ sqrt.(temp[1:m])
-# σ2, obj, = vcselect(y, X, V; penfun=L1Penalty(), λ=2.0, penwt=penwt)
-# @test all(σ2 .>= 0)
-
-# @info "MCP penalty at λ = 2.0"
-# σ2, obj, = vcselect(y, X, V; penfun=MCPPenalty(), λ=2.0)
-# @test all(σ2 .>= 0)
-
-# ## solution path 
-# @testset begin 
-      
-#     @info "solution path with lasso penalty (REML)"
-#     σ2path, = vcselectpath(y, V; penfun=L1Penalty(), nlambda=nlambda)
-#     @test all(σ2path .>= 0)
-
-#     @info "solution path with adaptive lasso penalty (REML)"
-#     σ2path, = vcselectpath(y, V; penfun=L1Penalty(), penwt=penwt, nlambda=nlambda)
-#     @test all(σ2path .>= 0)
-
-#     @info "solution path with MCP penalty (REML)"
-#     σ2path, = vcselectpath(y, V; penfun=MCPPenalty(), penwt=penwt, nlambda=nlambda) 
-#     @test all(σ2path .>= 0)
-
-#     @info "solution path with lasso penalty"
-#     σ2path, objpath, λpath = vcselectpath(y, X, V; penfun=L1Penalty(), nlambda=nlambda) 
-#     @test all(σ2path .>= 0)
-
-#     @info "solution path with adaptive lasso penalty"
-#     σ2path, objpath, λpath = vcselectpath(y, X, V; 
-#         penfun=L1Penalty(), penwt=penwt, nlambda=nlambda) 
-#     @test all(σ2path .>= 0)
-
-#     @info "solution path with MCP penalty"
-#     σ2path, objpath, λpath = vcselectpath(y, X, V; 
-#         penfun=MCPPenalty(), penwt=penwt, nlambda=nlambda) 
-#     @test all(σ2path .>= 0)
-
-
-
-
 @info "objective values are monotonically decreasing (no penalty)" 
 vcm11 = deepcopy(vcm1)
 _, _, _, objvec = vcselect!(vcm11)
@@ -154,3 +94,23 @@ _, _, _, objvec = vcselect!(vcm12; penfun=MCPPenalty(), λ=5.0)
   end 
 end 
 
+
+@info "check if vcselect! and vcselectpath! are equivalent"
+resetModel!(vcm2)
+nλ = 10
+Σ̂path2, β̂path2, λpath, = vcselectpath!(vcm2; penfun=L1Penalty(), nλ = nλ)
+
+resetModel!(vcm2)
+Σ̂path = Array{Float64}(undef, m+1, nλ)
+β̂path = zeros(Float64, p, nλ)
+#λpath = range(0, 7.0, length=nλ)
+for iter in 1:nλ
+    vcselect!(vcm2; penfun=L1Penalty(), λ=λpath[iter], checktype=false)
+    Σ̂path[:, iter] .= vcm2.Σ
+    β̂path[:, iter] .= vcm2.β
+end
+
+@testset begin 
+  @test Σ̂path == Σ̂path2
+  @test β̂path == β̂path2
+end 
