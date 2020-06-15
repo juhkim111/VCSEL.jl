@@ -19,8 +19,6 @@ versioninfo()
 
 ## Demo data
 
-
-
 For demonstration, we generate a random data set. We use the following distribution to generate response $Y$ of size $100 \times 3$:
 
 $$Y \sim \text{Normal}(X\beta, \Sigma_1 \otimes V_1 + \cdots + \Sigma_{10}\otimes V_{10} + \Sigma_0 \otimes I_n)$$
@@ -117,10 +115,6 @@ First load the package.
 using VCSEL
 ```
 
-    ┌ Info: Precompiling VCSEL [684d1ed6-5d62-11e9-0c0b-878d753c12b1]
-    └ @ Base loading.jl:1260
-
-
 To perform selection, take 2 steps:
 
 **Step 1 (Construct a model)**. Construct an instance of `VCModel`, which is the fundamental type for variance component model. It includes fields 
@@ -132,7 +126,7 @@ To perform selection, take 2 steps:
 
 !!! note 
 
-    All `V[i]` should have frobenius norm 1. This is easily achievable by `V[i] = V[i] / norm(V[i])`
+    All `V[i]` should have frobenius norm 1. This is easily achievable by `V[i] = V[i] / norm(V[i])`.
 
 `VCModel` can be initialized by 
 
@@ -150,7 +144,7 @@ Let us construct a `VCModel` using `Y`, `X`, and `V`. Since we do not provide `�
 vcm = VCModel(Y, X, V);
 ```
 
-Since we did not set initial estimates of `Σ`, all elements are identity matrix. 
+Note that every element of initial estimates for `Σ` is an identity matrix. 
 
 
 ```julia
@@ -177,9 +171,9 @@ vcm.Σ
 
 **Step 2 (Optimize)**. Call optimization routine `vcselect!`. 
 
-Required input argument for executing `vcselect!` is `VCModel`:
+Required input argument for executing `vcselect!` is:
     
-- `vcm`: `VCModel`.
+- `VCModel`.
 
 Keyword Arguments are 
 
@@ -226,6 +220,8 @@ vcm_nopen;
 
 Parameter estimates can be accessed as below:
 
+* estimated variance components 
+
 
 ```julia
 # variance components
@@ -250,9 +246,10 @@ vcm_nopen.Σ
 
 
 
+* estimated mean regression coefficients 
+
 
 ```julia
-# mean regression coefficients 
 vcm_nopen.β 
 ```
 
@@ -267,9 +264,10 @@ vcm_nopen.β
 
 
 
+* estimated ``nd\times nd`` overall covariance matrix 
+
 
 ```julia
-# estimated nd-by-nd overall covariance matrix 
 vcm_nopen.Ωest 
 ```
 
@@ -344,6 +342,8 @@ vcm_L1 = deepcopy(vcm)
 vcm_L1, obj_L1, niters_L1, = vcselect!(vcm_L1; penfun=L1Penalty(), λ=2.0);
 ```
 
+* Estimated variance components
+
 
 ```julia
 vcm_L1.Σ
@@ -367,6 +367,8 @@ vcm_L1.Σ
 
 
 
+* Estimated mean regression coefficients
+
 
 ```julia
 vcm_L1.β
@@ -383,6 +385,8 @@ vcm_L1.β
 
 
 
+* Objective value at the last iteration 
+
 
 ```julia
 obj_L1
@@ -394,6 +398,8 @@ obj_L1
     246.1242780263884
 
 
+
+* Number of iterations taken to reach convergence
 
 
 ```julia
@@ -407,7 +413,7 @@ niters_L1
 
 
 
-### Obtain solution path 
+## Obtain solution path 
 
 `vcselectpath!` function to compute regularization path for a given penalty at a grid of the regularization parameter lambda values. `vcselectpath!` provides options for users to customize. Keyword arguments for the function are 
 
@@ -419,6 +425,8 @@ niters_L1
 - `standardize`: logical flag for covariance matrix standardization. Default is `false`. If true, `V[i]` is standardized by its Frobenius norm.
 - `tol`: convergence tolerance. Default is `1e-6`.
 
+### No penalty
+
 When called without any penalty, `vcselectpath!` returns the same output as `vcselect!` with `penfun=NoPenalty()` ([compare the output](#no-penalty)). 
 
 
@@ -426,6 +434,8 @@ When called without any penalty, `vcselectpath!` returns the same output as `vcs
 vcmpath_np = deepcopy(vcm)
 Σ̂path_np, β̂path_np, λpath_np, objpath_np, niterspath_np = vcselectpath!(vcmpath_np);
 ```
+
+* Estimated variance components at $\lambda=0$
 
 
 ```julia
@@ -450,6 +460,8 @@ vcmpath_np = deepcopy(vcm)
 
 
 
+* Estimated mean regression cofficients
+
 
 ```julia
 β̂path_np
@@ -465,6 +477,8 @@ vcmpath_np = deepcopy(vcm)
      0.868534  1.1076    1.02098
 
 
+
+### lasso (L1) penalty
 
 Now let us call `vcselectpath!` with `penfun=L1Penalty()`. Since we do not provide `nλ` or `λpath`, a grid of 100 $λ$ values is generated internally. 
 
@@ -488,21 +502,21 @@ Output of `vcselectpath!` include
 
 
     11×100 Array{Array{Float64,2},2}:
-     [0.964484 -0.878534 0.291246; -0.878534 1.87357 0.409527; 0.291246 0.409527 0.512356]                       …  [0.0 0.0 0.0; 0.0 0.0 0.0; 0.0 0.0 0.0]                                                                           
-     [0.88697 -0.168999 -0.324029; -0.168999 0.0419948 0.0591281; -0.324029 0.0591281 0.11907]                      [0.0 0.0 0.0; 0.0 0.0 0.0; 0.0 0.0 0.0]                                                                           
-     [0.0319492 -0.13754 -0.0880763; -0.13754 0.62292 0.396603; -0.0880763 0.396603 0.252673]                       [0.0 0.0 0.0; 0.0 0.0 0.0; 0.0 0.0 0.0]                                                                           
-     [0.428464 0.897827 -0.297535; 0.897827 2.06265 -1.2974; -0.297535 -1.2974 2.71189]                             [2.46063e-16 1.17441e-15 -2.61995e-15; 1.17441e-15 5.6052e-15 -1.25045e-14; -2.61995e-15 -1.25045e-14 2.78959e-14]
-     [0.856367 -0.562249 -0.033135; -0.562249 0.369145 0.0217548; -0.033135 0.0217548 0.00128208]                   [0.0 0.0 0.0; 0.0 0.0 0.0; 0.0 0.0 0.0]                                                                           
-     [0.453486 -0.451398 0.0629725; -0.451398 0.87901 0.314005; 0.0629725 0.314005 0.33909]                      …  [0.0 0.0 0.0; 0.0 0.0 0.0; 0.0 0.0 0.0]                                                                           
-     [0.339107 0.148511 -0.247879; 0.148511 0.0650403 -0.108558; -0.247879 -0.108558 0.181193]                      [0.0 0.0 0.0; 0.0 0.0 0.0; 0.0 0.0 0.0]                                                                           
-     [5.27456e-6 1.29991e-6 -2.92758e-6; 1.29991e-6 3.20361e-7 -7.21499e-7; -2.92758e-6 -7.21499e-7 1.62492e-6]     [0.0 0.0 0.0; 0.0 0.0 0.0; 0.0 0.0 0.0]                                                                           
-     [0.797038 -0.658322 -0.322121; -0.658322 0.568001 0.380002; -0.322121 0.380002 0.665504]                       [0.0 0.0 0.0; 0.0 0.0 0.0; 0.0 0.0 0.0]                                                                           
-     [1.08826 1.38038 -0.0680152; 1.38038 2.21767 -0.54062; -0.0680152 -0.54062 0.478122]                           [0.0 0.0 0.0; 0.0 0.0 0.0; 0.0 0.0 0.0]                                                                           
-     [0.0702947 -0.0755383 0.0347578; -0.0755383 0.0811913 -0.0373599; 0.0347578 -0.0373599 0.0171911]           …  [3.33218 -0.315165 -0.464628; -0.315165 5.31693 0.035669; -0.464628 0.035669 3.23267]                             
+     [1.04039 -0.933165 0.269879; -0.933165 1.83237 0.502752; 0.269879 0.502752 0.628555]                       …  [0.0 0.0 0.0; 0.0 0.0 0.0; 0.0 0.0 0.0]
+     [1.02216 -0.40349 -0.321279; -0.40349 0.159442 0.126808; -0.321279 0.126808 0.100983]                         [0.0 0.0 0.0; 0.0 0.0 0.0; 0.0 0.0 0.0]
+     [0.0465248 -0.159551 -0.0911988; -0.159551 0.558497 0.317992; -0.0911988 0.317992 0.181189]                   [0.0 0.0 0.0; 0.0 0.0 0.0; 0.0 0.0 0.0]
+     [0.334567 0.871489 -0.408535; 0.871489 2.28341 -1.24037; -0.408535 -1.24037 2.82881]                          [0.0174472 0.0536601 -0.129907; 0.0536601 0.165207 -0.401806; -0.129907 -0.401806 0.99725]
+     [0.923482 -0.497495 -0.0235852; -0.497495 0.268009 0.0127057; -0.0235852 0.0127057 0.000602366]               [0.0 0.0 0.0; 0.0 0.0 0.0; 0.0 0.0 0.0]
+     [0.52127 -0.348712 0.206522; -0.348712 0.861941 0.277715; 0.206522 0.277715 0.356984]                      …  [0.0 0.0 0.0; 0.0 0.0 0.0; 0.0 0.0 0.0]
+     [0.330309 0.22713 -0.290442; 0.22713 0.156181 -0.199716; -0.290442 -0.199716 0.255386]                        [0.0 0.0 0.0; 0.0 0.0 0.0; 0.0 0.0 0.0]
+     [3.41978e-6 6.00209e-7 -1.94578e-6; 6.00209e-7 1.05343e-7 -3.41506e-7; -1.94578e-6 -3.41506e-7 1.1071e-6]     [0.0 0.0 0.0; 0.0 0.0 0.0; 0.0 0.0 0.0]
+     [0.78517 -0.714048 -0.301792; -0.714048 0.66384 0.355898; -0.301792 0.355898 0.574352]                        [0.0 0.0 0.0; 0.0 0.0 0.0; 0.0 0.0 0.0]
+     [1.15017 1.50181 -0.176709; 1.50181 2.14516 -0.48193; -0.176709 -0.48193 0.548215]                            [0.0 0.0 0.0; 0.0 0.0 0.0; 0.0 0.0 0.0]
+     [0.00641121 -0.00744549 0.0032556; -0.00744549 0.00869106 -0.0038087; 0.0032556 -0.0038087 0.0016707]      …  [0.336555 -0.0414196 -0.0260434; -0.0414196 0.519244 0.0568914; -0.0260434 0.0568914 0.206646]
 
 
 
-Let's take a trace of each matrix:
+Let's take a trace of each variance component matrix:
 
 
 ```julia
@@ -527,7 +541,7 @@ tr.(Σ̂path)
 
 
 
-* mean regression coefficient path: $j$-th element in `β̂path` corresponds to $p$-by-$d$ coefficients at `λpath[j]`.
+* mean regression coefficient path: $j$-th element in `β̂path` corresponds to ``p \times d`` matrix at `λpath[j]`.
 
 
 ```julia
@@ -621,7 +635,7 @@ objpath
 
 
 
-* number of iterations at each $\lambda$
+* number of iterations taken to converge at each $\lambda$
 
 
 ```julia
@@ -715,7 +729,7 @@ zerovarcomps
 ## Visualize/summarize
 
 We can visualize `Σ̂path` via `plotsolpath` function. 
-When variance component parameter is a matrix, `plotsolpath` calculates its trace and plots norms at each $\lambda$. 
+When variance component parameter is a matrix, `plotsolpath` calculates its trace and plots trace values at each $\lambda$. 
 
 
 
@@ -751,20 +765,30 @@ plotsolpath(Σ̂path[1:end-1, :], λpath; legendout=false, resvarcomp=false,
 
 
 
-![svg](output_71_0.svg)
+![svg](output_81_0.svg)
 
 
 
-Note the ranking in the legend matches that from `rankvarcomps` as well:
+Note the ranking in the legend matches that from `rankvarcomps`.
 
 
 ```julia
-ranking, zerovarcomps = rankvarcomps(Σ̂path)
+posvarcomps
 ```
 
 
 
 
-    ([4, 10, 1, 9, 2, 7, 6, 5, 3], [8, 11])
+    10-element Array{Int64,1}:
+      4
+     10
+      1
+      9
+      6
+      2
+      7
+      5
+      3
+      8
 
 
