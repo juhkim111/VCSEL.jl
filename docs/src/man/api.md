@@ -1,5 +1,9 @@
 # API 
 
+```@meta
+CurrentModule = VCSEL
+```
+
 ## Constructing models 
 
 ```@docs 
@@ -10,12 +14,12 @@ VCintModel
 ## Properties of model 
 
 ```@docs 
-length
-ncovariates 
-size 
-nmeanparams 
-nvarcomps 
-ngroups 
+length(::VCModel)
+ncovariates
+size(::VCModel)
+nmeanparams(::VCModel)
+nvarcomps(::VCModel)
+ngroups(::VCModel)
 ```
 
 
@@ -33,5 +37,4 @@ resetModel!
 maxlambda 
 rankvarcomps
 plotsolpath 
-maxlambda 
 ```
