@@ -27,7 +27,6 @@ export
     vcselect, vcselect!, vcselectpath, vcselectpath!
 
 """
-    VCModel 
     VCModel(Y, X, V, Σ)
     VCModel(Y, X, V)
     VCModel(Y, V, Σ)
@@ -35,6 +34,8 @@ export
 
 Variance component model type. Stores the data and model parameters of a variance 
 component model. 
+
+
 """
 struct VCModel{T <: Real} 
     # data
@@ -219,7 +220,6 @@ function VCModel(
 end 
 
 """
-    VCintModel 
     VCintModel(Y, X, V, Vint, Σ, Σint)
     VCintModel(Y, X, V, Vint)
     VCintModel(Y, V, Vint, Σ, Σint)
@@ -331,7 +331,8 @@ function VCintModel(
 end 
 
 """
-    length(vcm)
+    length(vcm::VCModel)
+    length(vcm::VCintModel)
 
 Length `d` of response. 
 """
@@ -339,7 +340,8 @@ length(vcm::VCModel) = size(vcm.Y, 2)
 length(vcm::VCintModel) = size(vcm.Y, 2)
 
 """
-    ncovariates(vcm)
+    ncovariates(vcm::VCModel)
+    ncovariates(vcm::VCintModel)
 
 Number of fixed effects parameters `p` of a [`VCModel`](@ref) or [`VCintModel`](@ref). 
 """
@@ -347,7 +349,8 @@ ncovariates(vcm::VCModel) = size(vcm.Xobs, 2)
 ncovariates(vcm::VCintModel) = size(vcm.Xobs, 2)
 
 """
-    size(vcm)
+    size(vcm::VCModel)
+    size(vcm::VCintModel)
 
 Size `(n, d)` of response matrix of a [`VCModel`](@ref) or [`VCintModel`](@ref). 
 """
@@ -355,7 +358,8 @@ size(vcm::VCModel) = size(vcm.Y)
 size(vcm::VCintModel) = size(vcm.Y)
 
 """
-    nmeanparams(vcm)
+    nmeanparams(vcm::VCModel)
+    nmeanparams(vcm::VCintModel)
 
 Number of mean parameters `p * d` of [`VCModel`](@ref) or [`VCintModel`](@ref).
 """
@@ -363,7 +367,8 @@ nmeanparams(vcm::VCModel) = length(vcm.β)
 nmeanparams(vcm::VCintModel) = length(vcm.β)
 
 """
-    nvarcomps(vcm)
+    nvarcomps(vcm::VCModel)
+    nvarcomps(vcm::VCintModel)
 
 Number of variance components. 
 """
@@ -371,9 +376,10 @@ nvarcomps(vcm::VCModel) = length(vcm.Σ)
 nvarcomps(vcm::VCintModel) = length(vcm.Σ) + length(vcm.Σint)
 
 """ 
-    ngroups(vcm)
+    ngroups(vcm::VCModel)
+    ngroups(vcm::VCintModel)
 
-Number of groups, `m`, for `VCModel` or `VCintModel`.
+Number of groups, `m`, for [`VCModel`](@ref) or [`VCintModel`](@ref).
 """
 ngroups(vcm::VCModel) = nvarcomps(vcm) - 1
 ngroups(vcm::VCintModel) = length(vcm.Σ) - 1
@@ -381,7 +387,7 @@ ngroups(vcm::VCintModel) = length(vcm.Σ) - 1
 """
     updateΩ!(vcm::VCModel)
 
-Update covariance matrix `Ω` for `VCModel`.
+Update covariance matrix `Ω` for [`VCModel`](@ref).
 """
 function updateΩ!(vcm::VCModel)
     fill!(vcm.Ω, 0)
@@ -394,7 +400,7 @@ end
 """
     updateΩ!(vcm::VCintModel)
 
-Update covariance matrix `Ω` for `VCintModel`.
+Update covariance matrix `Ω` for [`VCintModel`](@ref).
 """
 function updateΩ!(vcm::VCintModel)
     fill!(vcm.Ω, 0)
@@ -409,7 +415,7 @@ end
 """
     updateΩest!(vcm::VCModel)
 
-Update covariance matrix `Ωest` for `VCModel`. `Ωest` has the same dimension as `Vobs`. 
+Update covariance matrix `Ωest` for [`VCModel`](@ref). `Ωest` has the same dimension as `Vobs`. 
 """
 function updateΩest!(vcm::VCModel)
 
@@ -427,7 +433,7 @@ end
 """
     updateΩest!(vcm::VCintModel)
 
-Update covariance matrix `Ωest` for `VCintModel`. `Ωest` has the same dimension as `Vobs`. 
+Update covariance matrix `Ωest` for [`VCintModel`](@ref). `Ωest` has the same dimension as `Vobs`. 
 """
 function updateΩest!(vcm::VCintModel)
 
@@ -463,24 +469,7 @@ function update_arrays!(vcm::Union{VCModel, VCintModel})
 end 
 
 """
-    resetModel!(vcm, Σ)
-
-Reset [`VCModel`](@ref) with initial estimates `Σ`.
-"""
-function resetModel!(
-    vcm :: VCModel,
-    Σ :: Union{AbstractVector{T}, AbstractVector{Matrix{T}}} 
-    ) where {T <: Real}
-
-    vcm.Σ .= Σ
-    updateΩ!(vcm)
-    updateΩest!(vcm)
-    update_arrays!(vcm)
-    vcm.R .= reshape(vcm.ΩinvY, size(vcm))
-end 
-
-"""
-    resetModel!(vcm, Σ)
+    resetModel!(vcm::VCModel)
 
 Reset [`VCModel`](@ref) with initial estimates `Σ`. If `Σ` is unspecified, 
 it is set to a vector of ones or identity matrices based on its dimension.
@@ -499,9 +488,26 @@ function resetModel!(
 end 
 
 """
-    resetModel!(vcm, [Σ, Σint])
+    resetModel!(vcm::VCModel, Σ)
 
-Reset [`VCModel`](@ref) with initial estimates `Σ` and `Σint` (if given). If unspecified, 
+Reset [`VCModel`](@ref) with initial estimates `Σ`.
+"""
+function resetModel!(
+    vcm :: VCModel,
+    Σ :: Union{AbstractVector{T}, AbstractVector{Matrix{T}}} 
+    ) where {T <: Real}
+
+    vcm.Σ .= Σ
+    updateΩ!(vcm)
+    updateΩest!(vcm)
+    update_arrays!(vcm)
+    vcm.R .= reshape(vcm.ΩinvY, size(vcm))
+end 
+
+"""
+    resetModel!(vcm::VCintModel, [Σ, Σint])
+
+Reset [`VCintModel`](@ref) with initial estimates `Σ` and `Σint` (if given). If unspecified, 
 it is set to a vector of ones.
 """
 function resetModel!(
