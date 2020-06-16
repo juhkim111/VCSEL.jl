@@ -4,7 +4,7 @@
 Generate solution path of variance components along varying lambda values.
 
 # Input
-- `vcm`: VCintModel
+- `vcm`: [`VCintModel`](@ref)
 
 # Keyword 
 - `penfun`: penalty function (e.g. `NoPenalty()`, `L1Penalty()`, `MCPPenalty()`), 
@@ -101,7 +101,7 @@ end
     vcselect!(vcm; penfun, λ, penwt, maxiters, tol, verbose)
 
 # Input 
-- `vcm`: VCintModel
+- `vcm`: [`VCintModel`](@ref)
 
 # Keyword 
 - `penfun`: penalty function (e.g. `NoPenalty()`, `L1Penalty()`, `MCPPenalty()`), 
