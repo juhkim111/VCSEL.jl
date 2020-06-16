@@ -9,7 +9,8 @@
     in `Σpath`. If `true`, last row of `Σpath` is ignored. Default is `true`
 
 # Keyword Argument 
-- `tol`: a variance component less than `tol` is considered zero, default is 1e-8 
+- `tol`: value such that variance components less than this value is considered zero, 
+    default is 1e-8 
 
 # Output 
 - `ranking`: rank of each variance component based on the order in which it enters 
@@ -59,15 +60,14 @@ end
 
 # Input
 - `Σpath`: solution path (matrix of matrices), each column should 
-    contain estimated variance components at specific λ 
+    contain estimated variance component matrices at specific λ 
     as in output from `vcselectpath!`
 - `resvarcomp`: logical flag indicating the presence of residual variance component 
     in `Σpath`. If `true`, last row of `Σpath` is ignored. Default is `true`
 
 # Keyword Argument 
-- `tol`: a variance component whose `p`-norm is less than `tol` is considered zero, 
-    default is 1e-8 
-- `p`: `p` for determining which norm to use, default is 2. See [`norm(A, p::Real=2)`](@ref)
+- `tol`: value such that a variance component matrix whose trace is less than this value 
+    is considered zero, default is 1e-8 
 
 # Output 
 - `ranking`: rank of each variance component based on the order in which it enters 
@@ -77,7 +77,6 @@ end
 function rankvarcomps(
     Σpath      :: AbstractMatrix{Matrix{T}};
     tol        :: Float64 = 1e-8,
-    p          :: Real = 2,
     resvarcomp :: Bool = true
     ) where {T <: Real}
 
@@ -203,7 +202,8 @@ Output plot of solution path at varying λ values. Use backend such as `gr()`.
 # Input
 - `Σpath`: solution path (in numeric matrix) to be plotted, each column should 
         represent variance components at specific λ as in output from `vcselectpath!`. 
-	The last row of `Σpath` should be for residual variance component. Otherwise set `resvarcomp=false` to indicate the absence. 
+        The last row of `Σpath` should be for residual variance component. 
+        Otherwise set `resvarcomp=false` to indicate the absence. 
 - `λpath`: vector of tuning parameter λ values.
 
 # Keyword 
