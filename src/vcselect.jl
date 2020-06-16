@@ -26,6 +26,13 @@ Generate solution path of variance components along varying lambda values.
 - `λpath`: sequence of `λ` values used.
 - `objpath`: vector of objective values at each tuning parameter `λ`.
 - `niterspath`: vector of no. of iterations to convergence.
+
+# Example
+
+```julia
+vcm = VCModel(Y, X, V)
+Σ̂path, β̂path, λpath, objpath, niterspath = vcselectpath!(vcm; penfun=MCPPenalty(), nλ=50)
+```
 """
 function vcselectpath!(
     vcm          :: VCModel; 
@@ -129,6 +136,13 @@ end
 - `obj`: objective value at convergence.
 - `niters`: number of iterations to convergence.
 - `objvec`: vector of objvective values at each iteration.
+
+# Example
+
+```julia
+vcm1 = VCModel(Y, X, V)
+vcselect!(vcm1; penfun=L1Penalty(), λ=1.5)
+```
 """
 function vcselect!(
     vcm          :: VCModel;

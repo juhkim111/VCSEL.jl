@@ -30,6 +30,13 @@ Generate solution path of variance components along varying lambda values.
 - `objpath`: vector of objective values at each `λ`; i-th value corresponds to `λpath[i]`
 - `niterspath`: vector of no. of iterations to convergence at each `λ`; i-th value 
         corresponds to `λpath[i]`
+
+# Example
+
+```julia
+vcm = VCModel(Y, X, V, Vint)
+Σ̂path, Σ̂intpath, = vcselectpath!(vcm; penfun=L1Penalty(), λpath=range(0, 10.0, length=50))
+```
 """
 function vcselectpath!(
     vcm          :: VCintModel; 
@@ -122,6 +129,13 @@ end
     Access estimates with `vcm.Σ`, `vcm.Σint` and `vcm.β`
 - `obj`: objective value at convergence 
 - `niters`: number of iterations to convergence 
+
+# Example
+
+```julia
+vcm = VCModel(Y, X, V, Vint)
+vcselect!(vcm; penfun=MCPPenalty(), λ=1.5)
+```
 """
 function vcselect!(
     vcm          :: VCintModel;

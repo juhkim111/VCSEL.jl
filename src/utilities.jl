@@ -16,6 +16,14 @@
 - `ranking`: rank of each variance component based on the order in which it enters 
     solution path
 - `rest`: rest of the variance components that are estimated to be zero at all λ > 0
+
+# Example
+
+```julia
+vcm = VCModel(Y, X, V)
+Σ̂path, = vcselectpath!(vcm; penfun=MCPPenalty(), nλ=50)
+posvarcomps, = rankvarcomps(Σ̂path)
+```
 """
 function rankvarcomps(
     Σpath      :: AbstractMatrix{T};
@@ -126,16 +134,26 @@ Ranks are calculated using norm of paired variance components.
 - `Σpath2`: solution path (in numeric matrix), each column should 
     represent estimated variance components at specific λ 
     as in output from `vcselect`, `vcselectpath`
+
 # Keyword 
 - `tol`: a variance component less than `tol` is considered zero, default is 1e-6 
 - `resvarcomp`: logical flag indicating there is residual variance component in `Σpath`, 
     default is true. If true, the last variance component is not included in ranks
 - `resvarcomp2`: logical flag indicating there is residual variance component in `Σpath2`,
    default is true. If true, the last variance component is not included in ranks
+
 # Output 
 - `ranks`: rank of each variance component based on the order in which it enters 
     solution path
 - `rest`: rest of the variance components that are estimated to be zero at all λ > 0
+
+# Example
+
+```julia
+vcm = VCModel(Y, X, V, Vint)
+Σ̂path, Σ̂intpath, = vcselectpath!(vcm; penfun=L1Penalty(), λpath=range(0, 10.0, length=50))
+posvarcomps, zerovarcomps = rankvarcomps(Σ̂path, Σ̂intpath; tol=1e-5)
+```
 """
 function rankvarcomps(
     Σpath      :: AbstractMatrix{T},
