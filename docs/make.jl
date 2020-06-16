@@ -15,7 +15,7 @@ makedocs(
             "man/VCModel_example.md",
             "man/VCintModel_example.md"
         ],
-        #"API" => "man/api.md",
+        "API" => "man/api.md"
     ]
 )
 
