@@ -528,6 +528,6 @@ include("vcselect.jl")
 include("vcselect_interact.jl")
 include("maxlambda.jl")
 include("utilities.jl")
-include("linalg_operations.jl")
+include("linalgops.jl")
 
 end # module
