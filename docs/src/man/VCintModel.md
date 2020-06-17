@@ -34,7 +34,7 @@ In the equation (2),
 
 * ``Y``, ``X``, and ``V_{11},V_{12},...,V_{m1},V_{m2}, V_0`` form the **data** and 
 
-* ``\beta`` and ``\sigma^2_{11},\sigma^2_{12}...,\sigma^2_{m1},\sigma^2_{m2},\sigma_0`` are **parameters**. 
+* ``\beta`` and ``\sigma^2_{11},\sigma^2_{12}...,\sigma^2_{m1},\sigma^2_{m2},\sigma_0^2`` are **parameters**. 
 
 
 
