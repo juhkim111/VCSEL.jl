@@ -240,6 +240,14 @@ Output plot of solution path at varying λ values. Use backend such as `gr()`.
 
 # Output 
 - plot of solution path. 
+
+# Example 
+
+```julia
+vcm = VCModel(Y, X, V)
+Σ̂path, β̂path, λpath, = vcselectpath!(vcm; penfun=MCPPenalty(), nλ=50)
+plotsolpath(Σ̂path, λpath; title="Solution Path (MCP penalty)")
+```
 """
 function plotsolpath(
     Σpath     :: AbstractMatrix{T},
@@ -443,6 +451,14 @@ Output plot of a paired solution path at varying λ values. Use backend such as 
 
 # Output 
 - plot of solution path 
+
+# Example
+
+```julia
+vcm = VCModel(Y, X, V, Vint)
+Σ̂path, Σ̂intpath, _, λpath, = vcselectpath!(vcm; penfun=L1Penalty(), λpath=range(0, 10.0, length=50))
+plotsolpath(Σ̂path, Σ̂intpath, λpath; nranks=15)
+```
 """
 function plotsolpath(
     Σpath       :: AbstractMatrix{T},
@@ -452,7 +468,7 @@ function plotsolpath(
     xlab        :: AbstractString = "\$\\lambda\$",
     xmin        :: AbstractFloat = minimum(λpath),
     xmax        :: AbstractFloat = maximum(λpath),
-    ylab        :: AbstractString = "\$||(\\sigma_{1}^2, \\sigma_{2}^2)||_2\$",
+    ylab        :: AbstractString = "\$\sqrt{\\sigma_{1}^2 + \\sigma_{2}^2}\$",
     nranks      :: Int = size(Σpath, 1),
     linewidth   :: AbstractFloat = 1.0, 
     legend      :: Bool = true,
