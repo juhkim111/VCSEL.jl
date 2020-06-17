@@ -14,10 +14,10 @@ where
 * ``\gamma_i``: ``q_i \times 1`` unknown vector of random main effects parameters with ``\gamma_i \sim \text{Normal}(0, \sigma^2_{i1} I_{q_i})``
     * ``\sigma^2_{i1}``: $i$-th main effect variance component, ``i=1,\ldots, m``
 * ``\alpha_i``: ``q_i \times 1`` unknown vector of random interaction effects parameters with ``\alpha_i \sim \text{Normal}(0, \sigma^2_{i2} I_{q_i})``
-    - ``\sigma_{i2}``: $i$-th interaction effect variance component, ``i=1,\ldots, m``
+    - ``\sigma^2_{i2}``: $i$-th interaction effect variance component, ``i=1,\ldots, m``
 * ``E``: ``n\times n`` diagonal matrix whose diagonal entries are factors that interact with each main effect (``Z_i``). 
 * ``\epsilon``: ``n\times 1`` vector of errors with ``\epsilon \sim \text{Normal}(0, \sigma^2_0 I_n)``
-    - ``\sigma_0``: residual or intercept variance component
+    - ``\sigma^2_0``: residual or intercept variance component
 
 Equivalently, we can write (1) as
 
@@ -32,9 +32,9 @@ where ``V_{i1} = Z_{i1} Z_{i1}^T`` and ``V_{i2} = E Z_{i1} Z_{i1}^T E^T.``
 
 In the equation (2), 
 
-* ``Y``, ``X``: ``n\times p``, and ``V_{11},V_{12},...,V_{m1},V_{m2}, V_0`` form the **data** and 
+* ``Y``, ``X``, and ``V_{11},V_{12},...,V_{m1},V_{m2}, V_0`` form the **data** and 
 
-* ``\beta`` and ``\sigma^2_{11},\sigma^2_{12}...,\sigma^2_{m1},\sigma^2_{m2},\sigma_0)`` are **parameters**. 
+* ``\beta`` and ``\sigma^2_{11},\sigma^2_{12}...,\sigma^2_{m1},\sigma^2_{m2},\sigma_0`` are **parameters**. 
 
 
 
