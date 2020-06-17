@@ -74,16 +74,17 @@ Now this is were VCSEL algorithm comes in. VCSEL implements [Majorization-Minimi
 * univariate response model 
 
   ```math 
-  Y \sim \text{Normal}(X\beta, \sigma_1^2 V_1 + \cdots + \sigma_m^2 V_m + \sigma_{\epsilon}^2 I_n
+  Y \sim \text{Normal}(X\beta, \sigma_1^2 V_1 + \cdots + \sigma_m^2 V_m + \sigma_{\epsilon}^2 I_n)
   ```
 
   + ``Y``: $n\times 1$ response vector 
+  + ``\sigma_i^2, i=1,\ldots, m``: (scalar) variance components 
   + ``V_i ,i=1,\ldots, m``: covariance matrices corresponding to each random effects vector (e.g. ``V_i = Z_i Z_i^T``). 
 
 * multivariate response model 
 
   ```math 
-   Y \sim \text{Normal}(X\beta, \Sigma_1 \otimes V_1 + \cdots + \Sigma_m \otimes V_m + \Sigma_{\epsilon} \otimes I_n
+   Y \sim \text{Normal}(X\beta, \Sigma_1 \otimes V_1 + \cdots + \Sigma_m \otimes V_m + \Sigma_{\epsilon} \otimes I_n)
   ```
 
   + ``Y``: ``n\times d`` response matrix
@@ -99,4 +100,3 @@ Now this is were VCSEL algorithm comes in. VCSEL implements [Majorization-Minimi
    + ``Y``: ``n \times 1`` response vector 
    + ``\sigma_{i1}^2`` and ``\sigma_{i2}^2``: pair of variance components that are selected/unselected together (``i=1,\ldots, m``)	
       - ``\sigma_{i1}^2`` represents variance component for main effects while ``\sigma_{i2}^2`` represents variance component for interaction effects.
-
