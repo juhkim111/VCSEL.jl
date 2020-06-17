@@ -74,7 +74,7 @@ Now this is were VCSEL algorithm comes in. VCSEL implements [Majorization-Minimi
 * univariate response model 
 
   ```math 
-  Y \sim \text{Normal}(X\beta, \sigma_1^2 V_1 + \cdot + \sigma_m^2 V_m + \sigma_{\epsilon}^2 I_n
+  Y \sim \text{Normal}(X\beta, \sigma_1^2 V_1 + \cdots + \sigma_m^2 V_m + \sigma_{\epsilon}^2 I_n
   ```
 
   + ``Y``: $n\times 1$ response vector 
@@ -83,7 +83,7 @@ Now this is were VCSEL algorithm comes in. VCSEL implements [Majorization-Minimi
 * multivariate response model 
 
   ```math 
-   Y \sim \text{Normal}(X\beta, \Sigma_1 \otimes V_1 + \cdot + \Sigma_m \otimes V_m + \Sigma_{\epsilon} \otimes I_n
+   Y \sim \text{Normal}(X\beta, \Sigma_1 \otimes V_1 + \cdots + \Sigma_m \otimes V_m + \Sigma_{\epsilon} \otimes I_n
   ```
 
   + ``Y``: ``n\times d`` response matrix
@@ -93,7 +93,7 @@ Now this is were VCSEL algorithm comes in. VCSEL implements [Majorization-Minimi
 * univariate response model with interaction terms 
 
   ```math 
-  Y \sim \text{Normal}(X \beta, \sigma_{11}^2 V_{11} + \sigma_{12}^2 V_{12} + \cdot + \sigma_{m1}^2 V_{m1} + \sigma_{m2}^2 V_{m2} + \sigma_{\epsilon}^2 I_n)
+  Y \sim \text{Normal}(X \beta, \sigma_{11}^2 V_{11} + \sigma_{12}^2 V_{12} + \cdots + \sigma_{m1}^2 V_{m1} + \sigma_{m2}^2 V_{m2} + \sigma_{\epsilon}^2 I_n)
   ```
 
    + ``Y``: ``n \times 1`` response vector 
