@@ -12,13 +12,13 @@ Y = X\beta + Z\gamma + \epsilon
 
 where 
 
-* $Y$: $n\times 1$ vector of responses 
-* $X$: $n \times p$ known design matrix for the fixed effects 
-* $Z$: $n \times q$ known design matrix for the random effects 
-* $\beta$: $p \times 1$ vector of unknown fixed effects  
-* $\gamma$: $q \times 1$ vector of unknown random effects with $\gamma \sim \text{Normal}(0, \sigma_{\gamma}^2 I_q)$
-* $\epsilon$: $n\times 1$ vector of unknown random errors with $\epsilon \sim \text{Normal}(0, \sigma_{\epsilon}^2 I_n)$ 
-* $\gamma$ and $\epsilon$ are independent.
+* ``Y``: ``n\times 1`` vector of responses 
+* ``X``: ``n \times p`` known design matrix for the fixed effects 
+* ``Z``: ``n \times q`` known design matrix for the random effects 
+* ``\beta``: ``p \times 1`` vector of unknown fixed effects  
+* ``\gamma``: ``q \times 1`` vector of unknown random effects with ``\gamma \sim \text{Normal}(0, \sigma_{\gamma}^2 I_q)``
+* ``\epsilon``: $n\times 1$ vector of unknown random errors with $\epsilon \sim \text{Normal}(0, \sigma_{\epsilon}^2 I_n)$ 
+* ``\gamma`` and ``\epsilon`` are independent.
 
 Equivalently, we can write 
 
@@ -59,9 +59,9 @@ Y = X\beta + Z_1\gamma_1 + \cdot + Z_m \gamma_m + \epsilon
 
 where 
 
-* $Z_i$: $n \times q_i$ known design matrix for the random effects where $i=1,\dots, m$
-* $\gamma_i \sim \text{Normal}(0, \sigma_i^2 I_{q_i}), i=1,\ldots, m$
-* $\epsilon \sim \text{Normal}(0, \sigma_{\epsilon}^2 I_n)$.
+* ``Z_i``: ``n \times q_i`` known design matrix for the random effects where $i=1,\dots, m$
+* ``\gamma_i \sim \text{Normal}(0, \sigma_i^2 I_{q_i}), i=1,\ldots, m``
+* ``\epsilon \sim \text{Normal}(0, \sigma_{\epsilon}^2 I_n)``.
 
 ## VCSEL
 
@@ -73,12 +73,12 @@ Now this is were VCSEL algorithm comes in. VCSEL implements [Majorization-Minimi
 
 * univariate response model 
 
-   ```math 
-   Y \sim \text{Normal}(X\beta, \sigma_1^2 V_1 + \cdot + \sigma_m^2 V_m + \sigma_{\epsilon}^2 I_n
-   ```
+  ```math 
+  Y \sim \text{Normal}(X\beta, \sigma_1^2 V_1 + \cdot + \sigma_m^2 V_m + \sigma_{\epsilon}^2 I_n
+  ```
 
-   + ``Y``: $n\times 1$ response vector 
-   + ``V_i ,i=1,\ldots, m``: covariance matrices corresponding to each random effects vector (e.g. ``V_i = Z_i Z_i^T``). 
+  + ``Y``: $n\times 1$ response vector 
+  + ``V_i ,i=1,\ldots, m``: covariance matrices corresponding to each random effects vector (e.g. ``V_i = Z_i Z_i^T``). 
 
 * multivariate response model 
 
@@ -88,7 +88,7 @@ Now this is were VCSEL algorithm comes in. VCSEL implements [Majorization-Minimi
 
   + ``Y``: ``n\times d`` response matrix
   + ``\Sigma_i, i=1,\ldots, m``: $d\times d$ variance component matrices
-  + ``otimes``: [Kronecker product](https://en.wikipedia.org/wiki/Kronecker_product).
+  + ``\otimes``: [Kronecker product](https://en.wikipedia.org/wiki/Kronecker_product).
 
 * univariate response model with interaction terms 
 
@@ -99,6 +99,4 @@ Now this is were VCSEL algorithm comes in. VCSEL implements [Majorization-Minimi
    + ``Y``: ``n \times 1`` response vector 
    + ``\sigma_{i1}^2`` and ``\sigma_{i2}^2``: pair of variance components that are selected/unselected together (``i=1,\ldots, m``)	
       - ``\sigma_{i1}^2`` represents variance component for main effects while ``\sigma_{i2}^2`` represents variance component for interaction effects.
-
-
 
