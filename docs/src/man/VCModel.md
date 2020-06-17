@@ -79,7 +79,7 @@ vcm2 = VCModel(Y, V) # if there's no covariate matrix
 `VCModel` also has the following fields for its parameters: 
 
 * `B`: `p x d` mean regression coefficients 
-* `Σ = [Σ[1],...,Σ[m],Σ[0]]$`: variance component parameters.
+* `Σ = [Σ[1],...,Σ[m],Σ[0]]`: variance component parameters.
 
 By default, the vector of varaince component parameters are initialized to be a vector of identity matrices (e.g. `[Matrix(1.0*I, d, d) for i in 1:(m+1)]`). Users can set initial values of variance component parameters in this step if they wish to. 
 
@@ -126,6 +126,17 @@ Example:
 vcselect!(vcm4)
 vcselect!(vcm4; penfun=NoPenalty())
 vcselect!(vcm4; λ=0)
+```
+
+Estimated parameters can be accessed using the `vcm.Σ` notation.
+
+Example:
+
+```julia
+# variance components 
+vcm1.Σ
+# mean effects
+vcm1.β
 ```
 
 ### Step 2 Alternative: Get solution path
