@@ -11,14 +11,14 @@ where $\text{vec}(\cdot)$ stacks up columns of the given matrix on top of one an
 
 In the equation (1), 
 
-* $Y$: $n\times d$ response matrix 
-* $X$: $n\times p$ covariate matrix 
-* $V = (V_1,...,V_m,V_0)$: a vector of $m+1$ $n \times n$ covariance matrices
+* ``Y``: ``n\times d`` response matrix 
+* ``X``: ``n\times p`` covariate matrix 
+* ``V = (V_1,...,V_m,V_0)``: a vector of $m+1$ $n \times n$ covariance matrices
 
 form the data and 
 
-* $B$: $p \times d$ mean parameter matrix that explains the effect of covariates $X$ on response $Y$
-* $\Sigma = (\Sigma_1,...,\Sigma_m,\Sigma_0)$: a vector of $m+1$ $d \times d$ variance components matrices 
+* ``B``: ``p \times d`` mean parameter matrix that explains the effect of covariates $X$ on response $Y$
+* ``\Sigma = (\Sigma_1,...,\Sigma_m,\Sigma_0)``: a vector of $m+1$ $d \times d$ variance components matrices 
 
 are parameters. 
 
@@ -33,8 +33,8 @@ Y \sim \text{Normal}(XB, \Sigma_1 V_1 + \cdots + \Sigma_m V_m + \Sigma_0 V_0),
 
 where 
 
-* $B$: $p \times 1$ mean parameter vector 
-* $\Sigma_i, i=1,\ldots, m$ represent non-negative scalar variance components. 
+* ``B``: ``p \times 1`` mean parameter vector 
+* ``\Sigma_i, i=1,\ldots, m`` represent non-negative scalar variance components. 
 
 
 
@@ -58,7 +58,7 @@ Assuming the package is already installed, load the package:
 using VCSEL
 ```
 
-If not installed, follow the [installation instruction](../index.md/#Installation) on main page. 
+If not installed, follow the [Installation](@ref) instruction on main page. 
 
 ### Step 1: Construct a model with data
 
