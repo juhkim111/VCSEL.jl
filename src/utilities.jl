@@ -468,7 +468,7 @@ function plotsolpath(
     xlab        :: AbstractString = "\$\\lambda\$",
     xmin        :: AbstractFloat = minimum(λpath),
     xmax        :: AbstractFloat = maximum(λpath),
-    ylab        :: AbstractString = "\$\sqrt{\\sigma_{1}^2 + \\sigma_{2}^2}\$",
+    ylab        :: AbstractString = "\$\\sqrt{\\sigma_{1}^2 + \\sigma_{2}^2}\$",
     nranks      :: Int = size(Σpath, 1),
     linewidth   :: AbstractFloat = 1.0, 
     legend      :: Bool = true,

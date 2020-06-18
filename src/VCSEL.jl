@@ -473,6 +473,14 @@ end
 
 Reset [`VCModel`](@ref) with initial estimates `Σ`. If `Σ` is unspecified, 
 it is set to a vector of ones or identity matrices based on its dimension.
+
+# Example
+
+```julia
+vcm = VCModel(Y, X, V)
+Σ̂path, β̂path, λpath, objpath, niterspath = vcselectpath!(vcm; penfun=MCPPenalty(), nλ=50)
+resetModel!(vcm)
+```
 """
 function resetModel!(
     vcm :: VCModel
@@ -491,6 +499,15 @@ end
     resetModel!(vcm::VCModel, Σ)
 
 Reset [`VCModel`](@ref) with initial estimates `Σ`.
+
+# Example
+
+```julia
+vcm = VCModel(Y, X, V)
+Σ̂path, β̂path, = vcselectpath!(vcm; penfun=MCPPenalty(), nλ=30)
+Σ = fill(0.5, length(V))
+resetModel!(vcm, Σ)
+```
 """
 function resetModel!(
     vcm :: VCModel,
