@@ -1,5 +1,3 @@
-module standardize_test
-
 Random.seed!(123)
 
 # generate data from an univariate response variance component model 
@@ -68,5 +66,3 @@ vcselect!(vcmV_stan)
 
 println("vcmV_nostan.Σ = ", vcmV_nostan.Σ)
 println("vcmV_stan.Σ = ", vcmV_stan.Σ)
-
-end # end of module 
