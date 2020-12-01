@@ -1,4 +1,4 @@
-export nullprojection, kronaxpy!, clamp_diagonal!
+export nullprojection, kronaxpy!, clamp_diagonal!, updateM!
 
 """
     objvalue(vcm; penfun, λ, penwt)
@@ -57,63 +57,8 @@ function objvalue(
     return obj 
 end 
 
-"""
-    objvalue(vcm; penfun, λ, penwt)
 
-Calculate objective value, i.e. negative log-likelihood of [`VCintModel`](@ref) instance 
-plus penalty terms. 
 
-# Input 
-- `vcm`: VCintModel
-
-# Keyword Argument 
-- `penfun`: penalty function (e.g. NoPenalty(), L1Penalty(), MCPPenalty()), 
-        default is NoPenalty()
-- `λ`: tuning parameter, default is 1
-- `penwt`: penalty weight, default is (1,...1,0)
-
-# Output 
-- `obj`: objective value    
-"""
-function objvalue(
-    vcm    :: VCintModel;
-    penfun :: Penalty = NoPenalty(),
-    λ      :: Real = 1.0,
-    penwt  :: AbstractVector{T} = [ones(T, ngroups(vcm)); zero(T)]
-    ) where {T <: Real}
-
-    obj = logdet(vcm.ΩcholL) + (1 // 2) * dot(vcm.vecY, vcm.ΩinvY)
-    obj += (1 // 2) * size(vcm)[1] * log(2π)
-
-    # add penalty term 
-    if !isa(penfun, NoPenalty)
-        pen = 0.0
-        # L1Penalty
-        if isa(penfun, L1Penalty)
-            # add penalty term 
-            for j in 1:ngroups(vcm)
-                pen += penwt[j] * √(vcm.Σ[j] + vcm.Σint[j])
-            end 
-            obj += λ * pen
-        # MCP penalty 
-        elseif isa(penfun, MCPPenalty)
-            const1 = penfun.γ * λ
-            const2 = (1/2) * const1 * λ
-            # add penalty term 
-            for j in 1:ngroups(vcm)
-                if √(vcm.Σ[j] + vcm.Σint[j]) < const1
-                    pen += λ * √(vcm.Σ[j] + vcm.Σint[j]) - 
-                        (vcm.Σ[j] + vcm.Σint[j]) / (2*penfun.γ)
-                else
-                    pen += const2
-                end 
-            end 
-            obj += pen 
-        end 
-    end 
-
-    return obj 
-end 
 
 """
     nullprojection(y, X, V)
@@ -123,7 +68,7 @@ Project `y` to null space of `transpose(X)` and transform `V` accordingly.
 # Input 
 - `y`: response vector/matrix to be transformed
 - `X`: covariate matrix, response `y` is projected onto the null space of transpose(X) 
-- `V`: vector of covariance matrices, `(V[1],V[2],...,V[m],I)`
+- `G`: vector of genotype matrices, `(G[1],G[2],...,G[m])`
     note `V[end]` should be identity matrix or identity matrix divided by √n
 
 # Ouptut 
@@ -134,16 +79,14 @@ Project `y` to null space of `transpose(X)` and transform `V` accordingly.
 function nullprojection(
     y    :: AbstractVecOrMat{T},
     X    :: AbstractVecOrMat{T},
-    V    :: AbstractVector{Matrix{T}}
+    G    :: AbstractVector{Matrix{T}}
     ) where {T <: Real}
 
     if isempty(X)
-        return y, V, X
+        return y, G, X
     else
         # basis of nullspace of transpose(X), `N(X')`
-        Xt = Matrix{T}(undef, size(X, 2), size(X, 1))
-        transpose!(Xt, X)
-        B = nullspace(Xt)
+        B = nullspace(X')
 
         # projected response vector 
         ynew = B' * y 
@@ -151,126 +94,60 @@ function nullprojection(
         # dimension of null space 
         s = size(B, 2) 
 
-        # no. of variance components subject to selection 
-        nvarcomps = length(V) 
+        # 
+        m = length(G)
 
         # transformed covariance matrices 
-        Vnew = Vector{Matrix{Float64}}(undef, nvarcomps)
-        tmp = zeros(size(X, 1), s)
-        for i in 1:(nvarcomps - 1)
-            mul!(tmp, V[i], B)
-            Vnew[i] = BLAS.gemm('T', 'N', B, tmp)
-            # divide by its frobenius norm  
-            #Vnew[i] ./= norm(Vnew[i])
-        end 
-        Vnew[end] = Matrix{eltype(B)}(I, s, s)
-
-        # output 
-        return ynew, Vnew, B 
-    end 
-
-end 
-
-"""
-    nullprojection(y, X, V1, V2)
-
-Project `y` to null space of `transpose(X)` and transform `V1` and `V2` accordingly.
-# Input 
-- `y`: response vector to be transformed. 
-- `X`: covariate vector or matrix, response `y` is projected onto the null space of transpose(X) 
-- `V1`: vector of covariance matrices, (V1[1],V1[2],...,V1[m],I)
-- `V2`: vector of covariance matrices, (V2[1],V2[2],...,V2[m]) 
-
-# Ouptut 
-- `ynew`: projected response vector
-- `Vnew1`: projected vector of covariance matrices
-- `Vnew2`: projected vector of covariance matrices
-- `B`: matrix whose columns are basis vectors of the null space of transpose(X) 
-"""
-function nullprojection(
-    y  :: AbstractVecOrMat{T},
-    X  :: AbstractVecOrMat{T},
-    V1 :: AbstractVector{Matrix{T}},
-    V2 :: AbstractVector{Matrix{T}}
-    ) where {T <: Real}
-
-    if isempty(X)
-        return y, V1, V2
-    else 
-        # basis of nullspace of transpose(X), `N(X')`
-        Xt = Matrix{T}(undef, size(X, 2), size(X, 1))
-        transpose!(Xt, X)
-        B = nullspace(Xt)
-
-        # projected response vector 
-        ynew = B' * y 
-
-        # dimension of null space 
-        s = size(B, 2) 
-
-        # no. of variance components subject to selection 
-        m = length(V2) 
-
-        # transformed covariance matrices 
-        Vnew1 = Vector{Matrix{Float64}}(undef, m + 1)
-        Vnew2 = Vector{Matrix{Float64}}(undef, m)
-
-        tmp = zeros(size(X, 1), s)
+        Gnew = Vector{Matrix{Float64}}(undef, m)
         for i in 1:m
-            mul!(tmp, V1[i], B)
-            Vnew1[i] = BLAS.gemm('T', 'N', B, tmp)
-            mul!(tmp, V2[i], B)
-            Vnew2[i] = BLAS.gemm('T', 'N', B, tmp)
-            # # divide by its frobenius norm  
-            # Vnew1[i] ./= norm(Vnew1[i])
-            # Vnew2[i] ./= norm(Vnew2[i])
+            Gnew[i] = BLAS.gemm('T', 'N', B, G[i])
         end 
-        Vnew1[end] = Matrix{eltype(B)}(I, s, s) 
 
         # output 
-        return ynew, Vnew1, Vnew2, B 
+        return ynew, Gnew, B 
     end 
 
 end 
 
-"""
-    updateβ!(vcm)
 
-Estimate fixed effects using REML estimate of variance components.
-Estimate of beta is 
-    `beta = pinv(X'*Ωinv*X)(X'*Ωinv*y)`
-    `beta = pinv()`
-where `Ω` being `∑ σ2[i] * V[i]` or `∑ Σ[i] ⊗ V[i]` where `σ2` or `Σ` are REML estimates.
+# """
+#     updateβ!(vcm)
 
-# Input
-- `vcm`: VCModel
+# Estimate fixed effects using REML estimate of variance components.
+# Estimate of beta is 
+#     `beta = pinv(X'*Ωinv*X)(X'*Ωinv*y)`
+#     `beta = pinv()`
+# where `Ω` being `∑ σ2[i] * V[i]` or `∑ Σ[i] ⊗ V[i]` where `σ2` or `Σ` are REML estimates.
 
-# Output 
-- `vcm.β`: updated fixed parameter estimates 
-"""
-function updateβ!( 
-    vcm :: Union{VCModel, VCintModel}
-    ) 
+# # Input
+# - `vcm`: VCModel
 
-    # quick return if there is no mean parameters
-    isempty(vcm.β) && return vcm.β
+# # Output 
+# - `vcm.β`: updated fixed parameter estimates 
+# """
+# function updateβ!( 
+#     vcm :: Union{VCModel}
+#     ) 
 
-    # 
-    Ωchol = cholesky(Symmetric(vcm.Ωest))
-    # 
-    d = length(vcm)
-    p = size(vcm.Xobs, 2)
-    kron_I_X = kron(Matrix(I, d, d), vcm.Xobs)
-    XtΩinvX = BLAS.gemm('T', 'N', kron_I_X, Ωchol \ kron_I_X)
-    β = BLAS.gemv('T', kron_I_X, Ωchol \ vec(vcm.Yobs))
-    β = pinv(XtΩinvX) * β
-    if d == 1 
-        vcm.β .= β
-    else 
-        vcm.β .= reshape(β, p, d)
-    end 
-    vcm.β
-end
+#     # quick return if there is no mean parameters
+#     isempty(vcm.β) && return vcm.β
+
+#     # 
+#     Ωchol = cholesky(Symmetric(vcm.Ωest))
+#     # 
+#     d = length(vcm)
+#     p = size(vcm.Xobs, 2)
+#     kron_I_X = kron(Matrix(I, d, d), vcm.Xobs)
+#     XtΩinvX = BLAS.gemm('T', 'N', kron_I_X, Ωchol \ kron_I_X)
+#     β = BLAS.gemv('T', kron_I_X, Ωchol \ vec(vcm.Yobs))
+#     β = pinv(XtΩinvX) * β
+#     if d == 1 
+#         vcm.β .= β
+#     else 
+#         vcm.β .= reshape(β, p, d)
+#     end 
+#     vcm.β
+# end
 
 """
     kronaxpy!(A, X, Y)
@@ -330,3 +207,99 @@ function clamp_diagonal!(
     end
     A
 end
+
+"""
+    mul!(res, Ω, M)
+
+Calculates the matrix-matrix or matrix-vector product ``ΩM`` and stores the result in `res`,
+overwriting the existing value of `res`. Note that `res` must not be aliased with either `Ω` or
+`M`.
+"""
+function LinearAlgebra.mul!(
+    res :: AbstractVecOrMat{T}, 
+    Ω   :: MvcCovMatrix{T}, 
+    M   :: AbstractVecOrMat{T}) where T <: Real
+    n, d, m = size(Ω.G[1], 1), size(Ω.Σ[1], 1), length(Ω.G)
+    Σ, G = Ω.Σ, Ω.G
+    for col in 1:size(M, 2)
+        Mcol = reshape(view(M, :, col), n, d)
+        rcol = view(res, :, col)
+        mul!(Ω.storage_nd, Mcol, Σ[end])
+        copyto!(rcol, Ω.storage_nd)
+        for i in 1:m
+            q = size(G[i], 2)
+            mul!(view(Ω.storage_qd_1, 1:q, :), transpose(G[i]), Mcol)
+            mul!(view(Ω.storage_qd_2, 1:q, :), view(Ω.storage_qd_1, 1:q, :), Σ[i])
+            mul!(Ω.storage_nd, G[i], view(Ω.storage_qd_2, 1:q, :))
+            @inbounds @simd for j in 1:length(rcol)
+                rcol[j] += Ω.storage_nd[j]
+            end 
+        end
+    end
+    res
+end
+
+""" 
+    updateM!(M, )
+
+Calculate `M = (I_d⊗1_n)'[(1_d1_d'⊗GG')⊙Ωinv](I_d⊗1_n)`. For multi-threading, start julia
+with `julia --threads 4` ()
+
+# Input 
+- `M`: d x d matrix 
+- `G`: n x q matrix  
+- `rhs_nd_q`: nd x q matrix 
+- `storage_nd_q`: initial guess of `Ωinv (I_d⊗G)`
+- `Ω`: MvcCovMatrix
+- `C`
+
+# Output 
+- `obj`: objective value 
+
+"""
+function updateM!(
+    M     :: Matrix{T},
+    G     :: Matrix{T},
+    Ω     :: MvcCovMatrix{T},
+    storage_nd_q :: Matrix{T} = Matrix{T}(undef, size(G, 1) * size(M, 1), size(G, 2)), 
+    rhs_nd     :: Vector{T} = Vector{T}(undef, size(G, 1) * size(M, 1)), 
+    C     :: Matrix{T} = Matrix{T}(undef, size(G, 2), size(G, 2))
+    ) where T <: Real 
+    n, d, q = size(G, 1), size(M, 1), size(G, 2)
+
+    # loop over each block 
+    for j in 1:d 
+        # obtain Ωinv * (I ⊗ G)
+            # TRIED, but failed: get wrong estimates 
+            # Threads.@threads for k in 1:q            
+            #     cg!(view(storage_nd_q, :, k), Ω, [zeros((j - 1) * n); view(G, :, k); zeros((d - j) * n)])
+            # end
+        for k in 1:q 
+            #copyto!(rhs_nd, 
+            #   [zeros((j - 1) * n); view(G, :, k); zeros((d - j) * n)])
+            for iter in 1:((j-1)*n)
+                rhs_nd[iter] = zero(T)
+            end
+            for iter in 1:n
+                rhs_nd[(j-1)*n + iter] = G[iter, k]
+            end 
+            for iter in (j * n + 1):(n*d)
+                rhs_nd[iter] = zero(T)
+            end
+            # copyto!(rhs_nd, 
+            #   [zeros((j - 1) * n); view(G, :, k); zeros((d - j) * n)])
+            cg!(view(storage_nd_q, :, k), Ω, rhs_nd)
+            #cg!(view(storage_nd_q, :, k), Ω, [zeros((j - 1) * n); view(G, :, k); zeros((d - j) * n)])
+        end
+
+
+        #fill in Mi matrix 
+        for Mrow in 1:d 
+            #M[Mrow, j] = tr(G' * storage_nd_q[(((Mrow-1)* n)+1):(((Mrow -1) * n)+n), 1:q])
+            M[Mrow, j] = tr(BLAS.gemm!('T', 'N', one(T), G, 
+                        storage_nd_q[(((Mrow-1)* n)+1):(((Mrow -1) * n)+n), 1:q], zero(T), C))
+        end
+    end 
+
+    return M 
+end 
