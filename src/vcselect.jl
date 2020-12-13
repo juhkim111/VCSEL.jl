@@ -323,6 +323,139 @@ function mm_update_Σ!(
 end 
 
 """
+    mm_update_Σ_v2!(vcm; penfun, λ, penwt, maxiters, tol, verbose)
+
+Update `Σ` using MM algorithm.
+"""
+function mm_update_Σ_v2!(
+    vcm         :: VCModel;
+    penfun      :: Penalty = NoPenalty(),
+    λ           :: Real = 1.0,
+    penwt       :: AbstractVector = [ones(nvarcomps(vcm)-1); 0.0],
+    standardize :: Bool = false, 
+    maxiters    :: Int = 1000, 
+    tol         :: Real = 1e-6,
+    verbose     :: Bool = false
+    ) 
+
+    # initialize algorithm 
+    n, d = size(vcm.Y)
+
+    # # initial objective value 
+    # updateΩ!(vcm)
+    # update_arrays!(vcm)
+    # obj = objvalue(vcm; penfun=penfun, λ=λ, penwt=penwt)
+
+    # # display 
+    if verbose 
+        println("iter = 0")
+        println("Σ    = ", norm.((vcm.Ω).Σ))
+        #println("obj  = ", obj) 
+    end  
+
+    # Σtmp = deepcopy(vcm.Σ)
+
+    ## MM loop 
+    niters = 0
+    for iter in 1:maxiters
+        for i in 1:nvarcomps(vcm)
+            # if previous iterate is zero, move on to the next component
+            if iszero((vcm.Ω).Σ) 
+                continue 
+            end 
+
+            # `(kron_I_one)' * [kron(ones(d, d), V[i]) .* Ωinv] * (kron_I_one)`
+            println("vcm.M", vcm.M)
+            if i < nvarcomps(vcm)
+                updateM!(vcm.M, vcm.G[i], vcm.Ω, vcm.storage_nd, vcm.storage_nd_q)
+            else
+                updateM!(vcm.M, Matrix(1.0I, n, n), vcm.Ω, vcm.storage_nd)
+            end
+            
+            println("vcm.M", vcm.M)
+            # add penalty as long as it is NOT the last variance component 
+            if isa(penfun, L1Penalty) && i < nvarcomps(vcm) 
+                penconst = λ * penwt[i] / √tr(vcm.Σ[i])
+                for j in 1:d
+                    vcm.M[j, j] += penconst  
+                end             
+            elseif isa(penfun, MCPPenalty) && (i < nvarcomps(vcm)) && (√tr((vcm.Ω).Σ[i]) <= penfun.γ * λ)
+                # penconst = λ * penwt[i] / √tr(vcm.Σ[i]) - 1 / penfun.γ
+                penconst = λ / √tr((vcm.Ω).Σ[i]) - 1 / penfun.γ
+                for j in 1:d
+                    vcm.M[j, j] += penconst  
+                end
+            end 
+
+            # cholesky decomposition & inverse 
+            copyto!(vcm.L, cholesky!(Symmetric(vcm.M)).L)
+            vcm.Linv[:] = inv(vcm.L)
+
+            println("vcm.L", vcm.L)
+
+            # 
+            LinearAlgebra.mul!(vcm.Mdxd, (vcm.Ω).Σ[i], vcm.L)
+            println("vcm.Mdxd", vcm.Mdxd)
+            if i < nvarcomps(vcm)
+                mul!(vcm.storage_q_d[i], transpose(vcm.G[i]), vcm.R)
+                println("vcm.storage_q_d[i]", vcm.storage_q_d[i])
+                copyto!(vcm.storage_q_d[i], vcm.storage_q_d[i] * vcm.Mdxd)
+                BLAS.syrk!('U', 'T', 1.0, vcm.storage_q_d[i], 0.0, vcm.Mdxd)
+                println("vcm.storage_q_d[i]", vcm.storage_q_d[i])
+            else 
+                copyto!(vcm.R, vcm.R * vcm.Mdxd)
+                BLAS.syrk!('U', 'T', 1.0, vcm.R, 0.0, vcm.Mdxd)
+            end 
+            # 
+            println("vcm.Mdxd", vcm.Mdxd)
+            storage = eigen!(Symmetric(vcm.Mdxd))
+            println(storage)
+            # if negative value, set it to 0
+            @inbounds for k in 1:d
+                storage.values[k] = storage.values[k] > 0 ? √storage.values[k] : 0
+            end 
+            copyto!(vcm.Σtmp[i], BLAS.gemm('N', 'T', 
+                    storage.vectors * Diagonal(storage.values), storage.vectors))
+            copyto!(vcm.Σtmp[i], BLAS.gemm('T', 'N', 
+                    vcm.Linv, vcm.Σtmp[i] * vcm.Linv))
+        end 
+
+
+        # update Σ
+        clamp_diagonal!(vcm.Σtmp[end], tol, Inf)
+
+        # update working arrays 
+        update_arrays!(vcm, vcm.Σtmp)
+        
+        # update 
+        sum_normΣold = sum_normΣ
+        sum_normΣ = sum(norm.(vcm.Σtmp, 2))
+
+         # # display 
+        if verbose 
+            println("iter = ", iter)
+            println("Σ    = ", norm.((vcm.Ω).Σ))
+        end  
+
+
+        # check convergence 
+        if abs(sum_normΣold - sum_norm) < tol * (abs(sum_normΣ) + 1)
+            niters = iter 
+            break 
+        end 
+
+    end # end of iteration 
+
+
+    # output 
+    if niters == 0 
+        niters = maxiters
+    end 
+ 
+    return vcm, niters
+end 
+
+"""
     mm_update_σ2!(vcm; penfun, λ, penwt, maxiters, tol, verbose)
 
 Update `σ2` using MM algorithm. 
