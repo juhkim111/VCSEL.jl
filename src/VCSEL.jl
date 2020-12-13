@@ -72,11 +72,14 @@ struct VCModel{T <: Real}
     # covariance matrix and working arrays 
     vecR        :: AbstractVector{T}
     R           :: AbstractVecOrMat{T}
+    storage_nd  :: AbstractVector{T}
+    storage_nd_q :: AbstractVecOrMat{T}
     M           :: AbstractVecOrMat{T}
     L           :: AbstractVecOrMat{T}
     Linv        :: AbstractVecOrMat{T}
+    storage_q_d :: AbstractVector{Matrix{T}}
     Mdxd        :: AbstractVecOrMat{T}
-    Mnxd        :: AbstractVecOrMat{T}
+    Σtmp        :: AbstractVector{Matrix{T}}
 end
 
 
@@ -107,23 +110,23 @@ function VCModel(
     #
     Ω = MvcCovMatrix(Σ, G)
     # pre-allocate working arrays 
-    vecR = Vector{T}(undef, n * d)
-    cg!(vecR, Ω, vecY)
+    vecR = cg(Ω, vecY)
     R = reshape(vecR, n, d)
     # 
     storage_nd = Vector{T}(undef, n * d)
-    storage_nd_q = Matrix{T}(undef, n * d, maximum([size(G[i], 2) for i in 1:m]))
+    storage_nd_q = ones(T, n*d, maximum([size(G[i], 2) for i in 1:m]))
     M = Matrix{T}(undef, d, d)
     L = Matrix{T}(undef, d, d)
     Linv = Matrix{T}(undef, d, d)
+    storage_q_d = [Matrix{T}(undef, 
+            size(G[i], 2), d) for i in 1:m]
     Mdxd = Matrix{T}(undef, d, d) # d x d 
-    Mnxd = Matrix{T}(undef, n, d)
     # 
+    Σtmp = [Matrix{T}(undef, d, d) for i in 1:(length(Gobs) + 1)]
 
     # 
-    VCModel{T}(Yobs, Xobs, Gobs, Y, vecY, G,
-            β, Ω, vecR, R, M, L, Linv, 
-            Mdxd, Mnxd)
+    VCModel{T}(Yobs, Xobs, Gobs, Y, vecY, G, β, Ω, vecR, R, 
+                storage_nd, storage_nd_q, M, L, Linv, storage_q_d, Mdxd, Σtmp)
 
 end 
 
@@ -207,18 +210,6 @@ Number of groups, `m`, for [`VCModel`](@ref) or [`VCintModel`](@ref).
 """
 ngroups(vcm::VCModel) = length(vcm.G)
 
-# """
-#     updateΩ!(vcm::VCModel)
-
-# Update covariance matrix `Ω` for [`VCModel`](@ref).
-# """
-# function updateΩ!(vcm::VCModel)
-#     fill!(vcm.Ω, 0)
-#     for k in 1:nvarcomps(vcm)
-#         kronaxpy!(vcm.wt[k] .* vcm.Σ[k], vcm.V[k], vcm.Ω)
-#     end
-#     vcm.Ω
-# end
 
 
 # """
@@ -241,76 +232,73 @@ ngroups(vcm::VCModel) = length(vcm.G)
 
 
 
-# """
-#     update_arrays!(vcm)
+"""
+    update_arrays!(vcm, Σnew)
 
-# Update working arrays `Ωchol`, `Ωinv`, `ΩinvY`, `R`.
+Update working arrays `Ωchol`, `Ωinv`, `ΩinvY`, `R`.
+"""
+function update_arrays!(vcm::Union{VCModel}, Σnew::Matrix{T}) where T <: Real
+
+    (vcm.Ω).Σ .= Σnew
+    cg!(vcm.vecR, vcm.Ω, vcm.vecY)
+    vcm.R = reshape(vcm.vecR, n, d)
+    nothing 
+end 
+
 # """
-# function update_arrays!(vcm::Union{VCModel, VCintModel})
-#     # vcm.Ωchol = cholesky!(Symmetric(vcm.Ω))
-#     # vcm.Ωinv[:] = inv(vcm.Ωchol)
-#     Ωchol = cholesky!(Symmetric(vcm.Ω))
-#     vcm.ΩcholL .= Ωchol.L
-#     vcm.Ωinv[:] = inv(Ωchol)
-#     mul!(vcm.ΩinvY, vcm.Ωinv, vcm.vecY)
-#     if typeof(vcm) <: VCModel
-#         vcm.R .= reshape(vcm.ΩinvY, size(vcm))
+#     resetModel!(vcm::VCModel)
+
+# Reset [`VCModel`](@ref) with initial estimates `Σ`. If `Σ` is unspecified, 
+# it is set to a vector of ones or identity matrices based on its dimension.
+
+# # Example
+
+# ```julia
+# vcm = VCModel(Y, X, V)
+# Σ̂path, β̂path, λpath, objpath, niterspath = vcselectpath!(vcm; penfun=MCPPenalty(), nλ=50)
+# resetModel!(vcm)
+# ```
+# """
+# function resetModel!(
+#     vcm :: VCModel
+#     ) 
+#     d = length(vcm)
+#     if typeof(vcm.Σ[1]) <: Matrix 
+#         resetModel!(vcm, 
+#                 [Matrix(one(eltype(vcm.Σ[1]))*I, d, d) for i in eachindex(vcm.Σ)])
+#     else 
+#         resetModel!(vcm,
+#                 ones(eltype(vcm.Σ[1]), nvarcomps(vcm)))
 #     end 
-#     nothing 
 # end 
 
-"""
-    resetModel!(vcm::VCModel)
+# """
+#     resetModel!(vcm::VCModel, Σ)
 
-Reset [`VCModel`](@ref) with initial estimates `Σ`. If `Σ` is unspecified, 
-it is set to a vector of ones or identity matrices based on its dimension.
+# Reset [`VCModel`](@ref) with initial estimates `Σ`.
 
-# Example
+# # Example
 
-```julia
-vcm = VCModel(Y, X, V)
-Σ̂path, β̂path, λpath, objpath, niterspath = vcselectpath!(vcm; penfun=MCPPenalty(), nλ=50)
-resetModel!(vcm)
-```
-"""
-function resetModel!(
-    vcm :: VCModel
-    ) 
-    d = length(vcm)
-    if typeof(vcm.Σ[1]) <: Matrix 
-        resetModel!(vcm, 
-                [Matrix(one(eltype(vcm.Σ[1]))*I, d, d) for i in eachindex(vcm.Σ)])
-    else 
-        resetModel!(vcm,
-                ones(eltype(vcm.Σ[1]), nvarcomps(vcm)))
-    end 
-end 
+# ```julia
+# vcm = VCModel(Y, X, V)
+# Σ̂path, β̂path, = vcselectpath!(vcm; penfun=MCPPenalty(), nλ=30)
+# Σ = fill(0.5, length(V))
+# resetModel!(vcm, Σ)
+# ```
+# """
+# function resetModel!(
+#     vcm :: VCModel,
+#     Σ :: Union{AbstractVector{T}, AbstractVector{Matrix{T}}} 
+#     ) where {T <: Real}
 
-"""
-    resetModel!(vcm::VCModel, Σ)
 
-Reset [`VCModel`](@ref) with initial estimates `Σ`.
+#     # pre-allocate working arrays 
+#     vecR = Vector{T}(undef, n * d)
+#     cg!(vecR, Ω, vecY)
+#     R = reshape(vecR, n, d)
 
-# Example
-
-```julia
-vcm = VCModel(Y, X, V)
-Σ̂path, β̂path, = vcselectpath!(vcm; penfun=MCPPenalty(), nλ=30)
-Σ = fill(0.5, length(V))
-resetModel!(vcm, Σ)
-```
-"""
-function resetModel!(
-    vcm :: VCModel,
-    Σ :: Union{AbstractVector{T}, AbstractVector{Matrix{T}}} 
-    ) where {T <: Real}
-
-    vcm.Σ .= Σ
-    updateΩ!(vcm)
-    updateΩest!(vcm)
-    update_arrays!(vcm)
-    vcm.R .= reshape(vcm.ΩinvY, size(vcm))
-end 
+#     vcm.R .= reshape(vcm.ΩinvY, size(vcm))
+# end 
 
 
 
