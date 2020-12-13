@@ -261,22 +261,34 @@ function updateM!(
     M     :: Matrix{T},
     G     :: Matrix{T},
     Ω     :: MvcCovMatrix{T},
-    storage_nd_q :: Matrix{T} = Matrix{T}(undef, size(G, 1) * size(M, 1), size(G, 2)), 
-    rhs_nd     :: Vector{T} = Vector{T}(undef, size(G, 1) * size(M, 1)), 
+    rhs_nd     :: Vector{T} = Vector{T}(undef, size(G, 1) * size(M, 1)),
+    #rhs_nd_q     :: Matrix{T} = Matrix{T}(undef, size(G, 1) * size(M, 1), size(G, 2)), 
+    storage_nd_q :: Matrix{T} = Matrix{T}(undef, size(G, 1) * size(M, 1), size(G, 2)),
     C     :: Matrix{T} = Matrix{T}(undef, size(G, 2), size(G, 2))
     ) where T <: Real 
     n, d, q = size(G, 1), size(M, 1), size(G, 2)
-
+ 
     # loop over each block 
     for j in 1:d 
         # obtain Ωinv * (I ⊗ G)
-            # TRIED, but failed: get wrong estimates 
-            # Threads.@threads for k in 1:q            
-            #     cg!(view(storage_nd_q, :, k), Ω, [zeros((j - 1) * n); view(G, :, k); zeros((d - j) * n)])
+            # TRIED, but failed: get NaN
+            # for k in 1:q
+            #     for iter in 1:((j-1)*n)
+            #         rhs_nd_q[iter, k] = zero(T)
+            #     end
+            #     for iter in 1:n
+            #         rhs_nd_q[(j-1)*n + iter, k] = G[iter, k]
+            #     end 
+            #     for iter in (j * n + 1):(n*d)
+            #         rhs_nd_q[iter, k] = zero(T)
+            #     end
             # end
+            # Threads.@threads for k in 1:q
+            #     cg!(view(storage_nd_q, :, k), Ω, view(rhs_nd_q, :, k))
+            # end
+
+        # THIS WORKS: 96.610988 seconds (947.39 k allocations: 54.333 MiB, 0.01% gc time)
         for k in 1:q 
-            #copyto!(rhs_nd, 
-            #   [zeros((j - 1) * n); view(G, :, k); zeros((d - j) * n)])
             for iter in 1:((j-1)*n)
                 rhs_nd[iter] = zero(T)
             end
@@ -286,10 +298,7 @@ function updateM!(
             for iter in (j * n + 1):(n*d)
                 rhs_nd[iter] = zero(T)
             end
-            # copyto!(rhs_nd, 
-            #   [zeros((j - 1) * n); view(G, :, k); zeros((d - j) * n)])
-            cg!(view(storage_nd_q, :, k), Ω, rhs_nd)
-            #cg!(view(storage_nd_q, :, k), Ω, [zeros((j - 1) * n); view(G, :, k); zeros((d - j) * n)])
+            copyto!(view(storage_nd_q, :, k), cg(Ω, rhs_nd))
         end
 
 
@@ -303,3 +312,4 @@ function updateM!(
 
     return M 
 end 
+
