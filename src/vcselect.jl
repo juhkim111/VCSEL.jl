@@ -114,7 +114,7 @@ function vcselectpath!(
 end 
 
 """
-    vcselect!(vcm; penfun, λ, penwt, maxiters, tol, verbose)
+    vcselect!(vcm; penfun, λ, penwt, maxiters, tol, verbose, checktype)
 
 # Input 
 - `vcm`: [`VCModel`](@ref).
@@ -145,16 +145,16 @@ vcselect!(vcm1; penfun=L1Penalty(), λ=1.5)
 ```
 """
 function vcselect!(
-    vcm          :: VCModel;
-    penfun       :: Penalty = NoPenalty(),
-    λ            :: Real = 1.0,
-    penwt        :: AbstractVector = [ones(nvarcomps(vcm)-1); 0.0],
-    standardize  :: Bool = false, 
-    maxiters     :: Int = 1000,
-    tol          :: Real = 1e-6,
-    verbose      :: Bool = false,
-    checktype    :: Bool = true 
-    ) 
+    vcm         :: VCModel{T};
+    penfun      :: Penalty = NoPenalty(),
+    λ           :: Real = 1.0,
+    penwt       :: AbstractVector = [ones(nvarcomps(vcm)-1); 0.0],
+    #standardize :: Bool = false, 
+    maxiters    :: Int = 1000, 
+    tol         :: Real = 1e-6,
+    verbose     :: Bool = false,
+    checktype   :: Bool = true 
+    ) where {T <: Real}
 
     # handle errors 
     if checktype 
@@ -165,52 +165,13 @@ function vcselect!(
         @assert all(tr.(vcm.Σ) .> 0) "starting Σ should be strictly positive or non-zero matrices"
     end 
 
-    # update weight with reciprocal of frobenius norm 
-    if standardize 
-        vcm.wt .= 1 ./ norm.(vcm.V)
-    end 
-
-    # multivariate update 
-    if typeof(vcm.Σ[1]) <: Matrix  # length(vcm) > 1
-        _, obj, niters, objvec = mm_update_Σ!(vcm; penfun=penfun, λ=λ, 
-            penwt=penwt, maxiters=maxiters, tol=tol, verbose=verbose)
-    
-    # univariate update 
-    else
-        _, obj, niters, objvec = mm_update_σ2!(vcm; penfun=penfun, λ=λ, 
-            penwt=penwt, maxiters=maxiters, tol=tol, verbose=verbose)
-    end 
-
-    # output 
-    return vcm, obj, niters, objvec
-
-end 
-
-"""
-    mm_update_Σ!(vcm; penfun, λ, penwt, maxiters, tol, verbose)
-
-Update `Σ` using MM algorithm.
-"""
-function mm_update_Σ!(
-    vcm         :: VCModel;
-    penfun      :: Penalty = NoPenalty(),
-    λ           :: Real = 1.0,
-    penwt       :: AbstractVector = [ones(nvarcomps(vcm)-1); 0.0],
-    standardize :: Bool = false, 
-    maxiters    :: Int = 1000, 
-    tol         :: Real = 1e-6,
-    verbose     :: Bool = false 
-    ) 
 
     # initialize algorithm 
-    n, d = size(vcm)
-
-    # working arrays 
-    kron_I_one = kron(Matrix(I, d, d), ones(n)) # dn x d
+    n = size(vcm)[1]
    
     # initial objective value 
-    updateΩ!(vcm)
-    update_arrays!(vcm)
+    #updateΩ!(vcm)
+    #update_arrays!(vcm)
     obj = objvalue(vcm; penfun=penfun, λ=λ, penwt=penwt)
 
     # # display 
@@ -223,7 +184,7 @@ function mm_update_Σ!(
     # update objective value 
     objvec = obj
 
-    Σtmp = deepcopy(vcm.Σ)
+    #Σtmp = deepcopy(vcm.Σ)
 
     ## MM loop 
     niters = 0
@@ -234,51 +195,19 @@ function mm_update_Σ!(
                 continue 
             end 
 
-            # `(kron_I_one)' * [kron(ones(d, d), V[i]) .* Ωinv] * (kron_I_one)`
-            copyto!(vcm.Mndxnd, vcm.kron_ones_V[i] .* vcm.Ωinv)
-            copyto!(vcm.Mdxd, BLAS.gemm('T', 'N', vcm.wt[i], kron_I_one, vcm.Mndxnd * kron_I_one))
-        
-            # add penalty as long as it is NOT the last variance component 
-            if isa(penfun, L1Penalty) && i < nvarcomps(vcm) 
-                penconst = λ * penwt[i] / √tr(vcm.Σ[i])
-                for j in 1:d
-                    vcm.Mdxd[j, j] += penconst  
-                end             
-            elseif isa(penfun, MCPPenalty) && (i < nvarcomps(vcm)) && (√tr(vcm.Σ[i]) <= penfun.γ * λ)
-                # penconst = λ * penwt[i] / √tr(vcm.Σ[i]) - 1 / penfun.γ
-                penconst = λ / √tr(vcm.Σ[i]) - 1 / penfun.γ
-                for j in 1:d
-                    vcm.Mdxd[j, j] += penconst  
-                end
+            if i < nvarcomps(vcm)
+                mm_update_Σ!(vcm, vcm.G[i], i; penfun=penfun, λ=λ, penwt=penwt)
+            else 
+                mm_update_Σ!(vcm, Matrix(one(T) * I, n, n), i)
             end 
-
-            # cholesky decomposition & inverse 
-            copyto!(vcm.L, cholesky!(Symmetric(vcm.Mdxd)).L)
-            vcm.Linv[:] = inv(vcm.L)
-
-            # 
-            copyto!(vcm.Mdxd, vcm.Σ[i] * vcm.L)
-            copyto!(vcm.Mnxd, vcm.R * vcm.Mdxd)
-            copyto!(vcm.Mdxd, BLAS.gemm('T', 'N', vcm.Mnxd, vcm.V[i] * vcm.Mnxd))
-
-            # 
-            storage = eigen!(Symmetric(vcm.Mdxd))
-            # if negative value, set it to 0
-            @inbounds for k in 1:d
-                storage.values[k] = storage.values[k] > 0 ? √storage.values[k] : 0
-            end 
-            copyto!(Σtmp[i], BLAS.gemm('N', 'T', 
-                    storage.vectors * Diagonal(storage.values), storage.vectors))
-            copyto!(Σtmp[i], BLAS.gemm('T', 'N', 
-                    sqrt(vcm.wt[i]), vcm.Linv, Σtmp[i] * vcm.Linv))
+            
         end 
 
         # update Σ
-        clamp_diagonal!(Σtmp[end], tol, Inf)
-        vcm.Σ .= Σtmp
+        clamp_diagonal!(vcm.Σ[end], tol, Inf)
 
         # update working arrays 
-        updateΩ!(vcm)
+        formΩ!(vcm.Ω, vcm.Σ, vcm.G)
         update_arrays!(vcm)
 
         # update objective value 
@@ -298,21 +227,21 @@ function mm_update_Σ!(
         # check convergence 
         if abs(obj - objold) < tol * (abs(obj) + 1)
             niters = iter 
+            println("converged!")
             break 
         end 
 
     end # end of iteration 
 
-    # back to original scale  
-    if standardize 
-        vcm.Σ .*= vcm.wt
-        vcm.wt .= ones(nvarcomps(vcm))
-    end 
+    # # back to original scale  
+    # if standardize 
+    #     vcm.Σ .*= vcm.wt
+    #     vcm.wt .= ones(nvarcomps(vcm))
+    # end 
 
     # construct final Ω matrix
-    updateΩ!(vcm)
-    updateΩest!(vcm)
-    updateβ!(vcm)
+    #updateΩ!(vcm)
+    #updateβ!(vcm)
 
     # output 
     if niters == 0 
@@ -321,6 +250,70 @@ function mm_update_Σ!(
  
     return vcm, obj, niters, objvec
 end 
+
+
+"""
+    mm_update_Σ!(vcm; penfun, λ, penwt, maxiters, tol, verbose)
+
+Update `Σ` using MM algorithm.
+"""
+function mm_update_Σ!(
+    vcm     :: VCModel, 
+    Gi      :: AbstractMatrix{T},
+    i       :: Int; 
+    penfun :: Penalty = NoPenalty(),
+    λ      :: Real    = zero(T), 
+    penwt  :: AbstractVector = [ones(nvarcomps(vcm)-1); 0.0]
+) where {T <: Union{Real}}
+
+    n, d = size(vcm)[1], size(vcm)[2]
+    # `(kron_I_one)' * [kron(ones(d, d), V[i]) .* Ωinv] * (kron_I_one)`
+    BLAS.syrk!('U', 'N', true, kron(ones(T, d), Gi), false, vcm.Mndxnd)
+    vcm.Mndxnd .*= vcm.Ωinv
+    BLAS.gemm!('T', 'N', true, vcm.kron_I_one, 
+                    Symmetric(vcm.Mndxnd) * vcm.kron_I_one, false, vcm.Mdxd)
+    
+    # add penalty as long as it is NOT the last variance component 
+    if isa(penfun, L1Penalty) && i < nvarcomps(vcm) 
+        penconst = λ * penwt[i] / √tr(vcm.Σ[i])
+        for j in 1:d
+            vcm.Mdxd[j, j] += penconst  
+        end             
+    elseif isa(penfun, MCPPenalty) && (i < nvarcomps(vcm)) && (√tr(vcm.Σ[i]) <= penfun.γ * λ)
+        # penconst = λ * penwt[i] / √tr(vcm.Σ[i]) - 1 / penfun.γ
+        penconst = λ / √tr(vcm.Σ[i]) - 1 / penfun.γ
+        for j in 1:d
+            vcm.Mdxd[j, j] += penconst  
+        end
+    end 
+
+    # cholesky decomposition & inverse 
+    copyto!(vcm.L, cholesky!(Symmetric(vcm.Mdxd)).L)
+    # 
+    mul!(vcm.Mdxd, vcm.Σ[i], vcm.L)
+    mul!(vcm.Mnxd, vcm.R, vcm.Mdxd)
+   
+    # 
+    if Gi != I(n)
+        BLAS.syrk!('U', 'T', true, Gi' * vcm.Mnxd, false, vcm.Mdxd)
+    else
+        BLAS.syrk!('U', 'T', true, vcm.Mnxd, false, vcm.Mdxd)
+    end
+   
+    # 
+    storage = eigen!(Symmetric(vcm.Mdxd))
+    # if negative value, set it to 0
+    @inbounds for k in 1:d
+        storage.values[k] = storage.values[k] > 0 ? √storage.values[k] : 0
+    end 
+    # copyto!(vcm.Σ[i], BLAS.gemm('N', 'T', 
+    #         storage.vectors * Diagonal(storage.values), storage.vectors))
+    BLAS.gemm!('N', 'T', true, 
+        storage.vectors * Diagonal(storage.values), storage.vectors, false, vcm.Σ[i])
+    vcm.L[:] = inv(vcm.L)
+    BLAS.gemm!('T', 'N', true, vcm.L, vcm.Σ[i] * vcm.L, false, vcm.Σ[i])
+end 
+
 
 """
     mm_update_σ2!(vcm; penfun, λ, penwt, maxiters, tol, verbose)
