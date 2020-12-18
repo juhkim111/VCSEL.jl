@@ -3,6 +3,7 @@ __precompile__()
 module VCSEL
 
 using PenaltyFunctions, LinearAlgebra, StatsBase, Distributions, Reexport, Plots
+using Permutations
 @reexport using PenaltyFunctions
 @reexport using Plots 
 
@@ -15,6 +16,7 @@ export
     kronaxpy!,
     nullprojection,  
     objvalue,  
+    formΩ!,
 # maximum lambda 
     maxlambda, 
 # utilities function 
@@ -27,10 +29,10 @@ export
     vcselect, vcselect!, vcselectpath, vcselectpath!
 
 """
-    VCModel(Y, X, V, Σ)
-    VCModel(Y, X, V)
-    VCModel(Y, V, Σ)
-    VCModel(Y, V)
+    VCModel(Y, X, G, Σ)
+    VCModel(Y, X, G)
+    VCModel(Y, G, Σ)
+    VCModel(Y, G)
 
 Variance component model type. Stores the data and model parameters of a variance 
 component model. 
@@ -41,182 +43,164 @@ struct VCModel{T <: Real}
     # data
     Yobs        :: AbstractVecOrMat{T}
     Xobs        :: AbstractVecOrMat{T}
-    Vobs        :: AbstractVector{Matrix{T}}
-    Y           :: AbstractVecOrMat{T}       # projected response matrix 
+    Gobs        :: AbstractVector{Matrix{T}} 
     vecY        :: AbstractVector{T}         # vectorized projected response matrix 
-    V           :: AbstractVector{Matrix{T}} # projected V
+    G           :: AbstractVector{Matrix{T}} # projected Gi including the last variance component 
     # model parameters 
     β           :: AbstractVecOrMat{T}
     Σ           :: Union{AbstractVector{T}, AbstractVector{Matrix{T}}}
-    # covariance matrix and working arrays 
-    wt          :: AbstractVector{T}         # weight for standardization 
+    # covariance matrix and working arrays  
     Ω           :: AbstractMatrix{T}         # covariance matrix 
     ΩcholL      :: LowerTriangular{T}        # cholesky factor 
     Ωinv        :: AbstractMatrix{T}         # inverse of covariance matrix 
     ΩinvY       :: AbstractVector{T}         # Ωinv * Y OR Ωinv * vec(Y) 
     R           :: AbstractVecOrMat{T}
-    kron_ones_V :: AbstractVector{Matrix{T}}
     L           :: AbstractVecOrMat{T}
-    Linv        :: AbstractVecOrMat{T}
     Mndxnd      :: AbstractMatrix{T}
+    kron_I_one  :: AbstractMatrix{T}
     Mdxd        :: AbstractVecOrMat{T}
     Mnxd        :: AbstractVecOrMat{T}
-    # covariance matrix in original dimension 
-    Ωest        :: AbstractMatrix{T}
 end
 
 
+# """
+#     VCModel(yobs, Xobs, Vobs, [σ2])
+
+# Default constructor of [`VCModel`](@ref) type when `y` is vector. 
+# """
+# function VCModel(
+#     yobs  :: AbstractVector{T},
+#     Xobs  :: AbstractVecOrMat{T},
+#     Gobs  :: AbstractVector{Matrix{T}},
+#     σ2    :: AbstractVector{T} = ones(length(Vobs))
+#     ) where {T <: Real}
+
+#     # handle error 
+#     @assert length(Vobs) == length(σ2) "vector of covariance matrices and vector of variance components should have the same length!\n"
+
+#     # project onto null space 
+#     y, G, = nullprojection(yobs, Xobs, Gobs)
+#     n = length(y)
+#     vecY = y 
+
+#     # initialize fixed effects parameter 
+#     β = Vector{T}(undef, size(Xobs, 2)) # px1 
+
+#     wt = ones(length(Gobs))
+
+#     # overall covariance matrix 
+#     Ω = zeros(T, n, n)
+#     for j in 1:length(σ2) 
+#         Ω .+= σ2[j] .* V[j]
+#     end 
+#     # allocate arrays 
+#     Ωchol = cholesky!(Symmetric(Ω))
+#     Ωinv = inv(Ωchol) 
+#     ΩinvY = Ωinv * y
+#     R = reshape(ΩinvY, n, 1)
+#     kron_ones_V = similar(V)
+#     L = Vector{T}(undef, 1)
+#     Linv = Vector{T}(undef, 1)
+#     Mndxnd = Matrix{T}(undef, n, 0)
+#     Mdxd = Vector{T}(undef, 1)
+#     Mnxd = Vector{T}(undef, n) # nx1
+#     # allocate matrix in obs diemension
+#     Ωest = Matrix{T}(undef, size(yobs, 1), size(yobs, 1))
+
+#     # 
+#     VCModel{T}(yobs, Xobs, Vobs, y, vecY, V,
+#             β, σ2, wt, Ω, Ωchol.L, Ωinv, ΩinvY, 
+#             R, kron_ones_V, L, Linv, Mndxnd, Mdxd, Mnxd,
+#             Ωest)
+# end 
+
+# """
+#     VCModel(yobs, Vobs, [σ2])
+
+# Construct [`VCModel`](@ref) from `y` and `V` where `y` is vector. `X` is treated empty. 
+# """
+# function VCModel(
+#     yobs  :: AbstractVector{T},
+#     Vobs  :: AbstractVector{Matrix{T}},
+#     σ2    :: AbstractVector{T} = ones(length(Vobs))
+#     ) where {T <: Real}
+
+#     # handle error 
+#     @assert length(Vobs) == length(σ2) "vector of covariance matrices and vector of variance components should have the same length!\n"
+
+#     # create empty matrix for Xobs 
+#     Xobs = zeros(T, length(yobs), 0)
+
+#     # call VCModel constructor 
+#     VCModel(yobs, Xobs, Vobs, σ2)
+# end 
 
 """
-    VCModel(yobs, Xobs, Vobs, [σ2])
-
-Default constructor of [`VCModel`](@ref) type when `y` is vector. 
-"""
-function VCModel(
-    yobs  :: AbstractVector{T},
-    Xobs  :: AbstractVecOrMat{T},
-    Vobs  :: AbstractVector{Matrix{T}},
-    σ2    :: AbstractVector{T} = ones(length(Vobs))
-    ) where {T <: Real}
-
-    # handle error 
-    @assert length(Vobs) == length(σ2) "vector of covariance matrices and vector of variance components should have the same length!\n"
-
-    # project onto null space 
-    y, V, = nullprojection(yobs, Xobs, Vobs)
-    n = length(y)
-    vecY = y 
-
-    # initialize fixed effects parameter 
-    β = Vector{T}(undef, size(Xobs, 2)) # px1 
-
-    wt = ones(length(Vobs))
-
-    # overall covariance matrix 
-    Ω = zeros(T, n, n)
-    for j in 1:length(σ2) 
-        Ω .+= σ2[j] .* V[j]
-    end 
-    # allocate arrays 
-    Ωchol = cholesky!(Symmetric(Ω))
-    Ωinv = inv(Ωchol) 
-    ΩinvY = Ωinv * y
-    R = reshape(ΩinvY, n, 1)
-    kron_ones_V = similar(V)
-    L = Vector{T}(undef, 1)
-    Linv = Vector{T}(undef, 1)
-    Mndxnd = Matrix{T}(undef, n, 0)
-    Mdxd = Vector{T}(undef, 1)
-    Mnxd = Vector{T}(undef, n) # nx1
-    # allocate matrix in obs diemension
-    Ωest = Matrix{T}(undef, size(yobs, 1), size(yobs, 1))
-
-    # 
-    VCModel{T}(yobs, Xobs, Vobs, y, vecY, V,
-            β, σ2, wt, Ω, Ωchol.L, Ωinv, ΩinvY, 
-            R, kron_ones_V, L, Linv, Mndxnd, Mdxd, Mnxd,
-            Ωest)
-end 
-
-"""
-    VCModel(yobs, Vobs, [σ2])
-
-Construct [`VCModel`](@ref) from `y` and `V` where `y` is vector. `X` is treated empty. 
-"""
-function VCModel(
-    yobs  :: AbstractVector{T},
-    Vobs  :: AbstractVector{Matrix{T}},
-    σ2    :: AbstractVector{T} = ones(length(Vobs))
-    ) where {T <: Real}
-
-    # handle error 
-    @assert length(Vobs) == length(σ2) "vector of covariance matrices and vector of variance components should have the same length!\n"
-
-    # create empty matrix for Xobs 
-    Xobs = zeros(T, length(yobs), 0)
-
-    # call VCModel constructor 
-    VCModel(yobs, Xobs, Vobs, σ2)
-end 
-
-"""
-    VCModel(Yobs, Xobs, Vobs, [Σ])
+    VCModel(Yobs, Xobs, Gobs, [Σ])
 
 Default constructor of [`VCModel`](@ref) type.
 """
 function VCModel(
     Yobs  :: AbstractMatrix{T},
     Xobs  :: AbstractVecOrMat{T},
-    Vobs  :: AbstractVector{Matrix{T}},
-    Σ     :: AbstractVector{Matrix{T}} = [Matrix(one(T)*I, 
-            size(Yobs, 2), size(Yobs, 2)) for i in 1:length(Vobs)]
+    Gobs  :: AbstractVector{Matrix{T}},
+    Σ     :: AbstractVector{Matrix{T}} = 
+                [Matrix{T}(I, size(Yobs, 2), size(Yobs, 2)) for i in 1:(length(Gobs)+1)]
     ) where {T <: AbstractFloat}
 
     # handle error 
-    @assert length(Vobs) == length(Σ) "vector of covariance matrices and vector of variance components should have the same length!\n"
-
+    @assert (length(Gobs) + 1) == length(Σ) "length of vector of genotype matrices should be one less than that of variance components!\n"
+    
     # projection 
-    Y, V, = nullprojection(Yobs, Xobs, Vobs)
-    n, d = size(Y, 1), size(Y, 2)
-    vecY = vec(Y)
-    nd = n * d
+    vecY, G, = nullprojection(Yobs, Xobs, Gobs) 
+    n, d = size(G[1], 1), size(Yobs, 2)
+    nd = n * d 
     p = size(Xobs, 2)
     # 
     β = Matrix{T}(undef, p, d)
-    #
-    wt = ones(length(Vobs))
+    # #
+    # wt = ones(length(Vobs))
     # accumulate covariance matrix 
     Ω = zeros(T, nd, nd)
-    for j in 1:length(Σ)
-        kronaxpy!(Σ[j], V[j], Ω)
-    end
+    formΩ!(Ω, Σ, G)
     # pre-allocate working arrays 
     Ωchol = cholesky!(Symmetric(Ω))
     Ωinv = inv(Ωchol) 
     ΩinvY = Ωinv * vecY  
     R = reshape(ΩinvY, n, d) # n x d 
-    kron_ones_V = similar(V)
-    kron_I_one = kron(Matrix(I, d, d), ones(n)) # dn x d
-    ones_d = ones(d, d)
-    for i in 1:length(V)
-        kron_ones_V[i] = kron(ones_d, V[i])
-    end 
-    L = Matrix{T}(undef, d, d)
-    Linv = Matrix{T}(undef, d, d)
-    Mndxnd = Matrix{T}(undef, nd, nd)
+    L = Matrix{T}(undef, d, d) # d x d 
+    Mndxnd = Matrix{T}(undef, nd, nd) # nd x nd 
+    kron_I_one = kron(I(d), ones(n)) # nd x d
     Mdxd = Matrix{T}(undef, d, d) # d x d 
-    Mnxd = Matrix{T}(undef, n, d)
-    # 
-    Ωest = Matrix{T}(undef, length(Yobs), length(Yobs))
+    Mnxd = Matrix{T}(undef, n, d) # n x d 
 
     # 
-    VCModel{T}(Yobs, Xobs, Vobs, Y, vecY, V,
-            β, Σ, wt, Ω, Ωchol.L, Ωinv, ΩinvY, 
-            R, kron_ones_V, L, Linv, Mndxnd, Mdxd, Mnxd,
-            Ωest)
+    VCModel{T}(Yobs, Xobs, Gobs, vecY, G,
+            β, Σ, Ω, Ωchol.L, Ωinv, ΩinvY, 
+            R, L, Mndxnd, kron_I_one, Mdxd, Mnxd)
 
 end 
 
 """
-    VCModel(Yobs, Vobs, [Σ])
+    VCModel(Yobs, Gobs, [Σ])
 
-Construct [`VCModel`](@ref) from `Y` and `V` where `Y` is matrix. `X` is treated empty. 
+Construct [`VCModel`](@ref) from `Yobs` and `Gobs` where `Yobs` is matrix. 
+`X` is treated empty. 
 """
 function VCModel(
     Yobs  :: AbstractMatrix{T},
-    Vobs  :: AbstractVector{Matrix{T}},
-    Σ     :: AbstractVector{Matrix{T}} = [Matrix(one(T)*I, 
-            size(Yobs, 2), size(Yobs, 2)) for i in 1:length(Vobs)]
+    Gobs  :: AbstractVector{Matrix{T}},
+    Σ     :: AbstractVector{Matrix{T}} = [Matrix{T}(I, size(Yobs, 2), size(Yobs, 2)) for i in 1:(length(Gobs)+1)]
     ) where {T <: Real}
 
     # handle error 
-    @assert length(Vobs) == length(Σ) "vector of covariance matrices and vector of variance components should have the same length!\n"
+    @assert (length(Gobs)+1) == length(Σ) "length of vector of genotype matrices should be one less than that of variance components!\n"
 
     # create empty matrix for Xobs 
     Xobs = zeros(T, size(Yobs, 1), 0) 
 
     # call VCModel constructor 
-    VCModel(Yobs, Xobs, Vobs, Σ)
+    VCModel(Yobs, Xobs, Gobs, Σ)
 end 
 
 """
@@ -336,7 +320,7 @@ end
 
 Length `d` of response. 
 """
-length(vcm::VCModel) = size(vcm.Y, 2)
+length(vcm::VCModel) = size(vcm.Yobs, 2)
 length(vcm::VCintModel) = size(vcm.Y, 2)
 
 """
@@ -354,7 +338,7 @@ ncovariates(vcm::VCintModel) = size(vcm.Xobs, 2)
 
 Size `(n, d)` of response matrix of a [`VCModel`](@ref) or [`VCintModel`](@ref). 
 """
-size(vcm::VCModel) = size(vcm.Y)
+size(vcm::VCModel) = (size(vcm.G[1], 1), size(vcm.Yobs, 2)) # size(vcm.Y)
 size(vcm::VCintModel) = size(vcm.Y)
 
 """
@@ -390,11 +374,7 @@ ngroups(vcm::VCintModel) = length(vcm.Σ) - 1
 Update covariance matrix `Ω` for [`VCModel`](@ref).
 """
 function updateΩ!(vcm::VCModel)
-    fill!(vcm.Ω, 0)
-    for k in 1:nvarcomps(vcm)
-        kronaxpy!(vcm.wt[k] .* vcm.Σ[k], vcm.V[k], vcm.Ω)
-    end
-    vcm.Ω
+    formΩ!(vcm.Ω, vcm.Σ, vcm.G)
 end
 
 """
@@ -412,23 +392,23 @@ function updateΩ!(vcm::VCintModel)
     vcm.Ω
 end
 
-"""
-    updateΩest!(vcm::VCModel)
+# """
+#     updateΩest!(vcm::VCModel)
 
-Update covariance matrix `Ωest` for [`VCModel`](@ref). `Ωest` has the same dimension as `Vobs`. 
-"""
-function updateΩest!(vcm::VCModel)
+# Update covariance matrix `Ωest` for [`VCModel`](@ref). `Ωest` has the same dimension as `Vobs`. 
+# """
+# function updateΩest!(vcm::VCModel)
 
-    if isempty(vcm.Xobs) 
-        vcm.Ωest .= vcm.Ω
-    else
-        fill!(vcm.Ωest, 0)
-        for k in 1:nvarcomps(vcm)
-            kronaxpy!(vcm.Σ[k], vcm.Vobs[k], vcm.Ωest)
-        end
-    end 
-    vcm.Ωest
-end
+#     if isempty(vcm.Xobs) 
+#         vcm.Ωest .= vcm.Ω
+#     else
+#         fill!(vcm.Ωest, 0)
+#         for k in 1:nvarcomps(vcm)
+#             kronaxpy!(vcm.Σ[k], vcm.Vobs[k], vcm.Ωest)
+#         end
+#     end 
+#     vcm.Ωest
+# end
 
 """
     updateΩest!(vcm::VCintModel)
@@ -463,7 +443,7 @@ function update_arrays!(vcm::Union{VCModel, VCintModel})
     vcm.Ωinv[:] = inv(Ωchol)
     mul!(vcm.ΩinvY, vcm.Ωinv, vcm.vecY)
     if typeof(vcm) <: VCModel
-        vcm.R .= reshape(vcm.ΩinvY, size(vcm))
+        vcm.R[:] = reshape(vcm.ΩinvY, size(vcm))
     end 
     nothing 
 end 
