@@ -116,57 +116,52 @@ function objvalue(
 end 
 
 """
-    nullprojection(y, X, V)
+    nullprojection(Y, X, G)
 
-Project `y` to null space of `transpose(X)` and transform `V` accordingly.
+Project `Y` to null space of `transpose(X)` and transform `G` accordingly.
 
 # Input 
-- `y`: response vector/matrix to be transformed
-- `X`: covariate matrix, response `y` is projected onto the null space of transpose(X) 
-- `V`: vector of covariance matrices, `(V[1],V[2],...,V[m],I)`
-    note `V[end]` should be identity matrix or identity matrix divided by √n
+- `Y`: response vector/matrix to be transformed
+- `X`: covariate matrix, response `Y` is projected onto the null space of transpose(X) 
+- `G`: vector of genotype matrices, `(G[1],G[2],...,G[m])`
 
 # Ouptut 
-- `ynew`: projected response vector/matrix
-- `Vnew`: projected vector of covariance matrices
+- `Ynew`: vectorized projected response vector/matrix 
+- `Gnew`: vector of projected genotype matrices `(Gnew[1],Gnew[2],...,Gnew[m])`
 - `B`: matrix whose columns are basis vectors of the null space of transpose(X) 
 """
 function nullprojection(
-    y    :: AbstractVecOrMat{T},
+    Y    :: AbstractVecOrMat{T},
     X    :: AbstractVecOrMat{T},
-    V    :: AbstractVector{Matrix{T}}
+    G    :: AbstractVector{Matrix{T}}
     ) where {T <: Real}
 
     if isempty(X)
-        return y, V, X
+        return vec(Y), G, X
     else
         # basis of nullspace of transpose(X), `N(X')`
-        Xt = Matrix{T}(undef, size(X, 2), size(X, 1))
-        transpose!(Xt, X)
-        B = nullspace(Xt)
-
-        # projected response vector 
-        ynew = B' * y 
+        # Xt = Matrix{T}(undef, size(X, 2), size(X, 1))
+        # transpose!(Xt, X)
+        B = nullspace(X')
 
         # dimension of null space 
         s = size(B, 2) 
 
+        # projected response vector 
+        Ynew = Matrix{T}(undef, s, size(Y, 2))
+        BLAS.gemm!('T', 'N', one(T), B, Y, zero(T), Ynew)
+
         # no. of variance components subject to selection 
-        nvarcomps = length(V) 
+        m = length(G) 
 
         # transformed covariance matrices 
-        Vnew = Vector{Matrix{Float64}}(undef, nvarcomps)
-        tmp = zeros(size(X, 1), s)
-        for i in 1:(nvarcomps - 1)
-            mul!(tmp, V[i], B)
-            Vnew[i] = BLAS.gemm('T', 'N', B, tmp)
-            # divide by its frobenius norm  
-            #Vnew[i] ./= norm(Vnew[i])
+        Gnew = [Matrix{T}(undef, s, size(G[i], 2)) for i in 1:m]
+        for i in 1:m
+            BLAS.gemm!('T', 'N', one(T), B, G[i], zero(T), Gnew[i])
         end 
-        Vnew[end] = Matrix{eltype(B)}(I, s, s)
 
         # output 
-        return ynew, Vnew, B 
+        return vec(Ynew), Gnew, B 
     end 
 
 end 
@@ -330,3 +325,38 @@ function clamp_diagonal!(
     end
     A
 end
+
+
+"""
+    formΩ!(Ω, Σ, G)
+
+Overwrite `Ω` with `∑ Σi ⊗ GiGi'`
+
+# Input 
+
+# Output 
+"""
+function formΩ!(
+    Ω :: AbstractMatrix{T}, 
+    Σ :: AbstractVector{Matrix{T}}, 
+    G :: AbstractVector{Matrix{T}}, 
+    L :: AbstractMatrix{T} = Matrix{T}(undef, size(Σ[1], 1), size(Σ[1], 1))
+    ) where {T <: Real}
+
+    n = size(G[1], 1)
+    d = size(Σ[1], 1) 
+    Ω .= kron(Σ[end], I(n))
+    tmp = Matrix{T}(undef, size(L, 1) * n, d)
+    for i in 1:length(G)
+        #println("Symmetric(Σ[i])=", Symmetric(Σ[i]))
+        Σchol = cholesky(Symmetric(Σ[i]), Val(true), check=false)
+        #dump(Σchol)
+        #L[:] = Σchol.L[inv(Permutation(Σchol.p)).data, 1:Σchol.rank]
+        L[:] = Σchol.L[inv(Permutation(Σchol.p)).data, 1:d]
+        for j in 1:size(G[i], 2)
+            fill!(tmp, 0)
+            kronaxpy!(L, view(G[i], :, j), tmp)
+            BLAS.syrk!('U', 'N', one(T), tmp, one(T), Ω)
+        end
+    end 
+end 
