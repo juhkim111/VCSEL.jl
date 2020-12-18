@@ -227,7 +227,6 @@ function vcselect!(
         # check convergence 
         if abs(obj - objold) < tol * (abs(obj) + 1)
             niters = iter 
-            println("converged!")
             break 
         end 
 
