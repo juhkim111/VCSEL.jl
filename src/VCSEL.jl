@@ -18,7 +18,7 @@ export
     objvalue,  
     formΩ!,
 # maximum lambda 
-    maxlambda, 
+    findmaxλ, 
 # utilities function 
     ncovariates, nvarcomps, nmeanparams, 
     plotsolpath, resetModel!, 
@@ -320,59 +320,19 @@ function updateΩ!(vcm::VCintModel)
     vcm.Ω
 end
 
-# """
-#     updateΩest!(vcm::VCModel)
 
-# Update covariance matrix `Ωest` for [`VCModel`](@ref). `Ωest` has the same dimension as `Vobs`. 
-# """
-# function updateΩest!(vcm::VCModel)
-
-#     if isempty(vcm.Xobs) 
-#         vcm.Ωest .= vcm.Ω
-#     else
-#         fill!(vcm.Ωest, 0)
-#         for k in 1:nvarcomps(vcm)
-#             kronaxpy!(vcm.Σ[k], vcm.Vobs[k], vcm.Ωest)
-#         end
-#     end 
-#     vcm.Ωest
-# end
-
-"""
-    updateΩest!(vcm::VCintModel)
-
-Update covariance matrix `Ωest` for [`VCintModel`](@ref). `Ωest` has the same dimension as `Vobs`. 
-"""
-function updateΩest!(vcm::VCintModel)
-
-    if isempty(vcm.Xobs) 
-        vcm.Ωest .= vcm.Ω
-    else
-        fill!(vcm.Ωest, 0)
-        for k in 1:ngroups(vcm)
-            kronaxpy!(vcm.Σ[k], vcm.Vobs[k], vcm.Ωest)
-            kronaxpy!(vcm.Σint[k], vcm.Vintobs[k], vcm.Ωest)
-        end
-        kronaxpy!(vcm.Σ[end], vcm.Vobs[end], vcm.Ωest)
-    end 
-    vcm.Ωest
-end
 
 """
     update_arrays!(vcm)
 
 Update working arrays `Ωchol`, `Ωinv`, `ΩinvY`, `R`.
 """
-function update_arrays!(vcm::Union{VCModel, VCintModel})
-    # vcm.Ωchol = cholesky!(Symmetric(vcm.Ω))
-    # vcm.Ωinv[:] = inv(vcm.Ωchol)
+function update_arrays!(vcm::VCModel)
     Ωchol = cholesky!(Symmetric(vcm.Ω))
     vcm.ΩcholL .= Ωchol.L
     vcm.Ωinv[:] = inv(Ωchol)
     mul!(vcm.ΩinvY, vcm.Ωinv, vcm.vecY)
-    if typeof(vcm) <: VCModel
-        vcm.R[:] = reshape(vcm.ΩinvY, size(vcm))
-    end 
+    vcm.R[:] = reshape(vcm.ΩinvY, size(vcm))
     nothing 
 end 
 
@@ -385,22 +345,18 @@ it is set to a vector of ones or identity matrices based on its dimension.
 # Example
 
 ```julia
-vcm = VCModel(Y, X, V)
+vcm = VCModel(Y, X, G)
 Σ̂path, β̂path, λpath, objpath, niterspath = vcselectpath!(vcm; penfun=MCPPenalty(), nλ=50)
 resetModel!(vcm)
 ```
 """
 function resetModel!(
-    vcm :: VCModel
-    ) 
+    vcm :: VCModel{T}
+    ) where {T <: Real}
     d = length(vcm)
-    if typeof(vcm.Σ[1]) <: Matrix 
-        resetModel!(vcm, 
-                [Matrix(one(eltype(vcm.Σ[1]))*I, d, d) for i in eachindex(vcm.Σ)])
-    else 
-        resetModel!(vcm,
-                ones(eltype(vcm.Σ[1]), nvarcomps(vcm)))
-    end 
+    resetModel!(vcm, 
+        [Matrix{T}(I, d, d) for i in 1:nvarcomps(vcm)])
+   
 end 
 
 """
@@ -411,43 +367,23 @@ Reset [`VCModel`](@ref) with initial estimates `Σ`.
 # Example
 
 ```julia
-vcm = VCModel(Y, X, V)
+d = size(Y, 2)
+vcm = VCModel(Y, X, G)
 Σ̂path, β̂path, = vcselectpath!(vcm; penfun=MCPPenalty(), nλ=30)
-Σ = fill(0.5, length(V))
+Σ = [ones(d, d) for i in 1:nvarcomps(vcm)]
 resetModel!(vcm, Σ)
 ```
 """
 function resetModel!(
     vcm :: VCModel,
-    Σ :: Union{AbstractVector{T}, AbstractVector{Matrix{T}}} 
+    Σ :: AbstractVector{Matrix{T}}
     ) where {T <: Real}
 
-    vcm.Σ .= Σ
-    updateΩ!(vcm)
-    updateΩest!(vcm)
+    (vcm.Σ)[:] = Σ
+    formΩ!(vcm.Ω, vcm.Σ, vcm.G)
     update_arrays!(vcm)
-    vcm.R .= reshape(vcm.ΩinvY, size(vcm))
 end 
 
-"""
-    resetModel!(vcm::VCintModel, [Σ, Σint])
-
-Reset [`VCintModel`](@ref) with initial estimates `Σ` and `Σint` (if given). If unspecified, 
-it is set to a vector of ones.
-"""
-function resetModel!(
-    vcm  :: VCintModel,
-    Σ    :: AbstractVector = ones(ngroups(vcm) + 1),
-    Σint :: AbstractVector = ones(ngroups(vcm)) 
-    ) 
-   
-    vcm.Σ .= Σ
-    vcm.Σint .= Σint 
-    updateΩ!(vcm)
-    updateΩest!(vcm)
-    update_arrays!(vcm)
-
-end 
 
 include("vcselect.jl")
 include("vcselect_interact.jl")
