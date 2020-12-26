@@ -54,6 +54,7 @@ function vcselectpath!(
     # dimension of X 
     p = ncovariates(vcm)
     d = length(vcm)
+    n = size(vcm)[1]
 
     # type 
     T = eltype(vcm.Y)
@@ -63,7 +64,7 @@ function vcselectpath!(
 
         # create a lambda grid if not specified  
         if isempty(λpath) 
-            maxλ, = maxlambda(vcm.Y, vcm.V; penfun=penfun, penwt=penwt)
+            maxλ, = findmaxλ(vcm.Y, vcm.G; penfun=penfun, penwt=penwt)
             λpath = range(0, stop=maxλ, length=nλ)
         else # if lambda grid specified, make sure nlambda matches 
             nλ = length(λpath)
@@ -165,13 +166,12 @@ function vcselect!(
         @assert all(tr.(vcm.Σ) .> 0) "starting Σ should be strictly positive or non-zero matrices"
     end 
 
-
     # initialize algorithm 
     n = size(vcm)[1]
    
     # initial objective value 
-    #updateΩ!(vcm)
-    #update_arrays!(vcm)
+    formΩ!(vcm.Ωinv, vcm.Σ, vcm.G)
+    update_arrays!(vcm)
     obj = objvalue(vcm; penfun=penfun, λ=λ, penwt=penwt)
 
     # # display 
@@ -207,7 +207,7 @@ function vcselect!(
         clamp_diagonal!(vcm.Σ[end], tol, Inf)
 
         # update working arrays 
-        formΩ!(vcm.Ω, vcm.Σ, vcm.G)
+        formΩ!(vcm.Ωinv, vcm.Σ, vcm.G)
         update_arrays!(vcm)
 
         # update objective value 
@@ -444,26 +444,26 @@ function mm_update_σ2!(
 end 
 
 """
-    vcselect(Y, V; penfun=NoPenalty(), λ=1.0, penwt=[ones(length(V)-1); 0.0],
+    vcselect(Y, G; penfun=NoPenalty(), λ=1.0, penwt=[ones(length(V)-1); 0.0],
                 standardize=true, maxiters=1000, tol=1e-6, verbose=false, checktype=true)
 
 """
 function vcselect(
     Y           :: AbstractVecOrMat{T},
-    V           :: AbstractVector{Matrix{T}};
+    G           :: AbstractVector{Matrix{T}};
     penfun      :: Penalty = NoPenalty(),
     λ           :: Real = 1.0,
     penwt       :: AbstractVector = [ones(length(V)-1); 0.0],
-    standardize :: Bool = true, 
+    #standardize :: Bool = true, 
     maxiters    :: Int = 1000,
     tol         :: Real = 1e-6,
     verbose     :: Bool = false,
     checktype   :: Bool = true 
     ) where {T <: Real}
 
-    vcmtmp = VCModel(Y, V)
+    vcmtmp = VCModel(Y, G)
     _, obj, niters, objvec = vcselect!(vcmtmp; penfun=penfun, λ=λ, penwt=penwt, 
-            standardize=standardize, maxiters=maxiters, tol=tol, verbose=verbose, 
+            maxiters=maxiters, tol=tol, verbose=verbose, 
             checktype=checktype)
 
     return vcmtmp.Σ, obj, niters, objvec
