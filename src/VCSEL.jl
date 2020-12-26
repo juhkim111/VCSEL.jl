@@ -50,7 +50,6 @@ struct VCModel{T <: Real}
     β           :: AbstractVecOrMat{T}
     Σ           :: Union{AbstractVector{T}, AbstractVector{Matrix{T}}}
     # covariance matrix and working arrays  
-    Ω           :: AbstractMatrix{T}         # covariance matrix 
     ΩcholL      :: LowerTriangular{T}        # cholesky factor 
     Ωinv        :: AbstractMatrix{T}         # inverse of covariance matrix 
     ΩinvY       :: AbstractVector{T}         # Ωinv * Y OR Ωinv * vec(Y) 
@@ -89,11 +88,11 @@ function VCModel(
     # #
     # wt = ones(length(Vobs))
     # accumulate covariance matrix 
-    Ω = zeros(T, nd, nd)
-    formΩ!(Ω, Σ, G)
+    Ωinv = zeros(T, nd, nd)
+    formΩ!(Ωinv, Σ, G)
     # pre-allocate working arrays 
-    Ωchol = cholesky!(Symmetric(Ω))
-    Ωinv = inv(Ωchol) 
+    Ωchol = cholesky!(Symmetric(Ωinv))
+    Ωinv[:] = inv(Ωchol) 
     ΩinvY = Ωinv * vecY  
     R = reshape(ΩinvY, n, d) # n x d 
     L = Matrix{T}(undef, d, d) # d x d 
@@ -104,7 +103,8 @@ function VCModel(
 
     # 
     VCModel{T}(Yobs, Xobs, Gobs, vecY, G,
-            β, Σ, Ω, Ωchol.L, Ωinv, ΩinvY, 
+            β, Σ, Ωchol.L, Ωinv, ΩinvY,
+            #β, Σ, Ω, Ωchol.L, Ωinv, ΩinvY, 
             R, L, Mndxnd, kron_I_one, Mdxd, Mnxd)
 
 end 
@@ -287,48 +287,13 @@ Number of variance components.
 nvarcomps(vcm::VCModel) = length(vcm.Σ)
 nvarcomps(vcm::VCintModel) = length(vcm.Σ) + length(vcm.Σint)
 
-""" 
-    ngroups(vcm::VCModel)
-    ngroups(vcm::VCintModel)
-
-Number of groups, `m`, for [`VCModel`](@ref) or [`VCintModel`](@ref).
-"""
-ngroups(vcm::VCModel) = nvarcomps(vcm) - 1
-ngroups(vcm::VCintModel) = length(vcm.Σ) - 1
-
-"""
-    updateΩ!(vcm::VCModel)
-
-Update covariance matrix `Ω` for [`VCModel`](@ref).
-"""
-function updateΩ!(vcm::VCModel)
-    formΩ!(vcm.Ω, vcm.Σ, vcm.G)
-end
-
-"""
-    updateΩ!(vcm::VCintModel)
-
-Update covariance matrix `Ω` for [`VCintModel`](@ref).
-"""
-function updateΩ!(vcm::VCintModel)
-    fill!(vcm.Ω, 0)
-    for k in 1:ngroups(vcm)
-        kronaxpy!(vcm.wt[k] .* vcm.Σ[k], vcm.V[k], vcm.Ω)
-        kronaxpy!(vcm.wt_int[k] .* vcm.Σint[k], vcm.Vint[k], vcm.Ω)
-    end
-    kronaxpy!(vcm.wt[end] .* vcm.Σ[end], vcm.V[end], vcm.Ω)
-    vcm.Ω
-end
-
-
-
 """
     update_arrays!(vcm)
 
 Update working arrays `Ωchol`, `Ωinv`, `ΩinvY`, `R`.
 """
 function update_arrays!(vcm::VCModel)
-    Ωchol = cholesky!(Symmetric(vcm.Ω))
+    Ωchol = cholesky!(Symmetric(vcm.Ωinv))
     vcm.ΩcholL .= Ωchol.L
     vcm.Ωinv[:] = inv(Ωchol)
     mul!(vcm.ΩinvY, vcm.Ωinv, vcm.vecY)
@@ -379,8 +344,8 @@ function resetModel!(
     Σ :: AbstractVector{Matrix{T}}
     ) where {T <: Real}
 
-    (vcm.Σ)[:] = Σ
-    formΩ!(vcm.Ω, vcm.Σ, vcm.G)
+    (vcm.Σ)[:] = deepcopy(Σ)
+    formΩ!(vcm.Ωinv, vcm.Σ, vcm.G)
     update_arrays!(vcm)
 end 
 
