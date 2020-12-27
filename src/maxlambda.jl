@@ -257,7 +257,6 @@ function findmaxλ(
     # 
     vcmtmp = deepcopy(vcm)
     Σinit = deepcopy(vcm.Σ)
-    println("Σinit =", Σinit)
 
     # if no penalty, return 0 
     if isa(penfun, NoPenalty)
@@ -321,15 +320,12 @@ function findmaxλ(
       vcselect!(vcmtmp; penfun=penfun, λ=a, penwt=penwt, checktype=false)
       copyto!(Σ_a, vcmtmp.Σ)
       resetModel!(vcmtmp, Σinit)
-      #println("vcmtmp.Σ=", vcmtmp.Σ)
       vcselect!(vcmtmp; penfun=penfun, λ=b, penwt=penwt, checktype=false)
       copyto!(Σ_b, vcmtmp.Σ)
       resetModel!(vcmtmp, Σinit)
-      #println("vcmtmp.Σ=", vcmtmp.Σ)
       vcselect!(vcmtmp; penfun=penfun, λ=c, penwt=penwt, checktype=false)
       copyto!(Σ_c, vcmtmp.Σ)
       resetModel!(vcmtmp, Σinit)
-      #println("vcmtmp.Σ=", vcmtmp.Σ)
 
       if maximum(tr.(view(Σ_a, 1:m))) < tol 
         b = a

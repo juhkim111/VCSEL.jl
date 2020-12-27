@@ -331,10 +331,6 @@ end
     formΩ!(Ω, Σ, G)
 
 Overwrite `Ω` with `∑ Σi ⊗ GiGi'`
-
-# Input 
-
-# Output 
 """
 function formΩ!(
     Ω :: AbstractMatrix{T}, 
