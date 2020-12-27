@@ -35,7 +35,7 @@ vcm = VCModel(Y, X, V)
 ```
 """
 function vcselectpath!(
-    vcm          :: VCModel; 
+    vcm          :: VCModel{T}; 
     penfun       :: Penalty = NoPenalty(), 
     penwt        :: AbstractArray = [ones(nvarcomps(vcm)-1); 0],
     nλ           :: Int = 100, 
@@ -43,7 +43,7 @@ function vcselectpath!(
     maxiters     :: Int = 1000, 
     standardize  :: Bool = false, 
     tol          :: AbstractFloat = 1e-6
-    ) 
+    ) where {T <: Real}
 
     # handle errors 
     @assert penfun ∈ [NoPenalty(), L1Penalty(), MCPPenalty()] "penfun must be either NoPenalty(), L1Penalty(), or MCPPenalty()!\n"
@@ -56,15 +56,12 @@ function vcselectpath!(
     d = length(vcm)
     n = size(vcm)[1]
 
-    # type 
-    T = eltype(vcm.Y)
-
     ## generate solution path based on penalty 
     if penfun != NoPenalty()
 
         # create a lambda grid if not specified  
         if isempty(λpath) 
-            maxλ, = findmaxλ(vcm.Y, vcm.G; penfun=penfun, penwt=penwt)
+            maxλ, = findmaxλ(vcm; penfun=penfun, penwt=penwt)
             λpath = range(0, stop=maxλ, length=nλ)
         else # if lambda grid specified, make sure nlambda matches 
             nλ = length(λpath)
@@ -73,43 +70,29 @@ function vcselectpath!(
         # initialize arrays 
         objpath = zeros(T, nλ)
         niterspath = zeros(Int, nλ)
-        if typeof(vcm.Σ[1]) <: Matrix 
-            # initialize arrays
-            Σ̂path = Array{Matrix{T}}(undef, nvarcomps(vcm), nλ)
-            β̂path = [zeros(T, p, d) for i in 1:nλ]
-            # solution path from smallest to largest lambda 
-            for iter in 1:nλ
-                # call vcselect! function 
-                _, objpath[iter], niterspath[iter], = 
-                        vcselect!(vcm; penfun=penfun, λ=λpath[iter], penwt=penwt, 
-                        maxiters=maxiters, tol=tol, verbose=false, checktype=false,
-                        standardize=standardize)
-                Σ̂path[:, iter] = vcm.Σ 
-                β̂path[iter] .= vcm.β                
-            end
-        else
-            # initialize arrays
-            Σ̂path = zeros(T, nvarcomps(vcm), nλ)
-            β̂path = zeros(T, p, nλ)
-            # solution path from smallest to largest lambda
-            for iter in 1:nλ
-                # call vcselect! function 
-                _, objpath[iter], niterspath[iter], = 
-                        vcselect!(vcm; penfun=penfun, λ=λpath[iter], penwt=penwt, 
-                        maxiters=maxiters, tol=tol, verbose=false, checktype=false,
-                        standardize=standardize)
-                Σ̂path[:, iter] .= vcm.Σ
-                β̂path[:, iter] .= vcm.β
-            end
-        end 
+        # initialize arrays
+        Σ̂path = Array{Matrix{T}}(undef, nvarcomps(vcm), nλ)
+        #β̂path = [zeros(T, p, d) for i in 1:nλ]
+        # solution path from smallest to largest lambda 
+        for iter in 1:nλ
+            # call vcselect! function 
+            _, objpath[iter], niterspath[iter], = 
+                    vcselect!(vcm; penfun=penfun, λ=λpath[iter], penwt=penwt, 
+                    maxiters=maxiters, tol=tol, checktype=false)
+            println("vcm.Σ =", vcm.Σ)
+            Σ̂path[:, iter] = deepcopy(vcm.Σ)
+            #β̂path[iter] .= vcm.β    
+        end             
 
-        return Σ̂path, β̂path, λpath, objpath, niterspath
+        #return Σ̂path, β̂path, λpath, objpath, niterspath
+        return Σ̂path, λpath, objpath, niterspath
 
     else # if no penalty, there is no lambda grid 
         _, objpath, niterspath, = vcselect!(vcm; penfun=penfun, penwt=penwt, 
-            maxiters=maxiters, tol=tol, verbose=false, checktype=false)
+            maxiters=maxiters, tol=tol, checktype=false)
         
-        return vcm.Σ, vcm.β, zeros(1), objpath, niterspath 
+        #return vcm.Σ, vcm.β, zeros(1), objpath, niterspath 
+        return vcm.Σ, zeros(1), objpath, niterspath 
     end  
 
 end 
