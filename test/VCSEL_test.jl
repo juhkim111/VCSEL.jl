@@ -31,12 +31,20 @@ Y2 = reshape(Ωchol.L * randn(n*d), n, d)
 # construct VCModel 
 vcm = VCModel(Y, X, G)
 
-# 
+# perform variance component selection 
 vcselect!(vcm; penfun=L1Penalty(), λ=3.0, maxiters=100, tol=1e-5)
+@show vcm.Σ
 
-# 
+# tests 
+@info "check basic functions"
+@testset begin
+  @test length(vcm) == d
+  @test ncovariates(vcm) == p
+  @test nvarcomps(vcm) == (m + 1)
+end
+
 @info "check resetModel! function"
-Ωtmp = similar(vcm.Ω)
+Ωtmp = similar(vcm.Ωinv)
 resetModel!(vcm)
 formΩ!(Ωtmp, vcm.Σ, vcm.G)
 cholΩtmp = cholesky!(Symmetric(Ωtmp))
@@ -51,3 +59,6 @@ cholΩtmp = cholesky!(Symmetric(Ωtmp))
   @test vcm.Σ == Σ
   @test vcm.Ωinv == inv(cholΩtmp)
 end 
+resetModel!(vcm)
+vcselect!(vcm; penfun=L1Penalty(), λ=3.0, maxiters=100, tol=1e-5)
+@show vcm.Σ
