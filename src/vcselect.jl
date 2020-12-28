@@ -79,7 +79,6 @@ function vcselectpath!(
             _, objpath[iter], niterspath[iter], = 
                     vcselect!(vcm; penfun=penfun, λ=λpath[iter], penwt=penwt, 
                     maxiters=maxiters, tol=tol, checktype=false)
-            println("vcm.Σ =", vcm.Σ)
             Σ̂path[:, iter] = deepcopy(vcm.Σ)
             #β̂path[iter] .= vcm.β    
         end             
