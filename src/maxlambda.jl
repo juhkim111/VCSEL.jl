@@ -282,7 +282,6 @@ function findmaxλ(
       BLAS.syrk!('U', 'T', true, vcmtmp.G[i]' * vcmtmp.Mnxd, false, vcmtmp.Mdxd)
       potentialλs[i] =  const1 * tr(vcmtmp.G[i] * vcmtmp.G[i]') + n^2 * tr(vcmtmp.Mdxd)
     end
-    println("potentialλs=", potentialλs)
 
     # find maximum among m different lambdas
     tempλ = maximum(potentialλs)
@@ -300,8 +299,6 @@ function findmaxλ(
       # Step 2: else, multiply lambda by 1.5 and go to Step 1.
       tempλ = 1.5 * tempλ
     end
-
-    println("tempλ=", tempλ)
 
     # Step 3: Use bisection method
     resetModel!(vcmtmp, Σinit)
@@ -343,7 +340,6 @@ function findmaxλ(
     end
 
     maxλ = b
-    println("Σ_b=", Σ_b)
 
     return maxλ, iter
 end
