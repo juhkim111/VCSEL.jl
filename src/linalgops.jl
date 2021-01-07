@@ -330,7 +330,15 @@ end
 """
     formΩ!(Ω, Σ, G)
 
-Overwrite `Ω` with `∑ Σi ⊗ GiGi'`
+Overwrite `Ω` with `∑ Σ[i] ⊗ (G[i] * transpose(G[i]))`
+
+# Input
+- `Ω`: n*d-by-n*d matrix to be overwritten 
+- `Σ`: (m+1)-by-1 vector of d-by-d matrices 
+- `G`: m-by-1 vector of n-by-qi matrices 
+
+# Output 
+- `vcm.β`: updated fixed parameter estimates 
 """
 function formΩ!(
     Ω :: AbstractMatrix{T}, 
