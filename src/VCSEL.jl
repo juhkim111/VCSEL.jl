@@ -17,6 +17,7 @@ export
     nullprojection,  
     objvalue,  
     formΩ!,
+    genotype_kernel,
 # maximum lambda 
     findmaxλ, 
 # utilities function 
@@ -29,9 +30,9 @@ export
     vcselect, vcselect!, vcselectpath, vcselectpath!
 
 """
-    VCModel(Y, X, G, Σ)
+    VCModel(Y, X, G; Σinit)
     VCModel(Y, X, G)
-    VCModel(Y, G, Σ)
+    VCModel(Y, G; Σinit)
     VCModel(Y, G)
 
 Variance component model type. Stores the data and model parameters of a variance 
@@ -48,7 +49,10 @@ struct VCModel{T <: Real}
     G           :: AbstractVector{Matrix{T}} # projected Gi including the last variance component 
     # model parameters 
     β           :: AbstractVecOrMat{T}
-    Σ           :: Union{AbstractVector{T}, AbstractVector{Matrix{T}}}
+    Σ           :: Union{AbstractVector{Matrix{T}}}
+    # extra parameters 
+    weights_beta :: AbstractVector{T}
+    geno_kernel :: AbstractString 
     # covariance matrix and working arrays  
     ΩcholL      :: LowerTriangular{T}        # cholesky factor 
     Ωinv        :: AbstractMatrix{T}         # inverse of covariance matrix 
@@ -63,33 +67,34 @@ end
 
 
 """
-    VCModel(Yobs, Xobs, Gobs, [Σ])
+    VCModel(Yobs, Xobs, Gobs; Σinit, weights_beta, geno_kernel)
 
 Default constructor of [`VCModel`](@ref) type.
 """
 function VCModel(
     Yobs  :: AbstractMatrix{T},
     Xobs  :: AbstractVecOrMat{T},
-    Gobs  :: AbstractVector{Matrix{T}},
-    Σ     :: AbstractVector{Matrix{T}} = 
-                [Matrix{T}(I, size(Yobs, 2), size(Yobs, 2)) for i in 1:(length(Gobs)+1)]
-    ) where {T <: AbstractFloat}
+    Gobs  :: AbstractVector{Matrix{T}};
+    Σinit     :: AbstractVector{Matrix{T}} = 
+                [Matrix{T}(I, size(Yobs, 2), size(Yobs, 2)) for i in 1:(length(Gobs)+1)],
+    weights_beta :: AbstractVector{S} = [1,25],
+    geno_kernel :: AbstractString = "SKAT"
+    ) where {T, S <: Real}
 
     # handle error 
-    @assert (length(Gobs) + 1) == length(Σ) "length of vector of genotype matrices should be one less than that of variance components!\n"
+    @assert (length(Gobs) + 1) == length(Σinit) "length of vector of genotype matrices should be one less than that of variance components!\n"
     
     # projection 
-    vecY, G, = nullprojection(Yobs, Xobs, Gobs) 
-    n, d = size(G[1], 1), size(Yobs, 2)
+    G = genotype_kernel(Gobs, weights_beta, geno_kernel)
+    vecY, Gnew, = nullprojection(Yobs, Xobs, G) 
+    n, d = size(Gnew[1], 1), size(Yobs, 2)
     nd = n * d 
     p = size(Xobs, 2)
     # 
     β = Matrix{T}(undef, p, d)
-    # #
-    # wt = ones(length(Vobs))
     # accumulate covariance matrix 
     Ωinv = zeros(T, nd, nd)
-    formΩ!(Ωinv, Σ, G)
+    formΩ!(Ωinv, Σinit, Gnew)
     # pre-allocate working arrays 
     Ωchol = cholesky!(Symmetric(Ωinv))
     Ωinv[:] = inv(Ωchol) 
@@ -102,33 +107,35 @@ function VCModel(
     Mnxd = Matrix{T}(undef, n, d) # n x d 
 
     # 
-    VCModel{T}(Yobs, Xobs, Gobs, vecY, G,
-            β, Σ, Ωchol.L, Ωinv, ΩinvY,
-            #β, Σ, Ω, Ωchol.L, Ωinv, ΩinvY, 
+    VCModel{T}(Yobs, Xobs, Gobs, vecY, Gnew,
+            β, Σinit, weights_beta, geno_kernel, Ωchol.L, Ωinv, ΩinvY, 
             R, L, Mndxnd, kron_I_one, Mdxd, Mnxd)
 
 end 
 
 """
-    VCModel(Yobs, Gobs, [Σ])
+    VCModel(Yobs, Gobs; Σinit, weights_beta, geno_kernel)
 
 Construct [`VCModel`](@ref) from `Yobs` and `Gobs` where `Yobs` is matrix. 
 `X` is treated empty. 
 """
 function VCModel(
     Yobs  :: AbstractMatrix{T},
-    Gobs  :: AbstractVector{Matrix{T}},
-    Σ     :: AbstractVector{Matrix{T}} = [Matrix{T}(I, size(Yobs, 2), size(Yobs, 2)) for i in 1:(length(Gobs)+1)]
-    ) where {T <: Real}
+    Gobs  :: AbstractVector{Matrix{T}};
+    Σinit :: AbstractVector{Matrix{T}} = 
+                [Matrix{T}(I, size(Yobs, 2), size(Yobs, 2)) for i in 1:(length(Gobs)+1)],
+    weights_beta :: AbstractVector{S} = [1,25],
+    geno_kernel :: AbstractString = "SKAT"
+    ) where {T, S <: Real}
 
     # handle error 
-    @assert (length(Gobs)+1) == length(Σ) "length of vector of genotype matrices should be one less than that of variance components!\n"
+    @assert (length(Gobs)+1) == length(Σinit) "length of vector of genotype matrices should be one less than that of variance components!\n"
 
     # create empty matrix for Xobs 
     Xobs = zeros(T, size(Yobs, 1), 0) 
 
     # call VCModel constructor 
-    VCModel(Yobs, Xobs, Gobs, Σ)
+    VCModel(Yobs, Xobs, Gobs; Σinit=Σinit, weights_beta=weights_beta, geno_kernel=geno_kernel)
 end 
 
 """
@@ -355,5 +362,6 @@ include("vcselect_interact.jl")
 include("maxlambda.jl")
 include("utilities.jl")
 include("linalgops.jl")
+include("genotype_kernel.jl")
 
 end # module
