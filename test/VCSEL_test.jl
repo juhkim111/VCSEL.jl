@@ -32,8 +32,8 @@ Y2 = reshape(Ωchol.L * randn(n*d), n, d)
 vcm = VCModel(Y, X, G)
 
 # perform variance component selection 
-vcselect!(vcm; penfun=L1Penalty(), λ=3.0, maxiters=100, tol=1e-5)
-@show vcm.Σ
+vcselect!(vcm; penfun=L1Penalty(), λ=0.2, maxiters=100, tol=1e-5)
+#@show vcm.Σ
 
 # tests 
 @info "check basic functions"
@@ -59,6 +59,30 @@ cholΩtmp = cholesky!(Symmetric(Ωtmp))
   @test vcm.Σ == Σ
   @test vcm.Ωinv == inv(cholΩtmp)
 end 
-resetModel!(vcm)
-vcselect!(vcm; penfun=L1Penalty(), λ=3.0, maxiters=100, tol=1e-5)
-@show vcm.Σ
+
+@info "check VCModel with SKAT genotype kernel"
+vcm1 = VCModel(Y, G; weights_beta=[1, 1])
+@testset begin 
+  for i in 1:m
+    Vi = G[i] * G[i]'
+    @test norm(vcm1.G[i] * vcm1.G[i]') ≈ 1
+    @test vcm1.G[i] * vcm1.G[i]' ≈ (Vi ./ norm(Vi))
+  end 
+end 
+vcselect!(vcm1; λ=0, maxiters=100, tol=1e-5)
+#@show vcm1.Σ
+
+@info "check VCModel with Burden genotype kernel"
+vcm2 = VCModel(Y, G; weights_beta=[1, 1], geno_kernel="Burden")
+@testset begin 
+  for i in 1:m
+    Vi = G[i] * ones(size(G[i], 2), size(G[i], 2)) * G[i]'
+    @test norm(vcm2.G[i] * vcm2.G[i]') ≈ 1
+    @test vcm2.G[i] * vcm2.G[i]' ≈ (Vi ./ norm(Vi))
+  end
+end
+vcselect!(vcm2; penfun=MCPPenalty(), λ=0.5, maxiters=50, tol=1e-5)
+#@show vcm2.Σ
+
+
+
