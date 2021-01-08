@@ -3,15 +3,15 @@
 
 Constructs genotype kernel based on options: G[i] = Gobs[i] * W * I if geno_kernel = "SKAT"
 OR G[i] = Gobs[i] * W * ones(qi) if geno_kernel = "Burden" where W is a diagonal matrix whose
-entries are weights. Each G[i] is divided by square root of frobenius norm of G[i]*transpose(G[i]).
+entries are beta weights using MAF. Each G[i] is divided by square root of frobenius norm of G[i]*transpose(G[i]).
 
 # Input
-- obs: 
-- weights_beta: 
+- Gobs: vector of `m` genotype matrices 
+- weights_beta: variant weights. e.g. [1, 25] equals to beta(MAF, 1, 25)
 - geno_kernel: "Burden" or "SKAT"
 
 # Output 
-- `G`: 
+- `G`: vector of `m` genotype kernel matrices 
 """
 function genotype_kernel(
     Gobs  :: AbstractVector{Matrix{T}},
@@ -21,6 +21,7 @@ function genotype_kernel(
 
     # handle errors 
     @assert length(weights_beta) == 2 "weights_beta takes only two parameters for beta distribution!\n"
+    @assert all(weights_beta .> 0) "parameters for beta distribution should be positive!\n"
     @assert geno_kernel ∈ ["Burden", "SKAT"] "geno_kernel must be either Burden or SKAT!\n"
 
     # 
