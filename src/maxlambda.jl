@@ -250,7 +250,7 @@ function findmaxλ(
     penwt   :: AbstractVector{T} = [ones(T, nvarcomps(vcm)-1); zero(T)],
     #standardize :: Bool = false, 
     maxiters :: Int = 500,
-    tol     :: AbstractFloat = 1e-8,
+    tol     :: AbstractFloat = 1e-6,
     tempλ   :: AbstractFloat = 50.0
     ) where {T <: Real}
 
@@ -301,7 +301,7 @@ function findmaxλ(
     end
 
     # Step 3: Use bisection method
-    resetModel!(vcmtmp, Σinit)
+    #resetModel!(vcmtmp, Σinit)
     iter = 1
     a = 0.5 * tempλ
     b = tempλ
@@ -314,6 +314,7 @@ function findmaxλ(
     while iter <= maxiters
       c = (a + b) / 2
 
+      resetModel!(vcmtmp, Σinit)     
       vcselect!(vcmtmp; penfun=penfun, λ=a, penwt=penwt, checktype=false)
       copyto!(Σ_a, vcmtmp.Σ)
       resetModel!(vcmtmp, Σinit)
@@ -322,7 +323,7 @@ function findmaxλ(
       resetModel!(vcmtmp, Σinit)
       vcselect!(vcmtmp; penfun=penfun, λ=c, penwt=penwt, checktype=false)
       copyto!(Σ_c, vcmtmp.Σ)
-      resetModel!(vcmtmp, Σinit)
+      
 
       if maximum(tr.(view(Σ_a, 1:m))) < tol 
         b = a
