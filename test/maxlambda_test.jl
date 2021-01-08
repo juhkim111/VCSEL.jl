@@ -1,12 +1,12 @@
 # Generate a sample covariance matrix
 Random.seed!(123)
-n = 300
-d = 3
-m = 10
+n = 100
+d = 2
+m = 5
 p = 3
 X = randn(n, p)    # covariate matrix 
 β = ones(p, d)     # fixed effects parameter matrix 
-q = rand(5:50, m)  # #snps in each gene
+q = rand(5:20, m)  # #snps in each gene
 
 # generate random positive semidefinite matrix 
 function generate_psd(d::Integer)
@@ -33,6 +33,7 @@ Y = X * β + reshape(Ωchol.L * randn(n*d), n, d)
 vcm = VCModel(Y, X, G)
 Σinit = deepcopy(vcm.Σ)
 maxλ_lasso, iter = findmaxλ(vcm; penfun=L1Penalty())
+@show maxλ_lasso
 vcselect!(vcm; penfun=L1Penalty(), λ=maxλ_lasso)
 @testset begin 
     for i in 1:m
@@ -44,6 +45,7 @@ end
 resetModel!(vcm, Σinit)
 maxλ_mcp, iter = findmaxλ(vcm; penfun=MCPPenalty())
 vcselect!(vcm; penfun=MCPPenalty(), λ=maxλ_mcp)
+@show maxλ_mcp
 @testset begin 
   for i in 1:m
     @test isapprox(vcm.Σ[i], zeros(d, d); atol=1e-6)
@@ -53,6 +55,7 @@ end
 @info "test findmaxλ with NoPenalty"
 resetModel!(vcm, Σinit)
 maxλ, iter = findmaxλ(vcm; penfun=NoPenalty())
+@show maxλ
 @testset begin 
   @test maxλ == 0
   @test iter == 0
