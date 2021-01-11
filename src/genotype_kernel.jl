@@ -22,7 +22,7 @@ function genotype_kernel(
     # handle errors 
     @assert length(weights_beta) == 2 "weights_beta takes only two parameters for beta distribution!\n"
     @assert all(weights_beta .> 0) "parameters for beta distribution should be positive!\n"
-    @assert geno_kernel ∈ ["Burden", "SKAT"] "geno_kernel must be either Burden or SKAT!\n"
+    @assert geno_kernel ∈ ["Burden", "SKAT", "none"] "geno_kernel must be either Burden or SKAT!\n"
 
     # 
     G = similar(Gobs)
@@ -49,7 +49,9 @@ function genotype_kernel(
             G[i] ./= sqrt(dot(G[i], G[i]))
             # divide by square root of frobenius norm of G[i] * G[i]'
         end 
-    end
+    else 
+        return Gobs 
+    end 
 
     return G 
 
