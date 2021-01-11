@@ -28,8 +28,7 @@ end
 
 Ω = Matrix{Float64}(undef, n*d, n*d);
 #@testset "test forming Ω" begin
-using BenchmarkTools
-@btime formΩ!(Ω, Σ, G)
+formΩ!(Ω, Σ, G)
 
 Ω2 = Matrix{Float64}(undef, n*d, n*d);
 
