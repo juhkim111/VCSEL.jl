@@ -4,11 +4,12 @@
 Constructs genotype kernel based on options: G[i] = Gobs[i] * W * I if geno_kernel = "SKAT"
 OR G[i] = Gobs[i] * W * ones(qi) if geno_kernel = "Burden" where W is a diagonal matrix whose
 entries are beta weights using MAF. Each G[i] is divided by square root of frobenius norm of G[i]*transpose(G[i]).
+If geno_kernel = "none", it outputs Gobs.
 
 # Input
 - Gobs: vector of `m` genotype matrices 
 - weights_beta: variant weights. e.g. [1, 25] equals to beta(MAF, 1, 25)
-- geno_kernel: "Burden" or "SKAT"
+- geno_kernel: "Burden" or "SKAT" or "none"
 
 # Output 
 - `G`: vector of `m` genotype kernel matrices 
