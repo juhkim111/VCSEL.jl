@@ -84,5 +84,12 @@ end
 vcselect!(vcm2; penfun=MCPPenalty(), λ=0.5, maxiters=50, tol=1e-5)
 #@show vcm2.Σ
 
+@info "check VCModel with no genotype kernel"
+vcm3 = VCModel(Y, G; geno_kernel="none")
+@testset begin 
+   for i in 1:m
+        @test vcm3.G[i] == G[i] 
+   end
+end 
 
 
