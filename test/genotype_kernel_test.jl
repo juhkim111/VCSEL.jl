@@ -36,3 +36,6 @@ Gker_burden = genotype_kernel(G, [1, 25], "Burden")
     @test Gker_burden[i] * Gker_burden[i]' ≈ Vi 
     @test isapprox(norm(Gker_burden[i] * Gker_burden[i]'), 1, atol=1e-7)
 end
+
+Gnew = genotype_kernel(G, [1, 25], "none")
+@test Gnew == G 
