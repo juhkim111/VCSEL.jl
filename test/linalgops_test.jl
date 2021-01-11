@@ -40,6 +40,7 @@ function formΩ2!(
     ) where {T <: Real}
     n = size(G[1], 1)
     Ω .= kron(Σ[end], I(n))
+    Ω ./= √n
     for i in 1:m
         kronaxpy!(Σ[i], G[i] * transpose(G[i]), Ω)
     end
