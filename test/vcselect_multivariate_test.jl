@@ -1,5 +1,3 @@
-using BenchmarkTools
-
 ## generate data from a 3-variate response variance component model
 Random.seed!(123)
 n = 100         # no. observations
