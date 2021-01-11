@@ -350,6 +350,7 @@ function formΩ!(
     n = size(G[1], 1)
     d = size(Σ[1], 1) 
     Ω .= kron(Σ[end], I(n))
+    Ω ./= √n
     tmp = Matrix{T}(undef, size(L, 1) * n, d)
     for i in 1:length(G)
         #println("Symmetric(Σ[i])=", Symmetric(Σ[i]))
