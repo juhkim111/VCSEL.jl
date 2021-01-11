@@ -44,7 +44,7 @@ function formΩ2!(
         kronaxpy!(Σ[i], G[i] * transpose(G[i]), Ω)
     end
 end 
-@btime formΩ2!(Ω2, Σ, G)
+formΩ2!(Ω2, Σ, G)
 
 @info "test estimates of Ω"
 @test isapprox(norm(Symmetric(Ω) - Ω2), 0; atol=1e-8)
