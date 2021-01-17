@@ -67,6 +67,8 @@ function vcselectpath!(
             nλ = length(λpath)
         end 
 
+        println("λpath=",λpath)
+
         # initialize arrays 
         objpath = zeros(T, nλ)
         niterspath = zeros(Int, nλ)
@@ -75,8 +77,9 @@ function vcselectpath!(
         #β̂path = [zeros(T, p, d) for i in 1:nλ]
         # solution path from smallest to largest lambda 
         for iter in 1:nλ
+            println("λ : ", iter, "/", nλ)
             # call vcselect! function 
-            _, objpath[iter], niterspath[iter], = 
+            @time _, objpath[iter], niterspath[iter], = 
                     vcselect!(vcm; penfun=penfun, λ=λpath[iter], penwt=penwt, 
                     maxiters=maxiters, tol=tol, checktype=false)
             Σ̂path[:, iter] = deepcopy(vcm.Σ)
