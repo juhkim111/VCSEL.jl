@@ -67,7 +67,7 @@ function vcselectpath!(
             nλ = length(λpath)
         end 
 
-        println("λpath=",λpath)
+        println("λpath=", λpath)
 
         # initialize arrays 
         objpath = zeros(T, nλ)

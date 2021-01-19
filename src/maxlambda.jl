@@ -254,6 +254,8 @@ function findmaxλ(
     tempλ   :: AbstractFloat = 50.0
     ) where {T <: Real}
 
+    println("------- starting findmaxλ -------")
+    println("penfun = ", penfun, ", maxiters = ", maxiters, ", tol = ", tol)
     # 
     vcmtmp = deepcopy(vcm)
     Σinit = deepcopy(vcm.Σ)
@@ -312,6 +314,7 @@ function findmaxλ(
 
     # loop through while iteration number less than maxiters
     while iter <= maxiters
+      println("iter : ", iter)
       c = (a + b) / 2
 
       resetModel!(vcmtmp, Σinit)     
@@ -341,6 +344,7 @@ function findmaxλ(
     end
 
     maxλ = b
-
+    println("maxλ = ", maxλ)
+    println("------ findmaxλ finished -------")
     return maxλ, iter
 end
