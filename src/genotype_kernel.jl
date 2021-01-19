@@ -26,8 +26,10 @@ function genotype_kernel(
     @assert geno_kernel ∈ ["Burden", "SKAT", "none"] "geno_kernel must be either Burden or SKAT!\n"
 
     # 
-    G = similar(Gobs)
-    if geno_kernel == "SKAT"
+    if geno_kernel == "none"
+        return Gobs 
+    elseif geno_kernel == "SKAT"
+        G = similar(Gobs)
         for i in eachindex(Gobs)
             maf = mean(Gobs[i], dims=1)[:] ./ 2
             G[i] = Gobs[i][:, maf .> 0]
@@ -38,6 +40,7 @@ function genotype_kernel(
             G[i] ./= sqrt(norm(Symmetric(W)))
         end 
     elseif geno_kernel == "Burden"
+        G = similar(Gobs)
         for i in eachindex(Gobs)
             # calculate MAF by column mean 
             maf = mean(Gobs[i], dims=1)[:] ./ 2
@@ -50,8 +53,6 @@ function genotype_kernel(
             G[i] ./= sqrt(dot(G[i], G[i]))
             # divide by square root of frobenius norm of G[i] * G[i]'
         end 
-    else 
-        return Gobs 
     end 
 
     return G 
