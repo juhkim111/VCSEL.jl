@@ -316,7 +316,7 @@ function findmaxλ(
 
     # loop through while iteration number less than maxiters
     while iter <= maxiters
-      println("iter : ", iter)
+      println("iter no. ", iter)
       println("a=", a, " b=", b, " c=", c)
       c = (a + b) / 2
 

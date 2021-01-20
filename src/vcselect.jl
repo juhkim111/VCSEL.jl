@@ -42,7 +42,8 @@ function vcselectpath!(
     λpath        :: AbstractArray = zeros(0), 
     maxiters     :: Int = 1000, 
     standardize  :: Bool = false, 
-    tol          :: AbstractFloat = 1e-6
+    tol          :: AbstractFloat = 1e-6,
+    temp_maxλ    :: AbstractFloat = 0.0
     ) where {T <: Real}
 
     # handle errors 
@@ -61,7 +62,7 @@ function vcselectpath!(
 
         # create a lambda grid if not specified  
         if isempty(λpath) 
-            maxλ, = findmaxλ(vcm; penfun=penfun, penwt=penwt)
+            maxλ, = findmaxλ(vcm; penfun=penfun, penwt=penwt, tempλ=temp_maxλ)
             λpath = range(0, stop=maxλ, length=nλ)
         else # if lambda grid specified, make sure nlambda matches 
             nλ = length(λpath)
