@@ -317,8 +317,8 @@ function findmaxλ(
     # loop through while iteration number less than maxiters
     while iter <= maxiters
       println("iter no. ", iter)
-      println("a=", a, " b=", b, " c=", c)
       c = (a + b) / 2
+      println("a=", a, " c=", c, " b=", b)
 
       resetModel!(vcmtmp, Σinit)     
       vcselect!(vcmtmp; penfun=penfun, λ=a, penwt=penwt, checktype=false)
@@ -336,7 +336,7 @@ function findmaxλ(
         a = b / 2
       # given that at least one σ2 at a is non-zero, if difference between
       #   σ2 at a and b are really small, break the loop
-      elseif maximum(abs, tr.(view(Σ_b, 1:m)) - tr.(view(Σ_a, 1:m))) < tol || (b-a) < 0.01
+      elseif maximum(abs, tr.(view(Σ_b, 1:m)) - tr.(view(Σ_a, 1:m))) < tol || (b-a) < 0.1
         break
       elseif maximum(tr.(view(Σ_c, 1:m))) > tol 
         a = c
