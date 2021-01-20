@@ -52,6 +52,17 @@ vcselect!(vcm; penfun=MCPPenalty(), λ=maxλ_mcp)
   end 
 end 
 
+@info "test findmaxλ with MCPPenalty"
+resetModel!(vcm, Σinit)
+maxλ_mcp, iter = findmaxλ(vcm; penfun=MCPPenalty(), tempλ=30.0)
+vcselect!(vcm; penfun=MCPPenalty(), λ=maxλ_mcp)
+@show maxλ_mcp
+@testset begin 
+  for i in 1:m
+    @test isapprox(vcm.Σ[i], zeros(d, d); atol=1e-6)
+  end 
+end 
+
 @info "test findmaxλ with NoPenalty"
 resetModel!(vcm, Σinit)
 maxλ, iter = findmaxλ(vcm; penfun=NoPenalty())
