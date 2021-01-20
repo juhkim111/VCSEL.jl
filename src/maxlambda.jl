@@ -251,7 +251,7 @@ function findmaxλ(
     #standardize :: Bool = false, 
     maxiters :: Int = 500,
     tol     :: AbstractFloat = 1e-6,
-    tempλ   :: AbstractFloat = 50.0
+    tempλ   :: AbstractFloat = 0.0
     ) where {T <: Real}
 
     println("------- starting findmaxλ -------")
@@ -270,26 +270,28 @@ function findmaxλ(
     m = nvarcomps(vcmtmp) - 1 
 
     # 
-    BLAS.syrk!('U', 'T', true, reshape(vcmtmp.vecY, n, d), false, vcmtmp.Mdxd)
-    chol = cholesky!(Symmetric(vcmtmp.Mdxd))          
-    vcmtmp.Mdxd[:] = inv(chol)
-    const1 = -n * tr(vcmtmp.Mdxd)
-    mul!(vcmtmp.Mnxd, reshape(vcmtmp.vecY, n, d), vcmtmp.Mdxd) # n * d
+    if tempλ <= 0 
+      BLAS.syrk!('U', 'T', true, reshape(vcmtmp.vecY, n, d), false, vcmtmp.Mdxd)
+      chol = cholesky!(Symmetric(vcmtmp.Mdxd))          
+      vcmtmp.Mdxd[:] = inv(chol)
+      const1 = -n * tr(vcmtmp.Mdxd)
+      mul!(vcmtmp.Mnxd, reshape(vcmtmp.vecY, n, d), vcmtmp.Mdxd) # n * d
 
-    # initialize array 
-    potentialλs = Array{T}(undef, m)
+      # initialize array 
+      potentialλs = Array{T}(undef, m)
 
-    # use derivative to find plausible lambda for each of `m` variance components 
-    for i in eachindex(potentialλs)
-      BLAS.syrk!('U', 'T', true, vcmtmp.G[i]' * vcmtmp.Mnxd, false, vcmtmp.Mdxd)
-      potentialλs[i] =  const1 * tr(vcmtmp.G[i] * vcmtmp.G[i]') + n^2 * tr(vcmtmp.Mdxd)
-    end
+      # use derivative to find plausible lambda for each of `m` variance components 
+      for i in eachindex(potentialλs)
+        BLAS.syrk!('U', 'T', true, vcmtmp.G[i]' * vcmtmp.Mnxd, false, vcmtmp.Mdxd)
+        potentialλs[i] =  const1 * tr(vcmtmp.G[i] * vcmtmp.G[i]') + n^2 * tr(vcmtmp.Mdxd)
+      end
 
-    # find maximum among m different lambdas
-    tempλ = maximum(potentialλs)
-    if tempλ <= 0
-	      tempλ = 30.0
-    end
+      # find maximum among m different lambdas
+      tempλ = maximum(potentialλs)
+      if tempλ <= 0
+          tempλ = 30.0
+      end
+    end 
 
     # make sure all estimated σ2 are 0 at current λ
     while true
