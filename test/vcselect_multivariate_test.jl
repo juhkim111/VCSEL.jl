@@ -107,10 +107,13 @@ end
 
 resetModel!(vcm)
 @info "vcselect path"
-Σ̂path, λpath, objpath, niterspath = vcselectpath!(vcm; penfun=L1Penalty(), nλ=30)
+Σ̂path, λpath, objpath, niterspath = vcselectpath!(vcm; 
+        penfun=L1Penalty(), nλ=30, temp_maxλ = 10.0)
 @testset begin 
   @test Σ̂path[:, 1] != Σ̂path[:, end]
   @test length(λpath) == 30
   @test length(objpath) == 30
   @test length(niterspath) == 30
 end 
+
+
