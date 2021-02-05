@@ -163,7 +163,7 @@ function vcselect!(
     # # display 
     if verbose 
         println("iter = 0")
-        println("Σ    = ", vcm.Σ)
+        #println("Σ    = ", vcm.Σ)
         println("obj  = ", obj) 
     end  
 
@@ -184,7 +184,7 @@ function vcselect!(
             if i < nvarcomps(vcm)
                 mm_update_Σ!(vcm, vcm.G[i], i; penfun=penfun, λ=λ, penwt=penwt)
             else 
-                mm_update_Σ!(vcm, Matrix(one(T) * I, n, n), i)
+                mm_update_Σ!(vcm, Matrix((1/n)^(1/4) * I, n, n), i)
             end 
             
         end 
@@ -203,7 +203,7 @@ function vcselect!(
         # display 
         if verbose 
             println("iter = ", iter)
-            println("Σ    = ", vcm.Σ)
+            #println("Σ    = ", vcm.Σ)
             println("obj  = ", obj)
         end
 
