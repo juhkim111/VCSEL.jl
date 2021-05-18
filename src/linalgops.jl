@@ -343,14 +343,17 @@ Overwrite `Ω` with `∑ Σ[i] ⊗ (G[i] * transpose(G[i]))`
 function formΩ!(
     Ω :: AbstractMatrix{T}, 
     Σ :: AbstractVector{Matrix{T}}, 
-    G :: AbstractVector{Matrix{T}}, 
+    G :: AbstractVector{Matrix{T}};
+    standardize :: Bool = true 
     L :: AbstractMatrix{T} = Matrix{T}(undef, size(Σ[1], 1), size(Σ[1], 1))
     ) where {T <: Real}
 
     n = size(G[1], 1)
     d = size(Σ[1], 1) 
     Ω .= kron(Σ[end], I(n))
-    Ω ./= √n
+    if standardize 
+        Ω ./= √n
+    end 
     tmp = Matrix{T}(undef, size(L, 1) * n, d)
     for i in 1:length(G)
         #println("Symmetric(Σ[i])=", Symmetric(Σ[i]))

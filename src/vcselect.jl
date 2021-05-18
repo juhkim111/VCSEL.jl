@@ -156,7 +156,7 @@ function vcselect!(
     n = size(vcm)[1]
    
     # initial objective value 
-    formΩ!(vcm.Ωinv, vcm.Σ, vcm.G)
+    formΩ!(vcm.Ωinv, vcm.Σ, vcm.G; standardize=vcm.standardize)
     update_arrays!(vcm)
     obj = objvalue(vcm; penfun=penfun, λ=λ, penwt=penwt)
 
@@ -193,7 +193,7 @@ function vcselect!(
         clamp_diagonal!(vcm.Σ[end], tol, Inf)
 
         # update working arrays 
-        formΩ!(vcm.Ωinv, vcm.Σ, vcm.G)
+        formΩ!(vcm.Ωinv, vcm.Σ, vcm.G; standardize=vcm.standardize)
         update_arrays!(vcm)
 
         # update objective value 

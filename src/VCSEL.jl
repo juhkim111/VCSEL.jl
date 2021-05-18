@@ -53,6 +53,7 @@ struct VCModel{T <: Real}
     # extra parameters 
     weights_beta :: AbstractVector{T}
     geno_kernel :: AbstractString 
+    standardize :: AbstractString
     # covariance matrix and working arrays  
     ΩcholL      :: LowerTriangular{T}        # cholesky factor 
     Ωinv        :: AbstractMatrix{T}         # inverse of covariance matrix 
@@ -75,10 +76,11 @@ function VCModel(
     Yobs  :: AbstractMatrix{T},
     Xobs  :: AbstractVecOrMat{T},
     Gobs  :: AbstractVector{Matrix{T}};
-    Σinit     :: AbstractVector{Matrix{T}} = 
+    Σinit :: AbstractVector{Matrix{T}} = 
                 [Matrix{T}(I, size(Yobs, 2), size(Yobs, 2)) for i in 1:(length(Gobs)+1)],
     weights_beta :: AbstractVector{S} = [1,25],
-    geno_kernel :: AbstractString = "SKAT"
+    geno_kernel  :: AbstractString = "SKAT",
+    standardize  :: Bool = true 
     ) where {T, S <: Real}
 
     # handle error 
@@ -94,7 +96,7 @@ function VCModel(
     β = Matrix{T}(undef, p, d)
     # accumulate covariance matrix 
     Ωinv = zeros(T, nd, nd)
-    formΩ!(Ωinv, Σinit, Gnew)
+    formΩ!(Ωinv, Σinit, Gnew; standardize = standardize)
     # pre-allocate working arrays 
     Ωchol = cholesky!(Symmetric(Ωinv))
     Ωinv[:] = inv(Ωchol) 
@@ -108,7 +110,8 @@ function VCModel(
 
     # 
     VCModel{T}(Yobs, Xobs, Gobs, vecY, Gnew,
-            β, Σinit, weights_beta, geno_kernel, Ωchol.L, Ωinv, ΩinvY, 
+            β, Σinit, weights_beta, geno_kernel, standardize, 
+            Ωchol.L, Ωinv, ΩinvY, 
             R, L, Mndxnd, kron_I_one, Mdxd, Mnxd)
 
 end 
@@ -125,7 +128,8 @@ function VCModel(
     Σinit :: AbstractVector{Matrix{T}} = 
                 [Matrix{T}(I, size(Yobs, 2), size(Yobs, 2)) for i in 1:(length(Gobs)+1)],
     weights_beta :: AbstractVector{S} = [1,25],
-    geno_kernel :: AbstractString = "SKAT"
+    geno_kernel :: AbstractString = "SKAT",
+    standardize :: Bool = true 
     ) where {T, S <: Real}
 
     # handle error 
@@ -135,7 +139,8 @@ function VCModel(
     Xobs = zeros(T, size(Yobs, 1), 0) 
 
     # call VCModel constructor 
-    VCModel(Yobs, Xobs, Gobs; Σinit=Σinit, weights_beta=weights_beta, geno_kernel=geno_kernel)
+    VCModel(Yobs, Xobs, Gobs; 
+        Σinit=Σinit, weights_beta=weights_beta, geno_kernel=geno_kernel, standardize=standardize)
 end 
 
 """
@@ -352,7 +357,7 @@ function resetModel!(
     ) where {T <: Real}
 
     (vcm.Σ)[:] = deepcopy(Σ)
-    formΩ!(vcm.Ωinv, vcm.Σ, vcm.G)
+    formΩ!(vcm.Ωinv, vcm.Σ, vcm.G; standardize=vcm.standardize)
     update_arrays!(vcm)
 end 
 
