@@ -344,7 +344,7 @@ function formΩ!(
     Ω :: AbstractMatrix{T}, 
     Σ :: AbstractVector{Matrix{T}}, 
     G :: AbstractVector{Matrix{T}};
-    standardize :: Bool = true 
+    standardize :: Bool = true,
     L :: AbstractMatrix{T} = Matrix{T}(undef, size(Σ[1], 1), size(Σ[1], 1))
     ) where {T <: Real}
 
