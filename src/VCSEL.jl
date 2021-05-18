@@ -53,7 +53,7 @@ struct VCModel{T <: Real}
     # extra parameters 
     weights_beta :: AbstractVector{T}
     geno_kernel :: AbstractString 
-    standardize :: AbstractString
+    standardize :: Bool           
     # covariance matrix and working arrays  
     ΩcholL      :: LowerTriangular{T}        # cholesky factor 
     Ωinv        :: AbstractMatrix{T}         # inverse of covariance matrix 
